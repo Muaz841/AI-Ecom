@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace EcomAI.Platform.Business.Entities;
 
-public class Product : Entity<Guid>
+public class Product : Entity<Guid>, ITenantEntity
 {
     public Guid ClientId { get; private set; }
     public string Name { get; private set; } = null!;

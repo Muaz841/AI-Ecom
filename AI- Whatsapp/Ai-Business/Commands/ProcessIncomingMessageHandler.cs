@@ -68,16 +68,18 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             return new ProcessIncomingMessageResult(false, null, intentResult.DetectedIntent, message.Id, replyResult.Error);
         }
 
+        var generatedReply = replyResult.GeneratedReply ?? string.Empty;
+
         var sendResult = await _metaService.SendTextMessageAsync(
             request.ClientId,
             request.Platform,
             request.From,
-            replyResult.GeneratedReply);
+            generatedReply);
 
         if (!sendResult.Success)
         {
-            _logger.LogError("Failed to send reply to {From} on {Platform}: {Error}", request.From, request.Platform, sendResult.Error);
-            return new ProcessIncomingMessageResult(false, null, intentResult.DetectedIntent, message.Id, sendResult.Error);
+            _logger.LogError("Failed to send reply to {From} on {Platform}: {Error}", request.From, request.Platform, sendResult.ErrorMessage);
+            return new ProcessIncomingMessageResult(false, null, intentResult.DetectedIntent, message.Id, sendResult.ErrorMessage);
         }
 
         message.MarkAsSent(DateTime.UtcNow);
@@ -91,7 +93,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         return new ProcessIncomingMessageResult(
             true,
-            replyResult.GeneratedReply,
+            generatedReply,
             intentResult.DetectedIntent,
             message.Id);
     }
