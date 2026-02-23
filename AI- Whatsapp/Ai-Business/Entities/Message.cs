@@ -90,6 +90,16 @@ public class Message : Entity<Guid>
         OrderId = orderId;
     }
 
+    public void MarkAsSent(DateTime sentAtUtc)
+    {
+        if (sentAtUtc == default)
+        {
+            throw new ArgumentException("Sent timestamp is required", nameof(sentAtUtc));
+        }
+
+        SentAt = sentAtUtc;
+    }
+
     private static bool IsValidPlatform(string platform)
     {
         var lower = platform.ToLowerInvariant();
