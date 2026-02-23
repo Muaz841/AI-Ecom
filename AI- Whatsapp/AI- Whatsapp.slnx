@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="AI- Whatsapp/AI- Whatsapp.csproj" />
+  <Project Path="Ai-Business/AI-Business.csproj" />
+  <Project Path="AI-Infrastructure/AI-Infrastructure.csproj" />
+</Solution>
