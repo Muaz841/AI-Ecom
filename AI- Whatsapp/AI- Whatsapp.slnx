@@ -1,5 +1,8 @@
 <Solution>
-  <Project Path="AI- Whatsapp/AI- Whatsapp.csproj" />
-  <Project Path="Ai-Business/AI-Business.csproj" />
-  <Project Path="AI-Infrastructure/AI-Infrastructure.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/UnitTests/UnitTests.csproj" />
+  </Folder>
+  <Project Path="AI- Whatsapp/EcomAI - API.csproj" />
+  <Project Path="Ai-Business/EcomAI-Business.csproj" />
+  <Project Path="AI-Infrastructure/EcomAI-Infrastructure.csproj" />
 </Solution>

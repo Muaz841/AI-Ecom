@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EcomAI.Platform.Business.Interfaces;
@@ -11,34 +12,39 @@ public interface IMetaMessagingService
         string platform,
         string recipient,
         string messageText,
-        string? messagingType = "RESPONSE");
+        string? messagingType = "RESPONSE",
+        CancellationToken cancellationToken = default);
 
     Task<MessagingSendResult> SendTemplateMessageAsync(
         Guid clientId,
         string platform,
         string recipient,
         string templateName,
-        object? templateParameters = null);
+        object? templateParameters = null,
+        CancellationToken cancellationToken = default);
 
     Task<MessagingSendResult> SendImageMessageAsync(
         Guid clientId,
         string platform,
         string recipient,
         string imageUrl,
-        string? caption = null);
+        string? caption = null,
+        CancellationToken cancellationToken = default);
 
     Task MarkMessageAsReadAsync(
         Guid clientId,
         string platform,
         string recipient,
-        string messageId);
+        string messageId,
+        CancellationToken cancellationToken = default);
 
     Task<MessagingSendResult> SendQuickRepliesAsync(
         Guid clientId,
         string platform,
         string recipient,
         string text,
-        IEnumerable<QuickReplyOption> quickReplies);
+        IEnumerable<QuickReplyOption> quickReplies,
+        CancellationToken cancellationToken = default);
 }
 
 public record MessagingSendResult(

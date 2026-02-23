@@ -1,3 +1,5 @@
+using EcomAI.Platform.Business.Interfaces;
+using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using EcomAI.Platform.Infrastructure.Tenant;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,6 +11,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentTenantAccessor, CurrentTenantAccessor>();
+        services.AddScoped<IMessageRepository, MessageRepository>();
 
         return services;
     }

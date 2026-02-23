@@ -15,6 +15,7 @@ public static class ApplicationBuilderExtensions
 
         app.UseHttpsRedirection();
         app.UseCors("AllowDevelopment");
+        app.UseAuthentication();
         app.UseAuthorization();
 
         return app;

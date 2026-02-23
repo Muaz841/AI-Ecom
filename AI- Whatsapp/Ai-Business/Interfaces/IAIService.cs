@@ -1,17 +1,18 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EcomAI.Platform.Business.Interfaces;
 
 public interface IAIService
 {
-    Task<IntentDetectionResult> DetectIntentAsync(IntentRequest request);
+    Task<IntentDetectionResult> DetectIntentAsync(IntentRequest request, CancellationToken cancellationToken = default);
 
-    Task<ReplyGenerationResult> GenerateReplyAsync(ReplyRequest request);
+    Task<ReplyGenerationResult> GenerateReplyAsync(ReplyRequest request, CancellationToken cancellationToken = default);
 
-    Task<CaptionGenerationResult> GenerateCaptionAsync(CaptionRequest request);
+    Task<CaptionGenerationResult> GenerateCaptionAsync(CaptionRequest request, CancellationToken cancellationToken = default);
 
-    Task<AdCopiesResult> GenerateAdCopiesAsync(AdRequest request);
+    Task<AdCopiesResult> GenerateAdCopiesAsync(AdRequest request, CancellationToken cancellationToken = default);
 }
 
 public record IntentRequest(

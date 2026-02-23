@@ -2,7 +2,7 @@ using System;
 
 namespace EcomAI.Platform.Business.Entities;
 
-public class Client : Entity<Guid>, ITenantEntity
+public class Client : Entity<Guid>
 {
     public string Name { get; private set; } = null!;
     public string BusinessName { get; private set; } = null!;

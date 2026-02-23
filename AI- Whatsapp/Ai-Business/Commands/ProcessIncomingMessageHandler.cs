@@ -42,16 +42,18 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             request.Content,
             request.RawPayloadJson);
 
-        await _messageRepository.AddAsync(message);
+        await _messageRepository.AddAsync(message, cancellationToken);
 
         var availableProducts = await _productRepository.GetAvailableProductsAsync(
             request.ClientId,
-            maxItems: 15);
+            maxItems: 15,
+            cancellationToken: cancellationToken);
 
         var inventoryContext = BuildInventoryContext(availableProducts);
 
         var intentResult = await _aiService.DetectIntentAsync(
-            new IntentRequest(request.Content, inventoryContext, request.Platform));
+            new IntentRequest(request.Content, inventoryContext, request.Platform),
+            cancellationToken);
 
         message.MarkAsHandledByAI(intentResult.DetectedIntent);
 
@@ -60,7 +62,8 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
                 request.Content,
                 intentResult.DetectedIntent,
                 inventoryContext,
-                message.Id.ToString()));
+                message.Id.ToString()),
+            cancellationToken);
 
         if (!replyResult.Success)
         {
@@ -74,7 +77,8 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             request.ClientId,
             request.Platform,
             request.From,
-            generatedReply);
+            generatedReply,
+            cancellationToken: cancellationToken);
 
         if (!sendResult.Success)
         {
@@ -84,7 +88,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         message.MarkAsSent(DateTime.UtcNow);
 
-        await _messageRepository.UpdateAsync(message);
+        await _messageRepository.UpdateAsync(message, cancellationToken);
 
         if (intentResult.DetectedIntent == "order_start")
         {
@@ -105,7 +109,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             return "No products currently available.";
         }
 
-        return string.Join("\n", products.Select(p =>
+        return string.Join("\n", products.Take(15).Select(p =>
             $"{p.Name} - {p.BasePrice:C} ({p.Currency}) | Stock: {p.TotalStock} | Variants: {p.Variants.Count}"));
     }
 }
