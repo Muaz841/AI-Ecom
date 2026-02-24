@@ -25,7 +25,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddHealthChecks();
-builder.Services.AddCoreInfrastructure();
+builder.Services.AddCoreInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 app.UseCoreMiddleware();

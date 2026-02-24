@@ -61,7 +61,7 @@ public class PlatformDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Platform).IsRequired().HasMaxLength(50);
             entity.Property(e => e.Content).IsRequired();
-            entity.Property(e => e.RawPayloadJson).HasColumnType("jsonb");
+            entity.Property(e => e.RawPayloadJson).HasColumnType("nvarchar(max)");
             entity.HasIndex(e => new { e.ClientId, e.ReceivedAt });
         });
 

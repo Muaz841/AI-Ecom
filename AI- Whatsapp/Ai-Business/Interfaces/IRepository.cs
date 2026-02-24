@@ -7,7 +7,7 @@ using EcomAI.Platform.Business.Entities;
 
 namespace EcomAI.Platform.Business.Interfaces;
 
-public interface IRepository<T> where T : Entity<Guid>, ITenantEntity
+public interface IRepository<T> where T : Entity<Guid>
 {
     Task<T?> GetByIdAsync(Guid id);
 

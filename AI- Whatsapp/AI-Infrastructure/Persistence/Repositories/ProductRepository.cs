@@ -34,10 +34,10 @@ public class ProductRepository : EfRepository<Product>, IProductRepository
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            searchTerm = searchTerm.Trim().ToLowerInvariant();
+            searchTerm = searchTerm.Trim();
             query = query.Where(p =>
-                EF.Functions.ILike(p.Name, $"%{searchTerm}%") ||
-                EF.Functions.ILike(p.Sku ?? string.Empty, $"%{searchTerm}%"));
+                EF.Functions.Like(p.Name, $"%{searchTerm}%") ||
+                EF.Functions.Like(p.Sku ?? string.Empty, $"%{searchTerm}%"));
         }
 
         IQueryable<Product> ordered = query
@@ -99,8 +99,8 @@ public class ProductRepository : EfRepository<Product>, IProductRepository
 
         return await _dbSet.AnyAsync(
             p => p.ClientId == clientId &&
-                 ((p.Sku != null && EF.Functions.ILike(p.Sku, $"%{term}%")) ||
-                  EF.Functions.ILike(p.Name, $"%{term}%")),
+                 ((p.Sku != null && EF.Functions.Like(p.Sku, $"%{term}%")) ||
+                  EF.Functions.Like(p.Name, $"%{term}%")),
             cancellationToken);
     }
 }
