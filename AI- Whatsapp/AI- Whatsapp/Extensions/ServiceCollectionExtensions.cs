@@ -11,7 +11,9 @@ public static class ServiceCollectionExtensions
     {
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentTenantAccessor, CurrentTenantAccessor>();
+        services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
         services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
 
         return services;
     }
