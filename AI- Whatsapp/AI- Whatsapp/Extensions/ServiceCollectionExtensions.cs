@@ -1,9 +1,11 @@
 using System;
+using EcomAI.Platform.Business.Commands;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Infrastructure.Persistence;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using EcomAI.Platform.Infrastructure.Tenant;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRepository<Client>, ClientRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(typeof(ProcessIncomingMessageCommand).Assembly));
         services.AddOptions<MetaSecrets>()
             .Configure<IConfiguration>((secrets, cfg) =>
             {
