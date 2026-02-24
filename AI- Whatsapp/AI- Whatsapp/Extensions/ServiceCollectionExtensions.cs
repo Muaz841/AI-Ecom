@@ -2,6 +2,7 @@ using System;
 using EcomAI.Platform.Business.Commands;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
+using EcomAI.Platform.Infrastructure.ExternalServices;
 using EcomAI.Platform.Infrastructure.Persistence;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using EcomAI.Platform.Infrastructure.Tenant;
@@ -10,6 +11,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Retry;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -41,6 +44,23 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRepository<Client>, ClientRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IMetaMessagingService, MetaMessagingService>();
+        services.AddHttpClient(MetaMessagingService.HttpClientName, client =>
+        {
+            client.BaseAddress = new Uri("https://graph.facebook.com/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddResiliencePipelineRegistry<string>();
+        services.AddResiliencePipeline(MetaMessagingService.SendMessagePipeline, builder =>
+        {
+            builder.AddRetry(new RetryStrategyOptions
+            {
+                MaxRetryAttempts = 3,
+                Delay = TimeSpan.FromSeconds(2),
+                BackoffType = DelayBackoffType.Exponential,
+                ShouldHandle = new PredicateBuilder().Handle<HttpRequestException>()
+            });
+        });
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(typeof(ProcessIncomingMessageCommand).Assembly));
         services.AddOptions<MetaSecrets>()
             .Configure<IConfiguration>((secrets, cfg) =>
