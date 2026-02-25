@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Retry;
 
 namespace EcomAI.Platform.Api.Extensions;
@@ -34,9 +35,9 @@ public static class ServiceCollectionExtensions
                 sqlOptions.MigrationsAssembly(typeof(PlatformDbContext).Assembly.FullName);
             });
 
-#if DEBUG
+
             options.EnableSensitiveDataLogging();
-#endif
+
         });
 
         services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
@@ -45,7 +46,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IMetaMessagingService, MetaMessagingService>();
-        services.AddHttpClient(MetaMessagingService.HttpClientName, client =>
+        services.AddScoped<IAIService, StubAIService>();
+        services.AddHttpClient(MetaMessagingService.MetaHttpClientName, client =>
         {
             client.BaseAddress = new Uri("https://graph.facebook.com/");
             client.Timeout = TimeSpan.FromSeconds(30);
@@ -58,6 +60,13 @@ public static class ServiceCollectionExtensions
                 MaxRetryAttempts = 3,
                 Delay = TimeSpan.FromSeconds(2),
                 BackoffType = DelayBackoffType.Exponential,
+                ShouldHandle = new PredicateBuilder().Handle<HttpRequestException>()
+            })
+            .AddCircuitBreaker(new CircuitBreakerStrategyOptions
+            {
+                FailureRatio = 0.5,
+                MinimumThroughput = 10,
+                BreakDuration = TimeSpan.FromSeconds(30),
                 ShouldHandle = new PredicateBuilder().Handle<HttpRequestException>()
             });
         });

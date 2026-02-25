@@ -1,29 +1,30 @@
+using EcomAI.Platform.Business.Interfaces;
+using EcomAI.Platform.Infrastructure.Persistence.Repositories;
+using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Registry;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using EcomAI.Platform.Business.Interfaces;
-using EcomAI.Platform.Infrastructure.Persistence.Repositories;
-using Microsoft.Extensions.Logging;
-using Polly.Registry;
 
 namespace EcomAI.Platform.Infrastructure.ExternalServices;
 
 public class MetaMessagingService : IMetaMessagingService
 {
-    public const string HttpClientName = "MetaApi";
-    public const string SendMessagePipeline = "meta-send-retry";
-
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ClientRepository _clientRepository;
     private readonly ILogger<MetaMessagingService> _logger;
-    private readonly ResiliencePipelineProvider<string> _pipelineProvider;
+    private readonly ResiliencePipeline<HttpResponseMessage> _sendPipeline;
+
+    public const string MetaHttpClientName = "MetaGraphApi";
+    public const string SendPipelineKey = "meta-send";    
+    public const string HttpClientName = MetaHttpClientName;
+    public const string SendMessagePipeline = SendPipelineKey;
 
     public MetaMessagingService(
         IHttpClientFactory httpClientFactory,
@@ -31,10 +32,12 @@ public class MetaMessagingService : IMetaMessagingService
         ILogger<MetaMessagingService> logger,
         ResiliencePipelineRegistry<string> pipelineRegistry)
     {
-        _httpClientFactory = httpClientFactory;
-        _clientRepository = clientRepository;
-        _logger = logger;
-        _pipelineProvider = pipelineRegistry;
+        _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        _clientRepository = clientRepository ?? throw new ArgumentNullException(nameof(clientRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        _sendPipeline = pipelineRegistry.GetPipeline<HttpResponseMessage>(SendPipelineKey)
+            ?? throw new InvalidOperationException($"Resilience pipeline '{SendPipelineKey}' not found in registry.");
     }
 
     public async Task<MessagingSendResult> SendTextMessageAsync(
@@ -45,23 +48,22 @@ public class MetaMessagingService : IMetaMessagingService
         string? messagingType = "RESPONSE",
         CancellationToken cancellationToken = default)
     {
-        var client = await _clientRepository.GetByIdAsync(clientId);
-        if (client == null)
+        var clientEntity = await _clientRepository.GetByIdAsync(clientId);
+        if (clientEntity == null || string.IsNullOrWhiteSpace(clientEntity.MetaAccessToken))
         {
-            return new MessagingSendResult(false, null, "Client not found.", 404);
+            _logger.LogError("Cannot send message: Client {ClientId} not found or missing token", clientId);
+            return new MessagingSendResult(false, null, "Client configuration missing", 400);
         }
 
-        if (string.IsNullOrWhiteSpace(client.MetaAccessToken))
+        var httpClient = _httpClientFactory.CreateClient(MetaHttpClientName);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", clientEntity.MetaAccessToken);
+
+        string endpoint = platform.ToLowerInvariant() switch
         {
-            return new MessagingSendResult(false, null, "Client Meta access token is missing.", 500);
-        }
-
-        var httpClient = _httpClientFactory.CreateClient(HttpClientName);
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", client.MetaAccessToken);
-
-        var endpoint = platform.Equals("whatsapp", StringComparison.OrdinalIgnoreCase)
-            ? $"v20.0/{recipient}/messages"
-            : "v20.0/me/messages";
+            "whatsapp" => $"v20.0/{recipient}/messages",
+            "instagram" => "v20.0/me/messages",
+            _ => throw new ArgumentException($"Unsupported platform: {platform}", nameof(platform))
+        };
 
         var payload = new
         {
@@ -70,24 +72,30 @@ public class MetaMessagingService : IMetaMessagingService
             message = new { text = messageText }
         };
 
-        var json = JsonSerializer.Serialize(payload);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var requestContent = JsonContent.Create(payload);
 
-        var pipeline = _pipelineProvider.GetPipeline(SendMessagePipeline);
-        return await pipeline.ExecuteAsync(async token =>
+        try
         {
-            var response = await httpClient.PostAsync(endpoint, content, token);
+            var response = await _sendPipeline.ExecuteAsync(async ct =>
+                await httpClient.PostAsync(endpoint, requestContent, ct), cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<SendResponse>(cancellationToken: token);
+                var result = await response.Content.ReadFromJsonAsync<MetaSendResponse>(cancellationToken: cancellationToken);
+                _logger.LogInformation("Message sent to {Recipient} on {Platform} for client {ClientId}", recipient, platform, clientId);
                 return new MessagingSendResult(true, result?.MessageId);
             }
 
-            var errorBody = await response.Content.ReadAsStringAsync(token);
-            _logger.LogError("Meta send failed for client {ClientId}: {Status} - {Body}", clientId, response.StatusCode, errorBody);
-            return new MessagingSendResult(false, null, errorBody, (int)response.StatusCode);
-        }, cancellationToken);
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError("Meta API error {StatusCode}: {Error}", response.StatusCode, errorContent);
+
+            return new MessagingSendResult(false, null, errorContent, (int)response.StatusCode);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Exception sending message to Meta for client {ClientId}", clientId);
+            return new MessagingSendResult(false, null, ex.Message);
+        }
     }
 
     public Task<MessagingSendResult> SendTemplateMessageAsync(
@@ -98,7 +106,7 @@ public class MetaMessagingService : IMetaMessagingService
         object? templateParameters = null,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException("Template sending not implemented yet.");
+        return Task.FromResult(new MessagingSendResult(false, null, "Template sending not implemented yet"));
     }
 
     public Task<MessagingSendResult> SendImageMessageAsync(
@@ -109,7 +117,7 @@ public class MetaMessagingService : IMetaMessagingService
         string? caption = null,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException("Image sending not implemented yet.");
+        return Task.FromResult(new MessagingSendResult(false, null, "Image sending not implemented yet"));
     }
 
     public Task MarkMessageAsReadAsync(
@@ -119,7 +127,8 @@ public class MetaMessagingService : IMetaMessagingService
         string messageId,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException("Mark as read not implemented yet.");
+        _logger.LogInformation("Mark as read requested for message {MessageId} (stub)", messageId);
+        return Task.CompletedTask;
     }
 
     public Task<MessagingSendResult> SendQuickRepliesAsync(
@@ -130,12 +139,11 @@ public class MetaMessagingService : IMetaMessagingService
         IEnumerable<QuickReplyOption> quickReplies,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException("Quick replies not implemented yet.");
+        return Task.FromResult(new MessagingSendResult(false, null, "Quick replies not implemented yet"));
     }
 
-    private sealed class SendResponse
+    private class MetaSendResponse
     {
-        [JsonPropertyName("message_id")]
         public string? MessageId { get; set; }
     }
 }
