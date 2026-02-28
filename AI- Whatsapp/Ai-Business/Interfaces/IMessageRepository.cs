@@ -21,4 +21,11 @@ public interface IMessageRepository
         CancellationToken cancellationToken = default);
 
     Task<bool> ExistsAsync(Guid clientId, string externalMessageId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Message>> GetByConversationThreadAsync(
+        Guid clientId,
+        Guid conversationThreadId,
+        int pageIndex = 0,
+        int pageSize = 200,
+        CancellationToken cancellationToken = default);
 }

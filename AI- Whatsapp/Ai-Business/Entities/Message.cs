@@ -5,10 +5,15 @@ namespace EcomAI.Platform.Business.Entities;
 public class Message : Entity<Guid>, ITenantEntity
 {
     public Guid ClientId { get; private set; }
+    public Guid? ConversationThreadId { get; private set; }
     public string Platform { get; private set; } = null!;
     public string From { get; private set; } = null!;
     public string To { get; private set; } = null!;
     public string Content { get; private set; } = null!;
+    public string Direction { get; private set; } = null!;
+    public string MessageType { get; private set; } = "text";
+    public string? ExternalMessageId { get; private set; }
+    public string? DeliveryStatus { get; private set; }
     public DateTime ReceivedAt { get; private set; }
     public DateTime? SentAt { get; private set; }
     public bool IsFromCustomer { get; private set; }
@@ -27,6 +32,65 @@ public class Message : Entity<Guid>, ITenantEntity
         string from,
         string to,
         string content,
+        string? rawPayloadJson = null,
+        Guid? conversationThreadId = null,
+        string? externalMessageId = null,
+        string messageType = "text")
+    {
+        if (clientId == Guid.Empty)
+        {
+            throw new ArgumentException("ClientId is required", nameof(clientId));
+        }
+
+        if (string.IsNullOrWhiteSpace(platform) || !IsValidPlatform(platform))
+        {
+            throw new ArgumentException("Valid platform required (whatsapp or instagram)", nameof(platform));
+        }
+
+        if (string.IsNullOrWhiteSpace(from))
+        {
+            throw new ArgumentException("From is required", nameof(from));
+        }
+
+        if (string.IsNullOrWhiteSpace(to))
+        {
+            throw new ArgumentException("To is required", nameof(to));
+        }
+
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new ArgumentException("Content is required", nameof(content));
+        }
+
+        return new Message
+        {
+            Id = Guid.NewGuid(),
+            TenantId = clientId,
+            ClientId = clientId,
+            ConversationThreadId = conversationThreadId,
+            Platform = platform.ToLowerInvariant().Trim(),
+            From = from.Trim(),
+            To = to.Trim(),
+            Content = content.Trim(),
+            Direction = "incoming",
+            MessageType = string.IsNullOrWhiteSpace(messageType) ? "text" : messageType.Trim().ToLowerInvariant(),
+            ExternalMessageId = externalMessageId?.Trim(),
+            ReceivedAt = DateTime.UtcNow,
+            IsFromCustomer = true,
+            IsHandledByAI = false,
+            RawPayloadJson = rawPayloadJson
+        };
+    }
+
+    public static Message CreateOutgoing(
+        Guid clientId,
+        string platform,
+        string from,
+        string to,
+        string content,
+        Guid? conversationThreadId = null,
+        string? externalMessageId = null,
+        string messageType = "text",
         string? rawPayloadJson = null)
     {
         if (clientId == Guid.Empty)
@@ -59,13 +123,17 @@ public class Message : Entity<Guid>, ITenantEntity
             Id = Guid.NewGuid(),
             TenantId = clientId,
             ClientId = clientId,
+            ConversationThreadId = conversationThreadId,
             Platform = platform.ToLowerInvariant().Trim(),
             From = from.Trim(),
             To = to.Trim(),
             Content = content.Trim(),
+            Direction = "outgoing",
+            MessageType = string.IsNullOrWhiteSpace(messageType) ? "text" : messageType.Trim().ToLowerInvariant(),
+            ExternalMessageId = externalMessageId?.Trim(),
             ReceivedAt = DateTime.UtcNow,
-            IsFromCustomer = true,
-            IsHandledByAI = false,
+            IsFromCustomer = false,
+            IsHandledByAI = true,
             RawPayloadJson = rawPayloadJson
         };
     }
@@ -99,6 +167,17 @@ public class Message : Entity<Guid>, ITenantEntity
         }
 
         SentAt = sentAtUtc;
+        DeliveryStatus = "sent";
+    }
+
+    public void SetDeliveryStatus(string status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            throw new ArgumentException("Delivery status cannot be empty.", nameof(status));
+        }
+
+        DeliveryStatus = status.Trim().ToLowerInvariant();
     }
 
     private static bool IsValidPlatform(string platform)

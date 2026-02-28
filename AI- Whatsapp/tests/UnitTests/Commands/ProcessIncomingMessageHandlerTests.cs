@@ -17,6 +17,7 @@ public class ProcessIncomingMessageHandlerTests
     {
         var handler = new ProcessIncomingMessageHandler(
             new FakeMessageRepository(),
+            new FakeConversationThreadRepository(),
             new FakeProductRepository(),
             new FakeAiService(shouldReplyFail: true),
             new FakeMetaMessagingService(),
@@ -33,6 +34,7 @@ public class ProcessIncomingMessageHandlerTests
     {
         var handler = new ProcessIncomingMessageHandler(
             new FakeMessageRepository(),
+            new FakeConversationThreadRepository(),
             new FakeProductRepository(),
             new FakeAiService(),
             new FakeMetaMessagingService(shouldFail: true),
@@ -49,6 +51,7 @@ public class ProcessIncomingMessageHandlerTests
     {
         var handler = new ProcessIncomingMessageHandler(
             new FakeMessageRepository(),
+            new FakeConversationThreadRepository(),
             new FakeProductRepository(),
             new FakeAiService(),
             new FakeMetaMessagingService(),
@@ -90,6 +93,29 @@ public class ProcessIncomingMessageHandlerTests
 
         public Task<bool> ExistsAsync(Guid clientId, string externalMessageId, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
+
+        public Task<IReadOnlyList<Message>> GetByConversationThreadAsync(
+            Guid clientId,
+            Guid conversationThreadId,
+            int pageIndex = 0,
+            int pageSize = 200,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Message>>(Array.Empty<Message>());
+    }
+
+    private sealed class FakeConversationThreadRepository : IConversationThreadRepository
+    {
+        public Task<ConversationThread> GetOrCreateAsync(Guid clientId, string platform, string customerIdentifier, string businessIdentifier, string? customerDisplayName = null, CancellationToken cancellationToken = default)
+            => Task.FromResult(ConversationThread.Create(clientId, platform, customerIdentifier, businessIdentifier, customerDisplayName));
+
+        public Task<ConversationThread?> GetByIdAsync(Guid clientId, Guid conversationThreadId, CancellationToken cancellationToken = default)
+            => Task.FromResult<ConversationThread?>(null);
+
+        public Task<IReadOnlyList<ConversationThread>> ListRecentAsync(Guid clientId, int pageIndex = 0, int pageSize = 50, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ConversationThread>>(Array.Empty<ConversationThread>());
+
+        public Task UpdateAsync(ConversationThread thread, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class FakeProductRepository : IProductRepository

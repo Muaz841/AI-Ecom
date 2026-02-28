@@ -64,8 +64,25 @@ public class MessageRepository : IMessageRepository
         return await _context.Messages
             .AnyAsync(
                 m => m.ClientId == clientId
-                     && m.RawPayloadJson != null
-                     && EF.Functions.Like(m.RawPayloadJson, $"%\"id\":\"{externalMessageId}\"%"),
+                     && ((m.ExternalMessageId != null && m.ExternalMessageId == externalMessageId)
+                         || (m.RawPayloadJson != null && EF.Functions.Like(m.RawPayloadJson, $"%\"id\":\"{externalMessageId}\"%"))),
                 cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Message>> GetByConversationThreadAsync(
+        Guid clientId,
+        Guid conversationThreadId,
+        int pageIndex = 0,
+        int pageSize = 200,
+        CancellationToken cancellationToken = default)
+    {
+        var messages = await _context.Messages
+            .Where(m => m.ClientId == clientId && m.ConversationThreadId == conversationThreadId)
+            .OrderBy(m => m.ReceivedAt)
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return messages.AsReadOnly();
     }
 }

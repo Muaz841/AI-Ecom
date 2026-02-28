@@ -46,6 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ClientRepository>();
         services.AddScoped<IRepository<Client>, ClientRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<IConversationThreadRepository, ConversationThreadRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IMetaMessagingService, MetaMessagingService>();
         services.AddScoped<IAIService, StubAIService>();

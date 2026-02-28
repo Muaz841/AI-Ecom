@@ -13,6 +13,7 @@ namespace EcomAI.Platform.Business.Commands;
 public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMessageCommand, ProcessIncomingMessageResult>
 {
     private readonly IMessageRepository _messageRepository;
+    private readonly IConversationThreadRepository _conversationThreadRepository;
     private readonly IProductRepository _productRepository;
     private readonly IAIService _aiService;
     private readonly IMetaMessagingService _metaService;
@@ -20,12 +21,14 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
     public ProcessIncomingMessageHandler(
         IMessageRepository messageRepository,
+        IConversationThreadRepository conversationThreadRepository,
         IProductRepository productRepository,
         IAIService aiService,
         IMetaMessagingService metaService,
         ILogger<ProcessIncomingMessageHandler> logger)
     {
         _messageRepository = messageRepository;
+        _conversationThreadRepository = conversationThreadRepository;
         _productRepository = productRepository;
         _aiService = aiService;
         _metaService = metaService;
@@ -34,15 +37,26 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
     public async Task<ProcessIncomingMessageResult> Handle(ProcessIncomingMessageCommand request, CancellationToken cancellationToken)
     {
+        var thread = await _conversationThreadRepository.GetOrCreateAsync(
+            request.ClientId,
+            request.Platform,
+            request.From,
+            request.To,
+            cancellationToken: cancellationToken);
+
         var message = Message.CreateIncoming(
             request.ClientId,
             request.Platform,
             request.From,
             request.To,
             request.Content,
-            request.RawPayloadJson);
+            request.RawPayloadJson,
+            conversationThreadId: thread.Id,
+            externalMessageId: request.ExternalMessageId);
 
         await _messageRepository.AddAsync(message, cancellationToken);
+        thread.TouchWithMessage("incoming", request.Content, DateTime.UtcNow);
+        await _conversationThreadRepository.UpdateAsync(thread, cancellationToken);
 
         var availableProducts = await _productRepository.GetAvailableProductsAsync(
             request.ClientId,
@@ -89,6 +103,18 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         message.MarkAsSent(DateTime.UtcNow);
 
         await _messageRepository.UpdateAsync(message, cancellationToken);
+
+        var outgoing = Message.CreateOutgoing(
+            request.ClientId,
+            request.Platform,
+            request.To,
+            request.From,
+            generatedReply,
+            conversationThreadId: thread.Id);
+        outgoing.MarkAsSent(DateTime.UtcNow);
+        await _messageRepository.AddAsync(outgoing, cancellationToken);
+        thread.TouchWithMessage("outgoing", generatedReply, DateTime.UtcNow);
+        await _conversationThreadRepository.UpdateAsync(thread, cancellationToken);
 
         if (intentResult.DetectedIntent == "order_start")
         {

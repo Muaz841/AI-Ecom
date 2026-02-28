@@ -9,7 +9,8 @@ public record ProcessIncomingMessageCommand(
     string From,
     string To,
     string Content,
-    string? RawPayloadJson = null
+    string? RawPayloadJson = null,
+    string? ExternalMessageId = null
 ) : IRequest<ProcessIncomingMessageResult>;
 
 public record ProcessIncomingMessageResult(

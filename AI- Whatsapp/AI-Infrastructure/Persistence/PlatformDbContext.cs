@@ -32,6 +32,7 @@ public class PlatformDbContext : DbContext
 
     public DbSet<Client> Clients { get; set; } = null!;
     public DbSet<Message> Messages { get; set; } = null!;
+    public DbSet<ConversationThread> ConversationThreads { get; set; } = null!;
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<ProductVariant> ProductVariants { get; set; } = null!;
     public DbSet<ProductImage> ProductImages { get; set; } = null!;
@@ -62,9 +63,29 @@ public class PlatformDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Platform).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Direction).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.MessageType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ExternalMessageId).HasMaxLength(200);
+            entity.Property(e => e.DeliveryStatus).HasMaxLength(50);
             entity.Property(e => e.Content).IsRequired();
             entity.Property(e => e.RawPayloadJson).HasColumnType("nvarchar(max)");
             entity.HasIndex(e => new { e.TenantId, e.ReceivedAt });
+            entity.HasIndex(e => new { e.TenantId, e.ConversationThreadId, e.ReceivedAt });
+            entity.HasIndex(e => new { e.TenantId, e.ExternalMessageId });
+        });
+
+        modelBuilder.Entity<ConversationThread>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Platform).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.CustomerIdentifier).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.BusinessIdentifier).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.CustomerDisplayName).HasMaxLength(200);
+            entity.Property(e => e.LastMessagePreview).HasMaxLength(500);
+            entity.Property(e => e.LastMessageDirection).HasMaxLength(20);
+            entity.Property(e => e.AssignmentMode).HasMaxLength(20);
+            entity.HasIndex(e => new { e.TenantId, e.Platform, e.CustomerIdentifier, e.BusinessIdentifier }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.LastMessageAt });
         });
 
         modelBuilder.Entity<Product>(entity =>

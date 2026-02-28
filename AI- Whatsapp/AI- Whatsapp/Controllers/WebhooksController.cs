@@ -149,7 +149,8 @@ public class WebhooksController : ControllerBase
                     From: msg.From ?? string.Empty,
                     To: msgValue.Metadata?.PhoneNumberId ?? string.Empty,
                     Content: content,
-                    RawPayloadJson: JsonSerializer.Serialize(msg));
+                    RawPayloadJson: JsonSerializer.Serialize(msg),
+                    ExternalMessageId: msg.Id);
 
                 await _mediator.Send(command, cancellationToken);
             }
@@ -258,6 +259,8 @@ public class MetaMetadata
 public class MetaMessage
 {
     public string? From { get; set; }
+    public string? Id { get; set; }
+    public string? Type { get; set; }
     public MetaText? Text { get; set; }
 }
 
