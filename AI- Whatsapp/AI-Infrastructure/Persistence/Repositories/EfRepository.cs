@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace EcomAI.Platform.Infrastructure.Persistence.Repositories;
 
 public class EfRepository<T> : IRepository<T>
-    where T : Entity<Guid>
+    where T : Entity<Guid>, ITenantEntity
 {
     protected readonly PlatformDbContext _context;
     protected readonly DbSet<T> _dbSet;

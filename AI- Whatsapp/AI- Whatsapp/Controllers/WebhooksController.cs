@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Api.Extensions;
 using EcomAI.Platform.Business.Commands;
+using EcomAI.Platform.Business.Entities;
+using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using EcomAI.Platform.Infrastructure.Tenant;
 using MediatR;
@@ -25,6 +27,7 @@ public class WebhooksController : ControllerBase
     private readonly IMediator _mediator;
     private readonly ClientRepository _clientRepository;
     private readonly ICurrentTenantAccessor _tenantAccessor;
+    private readonly IRepository<AppLog> _appLogRepository;
     private readonly ILogger<WebhooksController> _logger;
     private readonly MetaSecrets _metaSecrets;
 
@@ -32,12 +35,14 @@ public class WebhooksController : ControllerBase
         IMediator mediator,
         ClientRepository clientRepository,
         ICurrentTenantAccessor tenantAccessor,
+        IRepository<AppLog> appLogRepository,
         ILogger<WebhooksController> logger,
         IOptions<MetaSecrets> metaSecretsOptions)
     {
         _mediator = mediator;
         _clientRepository = clientRepository;
         _tenantAccessor = tenantAccessor;
+        _appLogRepository = appLogRepository;
         _logger = logger;
         _metaSecrets = metaSecretsOptions.Value;
     }
@@ -69,6 +74,14 @@ public class WebhooksController : ControllerBase
         if (!IsValidSignature(Request.Headers["X-Hub-Signature-256"], rawBody))
         {
             _logger.LogWarning("Webhook signature validation failed from IP {RemoteIp}", Request.HttpContext.Connection.RemoteIpAddress);
+            await TryWriteWebhookLogAsync(
+                tenantId: null,
+                requestPayload: rawBody,
+                isSuccess: false,
+                statusCode: 401,
+                responsePayload: "Invalid signature",
+                errorMessage: "Webhook signature validation failed.",
+                cancellationToken: cancellationToken);
             return Unauthorized("Invalid signature");
         }
 
@@ -80,6 +93,14 @@ public class WebhooksController : ControllerBase
         if (payload?.Entry == null || !payload.Entry.Any())
         {
             _logger.LogWarning("Invalid or empty webhook payload");
+            await TryWriteWebhookLogAsync(
+                tenantId: null,
+                requestPayload: rawBody,
+                isSuccess: false,
+                statusCode: 400,
+                responsePayload: "Invalid payload",
+                errorMessage: "Webhook payload is empty or malformed.",
+                cancellationToken: cancellationToken);
             return BadRequest("Invalid payload");
         }
 
@@ -93,6 +114,14 @@ public class WebhooksController : ControllerBase
         if (client is null)
         {
             _logger.LogWarning("No matching Client for webhook identifiers");
+            await TryWriteWebhookLogAsync(
+                tenantId: null,
+                requestPayload: rawBody,
+                isSuccess: false,
+                statusCode: 404,
+                responsePayload: "No matching tenant",
+                errorMessage: "No matching tenant for webhook identifiers.",
+                cancellationToken: cancellationToken);
             return NotFound("No matching tenant");
         }
 
@@ -126,6 +155,15 @@ public class WebhooksController : ControllerBase
             }
         }
 
+        await TryWriteWebhookLogAsync(
+            tenantId: client.Id,
+            requestPayload: rawBody,
+            isSuccess: true,
+            statusCode: 200,
+            responsePayload: "Webhook processed",
+            errorMessage: null,
+            cancellationToken: cancellationToken);
+
         return Ok();
     }
 
@@ -152,6 +190,38 @@ public class WebhooksController : ControllerBase
         var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
 
         return CryptographicOperations.FixedTimeEquals(computedHash, expectedHash);
+    }
+
+    private async Task TryWriteWebhookLogAsync(
+        Guid? tenantId,
+        string requestPayload,
+        bool isSuccess,
+        int statusCode,
+        string responsePayload,
+        string? errorMessage,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var log = AppLog.CreateIncoming(
+                tenantId: tenantId,
+                channel: "meta-webhook",
+                operation: "receive",
+                endpoint: Request.Path.Value,
+                requestPayload: requestPayload,
+                isSuccess: isSuccess,
+                statusCode: statusCode,
+                responsePayload: responsePayload,
+                errorMessage: errorMessage,
+                correlationId: HttpContext.TraceIdentifier);
+
+            await _appLogRepository.AddAsync(log);
+            await _appLogRepository.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to persist inbound webhook log.");
+        }
     }
 }
 

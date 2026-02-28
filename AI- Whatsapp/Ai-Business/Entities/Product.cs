@@ -55,6 +55,7 @@ public class Product : Entity<Guid>, ITenantEntity
         return new Product
         {
             Id = Guid.NewGuid(),
+            TenantId = clientId,
             ClientId = clientId,
             Name = name.Trim(),
             Description = description?.Trim(),
@@ -75,7 +76,7 @@ public class Product : Entity<Guid>, ITenantEntity
             throw new ArgumentException("Size is required for variant");
         }
 
-        var variant = ProductVariant.Create(Id, size.Trim(), color?.Trim(), stock, priceOverride);
+        var variant = ProductVariant.Create(Id, TenantId ?? ClientId, size.Trim(), color?.Trim(), stock, priceOverride);
         Variants.Add(variant);
         UpdateTotalStock();
     }
@@ -98,7 +99,7 @@ public class Product : Entity<Guid>, ITenantEntity
             throw new ArgumentException("Image URL is required");
         }
 
-        var image = ProductImage.Create(Id, url.Trim(), altText?.Trim(), isPrimary);
+        var image = ProductImage.Create(Id, TenantId ?? ClientId, url.Trim(), altText?.Trim(), isPrimary);
         Images.Add(image);
 
         if (isPrimary)
@@ -117,7 +118,7 @@ public class Product : Entity<Guid>, ITenantEntity
     }
 }
 
-public class ProductVariant : Entity<Guid>
+public class ProductVariant : Entity<Guid>, ITenantEntity
 {
     public Guid ProductId { get; private set; }
     public string Size { get; private set; } = null!;
@@ -131,6 +132,7 @@ public class ProductVariant : Entity<Guid>
 
     public static ProductVariant Create(
         Guid productId,
+        Guid tenantId,
         string size,
         string? color,
         int stock,
@@ -149,6 +151,7 @@ public class ProductVariant : Entity<Guid>
         return new ProductVariant
         {
             Id = Guid.NewGuid(),
+            TenantId = tenantId,
             ProductId = productId,
             Size = size,
             Color = color,
@@ -169,7 +172,7 @@ public class ProductVariant : Entity<Guid>
     }
 }
 
-public class ProductImage : Entity<Guid>
+public class ProductImage : Entity<Guid>, ITenantEntity
 {
     public Guid ProductId { get; private set; }
     public string Url { get; private set; } = null!;
@@ -180,11 +183,12 @@ public class ProductImage : Entity<Guid>
     {
     }
 
-    public static ProductImage Create(Guid productId, string url, string? altText, bool isPrimary)
+    public static ProductImage Create(Guid productId, Guid tenantId, string url, string? altText, bool isPrimary)
     {
         return new ProductImage
         {
             Id = Guid.NewGuid(),
+            TenantId = tenantId,
             ProductId = productId,
             Url = url,
             AltText = altText,

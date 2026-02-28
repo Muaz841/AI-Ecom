@@ -2,7 +2,7 @@ using System;
 
 namespace EcomAI.Platform.Business.Entities;
 
-public class Client : Entity<Guid>
+public class Client : Entity<Guid>, ITenantEntity
 {
     public string Name { get; private set; } = null!;
     public string BusinessName { get; private set; } = null!;
@@ -52,9 +52,12 @@ public class Client : Entity<Guid>
             throw new ArgumentException("WhatsApp Business Account ID required", nameof(whatsAppBusinessAccountId));
         }
 
+        var id = Guid.NewGuid();
+
         return new Client
         {
-            Id = Guid.NewGuid(),
+            Id = id,
+            TenantId = id,
             Name = name.Trim(),
             BusinessName = businessName.Trim(),
             MetaAccessToken = metaAccessToken,

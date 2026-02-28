@@ -57,6 +57,7 @@ public class Message : Entity<Guid>, ITenantEntity
         return new Message
         {
             Id = Guid.NewGuid(),
+            TenantId = clientId,
             ClientId = clientId,
             Platform = platform.ToLowerInvariant().Trim(),
             From = from.Trim(),

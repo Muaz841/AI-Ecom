@@ -7,6 +7,7 @@ public abstract class Entity<TId> : IEquatable<Entity<TId>>
     where TId : struct, IEquatable<TId>
 {
     public TId Id { get; protected set; }
+    public Guid? TenantId { get; protected set; }
 
     private readonly List<IDomainEvent> _domainEvents = new();
 

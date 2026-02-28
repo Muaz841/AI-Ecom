@@ -35,6 +35,7 @@ public class PlatformDbContext : DbContext
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<ProductVariant> ProductVariants { get; set; } = null!;
     public DbSet<ProductImage> ProductImages { get; set; } = null!;
+    public DbSet<AppLog> AppLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +55,7 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.BusinessName).IsRequired().HasMaxLength(200);
             entity.Property(e => e.MetaAccessToken).IsRequired();
             entity.HasIndex(e => e.Name).IsUnique(false);
+            entity.HasIndex(e => e.TenantId);
         });
 
         modelBuilder.Entity<Message>(entity =>
@@ -62,7 +64,7 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.Platform).IsRequired().HasMaxLength(50);
             entity.Property(e => e.Content).IsRequired();
             entity.Property(e => e.RawPayloadJson).HasColumnType("nvarchar(max)");
-            entity.HasIndex(e => new { e.ClientId, e.ReceivedAt });
+            entity.HasIndex(e => new { e.TenantId, e.ReceivedAt });
         });
 
         modelBuilder.Entity<Product>(entity =>
@@ -73,6 +75,34 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.Currency).HasMaxLength(3).HasDefaultValue("PKR");
             entity.HasMany(e => e.Variants).WithOne().HasForeignKey(v => v.ProductId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.Images).WithOne().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.TenantId, e.Name });
+        });
+
+        modelBuilder.Entity<ProductVariant>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PriceOverride).HasPrecision(18, 2);
+            entity.HasIndex(e => new { e.TenantId, e.ProductId });
+        });
+
+        modelBuilder.Entity<ProductImage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.ProductId });
+        });
+
+        modelBuilder.Entity<AppLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Direction).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Channel).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Operation).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Endpoint).HasMaxLength(500);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(4000);
+            entity.Property(e => e.CorrelationId).HasMaxLength(200);
+            entity.Property(e => e.RequestPayload).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ResponsePayload).HasColumnType("nvarchar(max)");
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
         });
     }
 
@@ -84,18 +114,18 @@ public class PlatformDbContext : DbContext
     private LambdaExpression BuildTenantFilterExpression(Type entityType)
     {
         var parameter = Expression.Parameter(entityType, "e");
-        var clientIdProperty = Expression.Call(
+        var tenantIdProperty = Expression.Call(
             typeof(EF),
             nameof(EF.Property),
-            new[] { typeof(Guid) },
+            new[] { typeof(Guid?) },
             parameter,
-            Expression.Constant("ClientId"));
+            Expression.Constant("TenantId"));
 
         var tenantIdNullable = Expression.Call(Expression.Constant(this), TenantAccessorMethod);
         var hasValue = Expression.Property(tenantIdNullable, nameof(Nullable<Guid>.HasValue));
-        var value = Expression.Property(tenantIdNullable, nameof(Nullable<Guid>.Value));
-        var equal = Expression.Equal(clientIdProperty, value);
-        var body = Expression.AndAlso(hasValue, equal);
+        var noTenant = Expression.Not(hasValue);
+        var equal = Expression.Equal(tenantIdProperty, tenantIdNullable);
+        var body = Expression.OrElse(noTenant, equal);
 
         return Expression.Lambda(body, parameter);
     }
