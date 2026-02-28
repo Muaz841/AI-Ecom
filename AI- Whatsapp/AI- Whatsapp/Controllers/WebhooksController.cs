@@ -88,7 +88,7 @@ public class WebhooksController : ControllerBase
 
         var client = await _clientRepository.GetByMetaIdentifiersAsync(
             metaPageId: value?.PageId,
-            whatsAppBusinessAccountId: value?.From?.BusinessAccountId);
+            whatsAppBusinessAccountId: value?.From?.BusinessAccountId ?? firstEntry.Id);
 
         if (client is null)
         {
@@ -162,6 +162,7 @@ public class MetaWebhookPayload
 
 public class MetaEntry
 {
+    public string? Id { get; set; }
     public List<MetaChange>? Changes { get; set; }
 }
 

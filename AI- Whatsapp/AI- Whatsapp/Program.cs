@@ -10,7 +10,7 @@ builder.Host.UseSerilog((ctx, lc) => lc
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c => c.EnableAnnotations());
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer();
 builder.Services.AddAuthorization();

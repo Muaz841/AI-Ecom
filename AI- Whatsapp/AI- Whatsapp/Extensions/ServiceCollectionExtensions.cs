@@ -1,4 +1,5 @@
 using System;
+using EcomAI.Platform.Business.Common.Behaviors;
 using EcomAI.Platform.Business.Commands;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
@@ -6,6 +7,7 @@ using EcomAI.Platform.Infrastructure.ExternalServices;
 using EcomAI.Platform.Infrastructure.Persistence;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using EcomAI.Platform.Infrastructure.Tenant;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -70,7 +72,12 @@ public static class ServiceCollectionExtensions
                 ShouldHandle = new PredicateBuilder().Handle<HttpRequestException>()
             });
         });
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(typeof(ProcessIncomingMessageCommand).Assembly));
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssemblies(typeof(ProcessIncomingMessageCommand).Assembly);
+            cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+        });
+        services.AddValidatorsFromAssembly(typeof(ProcessIncomingMessageCommand).Assembly);
         services.AddOptions<MetaSecrets>()
             .Configure<IConfiguration>((secrets, cfg) =>
             {

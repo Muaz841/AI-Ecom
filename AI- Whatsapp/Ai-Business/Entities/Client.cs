@@ -71,4 +71,51 @@ public class Client : Entity<Guid>
     {
         LastSyncedAt = DateTime.UtcNow;
     }
+
+    public void UpdateProfile(
+        string name,
+        string businessName,
+        string? shopifyStoreId = null,
+        string? wooCommerceStoreId = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Name required", nameof(name));
+        }
+
+        if (string.IsNullOrWhiteSpace(businessName))
+        {
+            throw new ArgumentException("Business name required", nameof(businessName));
+        }
+
+        Name = name.Trim();
+        BusinessName = businessName.Trim();
+        ShopifyStoreId = shopifyStoreId?.Trim();
+        WooCommerceStoreId = wooCommerceStoreId?.Trim();
+    }
+
+    public void UpdateMetaConfiguration(
+        string metaAccessToken,
+        string metaPageId,
+        string whatsAppBusinessAccountId)
+    {
+        if (string.IsNullOrWhiteSpace(metaAccessToken))
+        {
+            throw new ArgumentException("Meta access token required", nameof(metaAccessToken));
+        }
+
+        if (string.IsNullOrWhiteSpace(metaPageId))
+        {
+            throw new ArgumentException("Meta Page ID required", nameof(metaPageId));
+        }
+
+        if (string.IsNullOrWhiteSpace(whatsAppBusinessAccountId))
+        {
+            throw new ArgumentException("WhatsApp Business Account ID required", nameof(whatsAppBusinessAccountId));
+        }
+
+        MetaAccessToken = metaAccessToken.Trim();
+        MetaPageId = metaPageId.Trim();
+        WhatsAppBusinessAccountId = whatsAppBusinessAccountId.Trim();
+    }
 }
