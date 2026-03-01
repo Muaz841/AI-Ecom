@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
-using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 
@@ -14,12 +13,12 @@ public class PublishScheduledPostsJob
     private static readonly ActivitySource ActivitySource = new("EcomAI.BackgroundJobs.PublishScheduledPosts");
     private readonly ScheduledPostRepository _scheduledPostRepository;
     private readonly IMetaMessagingService _metaMessagingService;
-    private readonly ILogger<PublishScheduledPostsJob> _logger;
+    private readonly IApplicationLogger _logger;
 
     public PublishScheduledPostsJob(
         ScheduledPostRepository scheduledPostRepository,
         IMetaMessagingService metaMessagingService,
-        ILogger<PublishScheduledPostsJob> logger)
+        IApplicationLogger logger)
     {
         _scheduledPostRepository = scheduledPostRepository;
         _metaMessagingService = metaMessagingService;
@@ -30,12 +29,12 @@ public class PublishScheduledPostsJob
     {
         using var activity = ActivitySource.StartActivity("PublishScheduledPosts.Execute");
 
-        _logger.LogInformation("PublishScheduledPosts job started at {UtcNow}", DateTime.UtcNow);
+        _logger.Info("PublishScheduledPosts job started at {UtcNow}", DateTime.UtcNow);
 
         var readyPosts = await _scheduledPostRepository.GetReadyToPublishAsync(DateTime.UtcNow);
         if (readyPosts.Count == 0)
         {
-            _logger.LogInformation("No scheduled posts ready to publish");
+            _logger.Info("No scheduled posts ready to publish");
             return;
         }
 
@@ -64,14 +63,14 @@ public class PublishScheduledPostsJob
                     await _scheduledPostRepository.SaveChangesAsync();
                 });
 
-                _logger.LogInformation("Scheduled post {PostId} published for client {ClientId}", post.Id, post.ClientId);
+                _logger.Info("Scheduled post {PostId} published for client {ClientId}", post.Id, post.ClientId);
             }
             catch (Exception ex)
             {
                 post.MarkFailed();
                 await _scheduledPostRepository.UpdateAsync(post);
                 await _scheduledPostRepository.SaveChangesAsync();
-                _logger.LogError(ex, "Failed to publish scheduled post {PostId} for client {ClientId}", post.Id, post.ClientId);
+                _logger.Error(ex, "Failed to publish scheduled post {PostId} for client {ClientId}", post.Id, post.ClientId);
             }
         }
     }
@@ -85,7 +84,7 @@ public class PublishScheduledPostsJob
                 sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
                 onRetry: (exception, delay, attempt, _) =>
                 {
-                    _logger.LogWarning(
+                    _logger.Warning(
                         exception,
                         "Retry {Attempt} for scheduled post publish after {DelaySeconds}s",
                         attempt,

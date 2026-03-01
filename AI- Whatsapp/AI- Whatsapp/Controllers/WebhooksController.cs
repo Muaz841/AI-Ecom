@@ -9,13 +9,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Api.Extensions;
 using EcomAI.Platform.Business.Commands;
-using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using EcomAI.Platform.Infrastructure.Tenant;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace EcomAI.Platform.Api.Controllers;
@@ -27,23 +25,20 @@ public class WebhooksController : ControllerBase
     private readonly IMediator _mediator;
     private readonly ClientRepository _clientRepository;
     private readonly ICurrentTenantAccessor _tenantAccessor;
-    private readonly IRepository<AppLog> _appLogRepository;
-    private readonly ILogger<WebhooksController> _logger;
+    private readonly IApplicationLogger _appLogger;
     private readonly MetaSecrets _metaSecrets;
 
     public WebhooksController(
         IMediator mediator,
         ClientRepository clientRepository,
         ICurrentTenantAccessor tenantAccessor,
-        IRepository<AppLog> appLogRepository,
-        ILogger<WebhooksController> logger,
+        IApplicationLogger appLogger,
         IOptions<MetaSecrets> metaSecretsOptions)
     {
         _mediator = mediator;
         _clientRepository = clientRepository;
         _tenantAccessor = tenantAccessor;
-        _appLogRepository = appLogRepository;
-        _logger = logger;
+        _appLogger = appLogger;
         _metaSecrets = metaSecretsOptions.Value;
     }
 
@@ -57,11 +52,11 @@ public class WebhooksController : ControllerBase
 
         if (mode == "subscribe" && token == verifyToken)
         {
-            _logger.LogInformation("Webhook verification successful");
+            _appLogger.Info("Webhook verification successful");
             return Ok(challenge);
         }
 
-        _logger.LogWarning("Webhook verification failed");
+        _appLogger.Warning("Webhook verification failed");
         return BadRequest("Verification failed");
     }
 
@@ -73,7 +68,7 @@ public class WebhooksController : ControllerBase
 
         if (!IsValidSignature(Request.Headers["X-Hub-Signature-256"], rawBody))
         {
-            _logger.LogWarning("Webhook signature validation failed from IP {RemoteIp}", Request.HttpContext.Connection.RemoteIpAddress);
+            _appLogger.Warning("Webhook signature validation failed from IP {RemoteIp}", Request.HttpContext.Connection.RemoteIpAddress);
             await TryWriteWebhookLogAsync(
                 tenantId: null,
                 requestPayload: rawBody,
@@ -92,7 +87,7 @@ public class WebhooksController : ControllerBase
 
         if (payload?.Entry == null || !payload.Entry.Any())
         {
-            _logger.LogWarning("Invalid or empty webhook payload");
+            _appLogger.Warning("Invalid or empty webhook payload");
             await TryWriteWebhookLogAsync(
                 tenantId: null,
                 requestPayload: rawBody,
@@ -113,7 +108,7 @@ public class WebhooksController : ControllerBase
 
         if (client is null)
         {
-            _logger.LogWarning("No matching Client for webhook identifiers");
+            _appLogger.Warning("No matching Client for webhook identifiers");
             await TryWriteWebhookLogAsync(
                 tenantId: null,
                 requestPayload: rawBody,
@@ -204,7 +199,7 @@ public class WebhooksController : ControllerBase
     {
         try
         {
-            var log = AppLog.CreateIncoming(
+            await _appLogger.LogIncomingAsync(
                 tenantId: tenantId,
                 channel: "meta-webhook",
                 operation: "receive",
@@ -214,14 +209,12 @@ public class WebhooksController : ControllerBase
                 statusCode: statusCode,
                 responsePayload: responsePayload,
                 errorMessage: errorMessage,
-                correlationId: HttpContext.TraceIdentifier);
-
-            await _appLogRepository.AddAsync(log);
-            await _appLogRepository.SaveChangesAsync();
+                correlationId: HttpContext.TraceIdentifier,
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to persist inbound webhook log.");
+            _appLogger.Error(ex, "Failed to persist inbound webhook log.");
         }
     }
 }

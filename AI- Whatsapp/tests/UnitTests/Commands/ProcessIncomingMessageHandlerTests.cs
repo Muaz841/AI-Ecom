@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using EcomAI.Platform.Business.Commands;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace UnitTests.Commands;
@@ -21,7 +20,7 @@ public class ProcessIncomingMessageHandlerTests
             new FakeProductRepository(),
             new FakeAiService(shouldReplyFail: true),
             new FakeMetaMessagingService(),
-            NullLogger<ProcessIncomingMessageHandler>.Instance);
+            new FakeApplicationLogger());
 
         var result = await handler.Handle(CreateRequest(), CancellationToken.None);
 
@@ -38,7 +37,7 @@ public class ProcessIncomingMessageHandlerTests
             new FakeProductRepository(),
             new FakeAiService(),
             new FakeMetaMessagingService(shouldFail: true),
-            NullLogger<ProcessIncomingMessageHandler>.Instance);
+            new FakeApplicationLogger());
 
         var result = await handler.Handle(CreateRequest(), CancellationToken.None);
 
@@ -55,7 +54,7 @@ public class ProcessIncomingMessageHandlerTests
             new FakeProductRepository(),
             new FakeAiService(),
             new FakeMetaMessagingService(),
-            NullLogger<ProcessIncomingMessageHandler>.Instance);
+            new FakeApplicationLogger());
 
         var result = await handler.Handle(CreateRequest(), CancellationToken.None);
 
@@ -264,5 +263,44 @@ public class ProcessIncomingMessageHandlerTests
             IEnumerable<QuickReplyOption> quickReplies,
             CancellationToken cancellationToken = default)
             => Task.FromResult(new MessagingSendResult(true, Guid.NewGuid().ToString(), null, 200));
+    }
+
+    private sealed class FakeApplicationLogger : IApplicationLogger
+    {
+        public void Info(string messageTemplate, params object?[] args) { }
+
+        public void Warning(string messageTemplate, params object?[] args) { }
+
+        public void Warning(Exception exception, string messageTemplate, params object?[] args) { }
+
+        public void Error(string messageTemplate, params object?[] args) { }
+
+        public void Error(Exception exception, string messageTemplate, params object?[] args) { }
+
+        public Task LogIncomingAsync(
+            Guid? tenantId,
+            string channel,
+            string operation,
+            string? endpoint,
+            string? requestPayload,
+            bool isSuccess,
+            int? statusCode = null,
+            string? responsePayload = null,
+            string? errorMessage = null,
+            string? correlationId = null,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task LogOutgoingAsync(
+            Guid? tenantId,
+            string channel,
+            string operation,
+            string? endpoint,
+            string? requestPayload,
+            bool isSuccess,
+            int? statusCode = null,
+            string? responsePayload = null,
+            string? errorMessage = null,
+            string? correlationId = null,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

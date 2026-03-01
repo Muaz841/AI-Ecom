@@ -4,16 +4,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace EcomAI.Platform.Infrastructure.ExternalServices;
 
 public class MockAIService : IAIService
 {
-    private readonly ILogger<MockAIService> _logger;
+    private readonly IApplicationLogger _logger;
     private readonly Random _random = new(42);
 
-    public MockAIService(ILogger<MockAIService> logger)
+    public MockAIService(IApplicationLogger logger)
     {
         _logger = logger;
     }
@@ -35,7 +34,7 @@ public class MockAIService : IAIService
         var prompt = $"[MOCK] Intent for: {request.MessageContent}";
         var response = $"[MOCK] intent={intent}";
 
-        _logger.LogDebug("[MockAI] DetectIntent prompt={Prompt} response={Response}", prompt, response);
+        _logger.Info("[MockAI] DetectIntent prompt={Prompt} response={Response}", prompt, response);
 
         return Task.FromResult(new IntentDetectionResult(
             intent,
@@ -56,7 +55,7 @@ public class MockAIService : IAIService
         var reply = $"[MOCK] Thanks for your message. {firstInventoryLine}";
         var prompt = $"[MOCK] Reply for intent={request.DetectedIntent}";
 
-        _logger.LogDebug("[MockAI] GenerateReply prompt={Prompt} reply={Reply}", prompt, reply);
+        _logger.Info("[MockAI] GenerateReply prompt={Prompt} reply={Reply}", prompt, reply);
 
         return Task.FromResult(new ReplyGenerationResult(
             true,

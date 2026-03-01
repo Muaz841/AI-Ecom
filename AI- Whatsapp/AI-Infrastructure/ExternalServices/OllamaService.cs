@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace EcomAI.Platform.Infrastructure.ExternalServices;
@@ -15,12 +14,12 @@ public class OllamaService : IAIService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AISettings _settings;
-    private readonly ILogger<OllamaService> _logger;
+    private readonly IApplicationLogger _logger;
 
     public OllamaService(
         IHttpClientFactory httpClientFactory,
         IOptions<AISettings> settings,
-        ILogger<OllamaService> logger)
+        IApplicationLogger logger)
     {
         _httpClientFactory = httpClientFactory;
         _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
@@ -102,7 +101,7 @@ public class OllamaService : IAIService
     {
         if (simulateOnly)
         {
-            _logger.LogDebug("Ollama simulate-only prompt: {Prompt}", prompt);
+            _logger.Info("Ollama simulate-only prompt: {Prompt}", prompt);
             return simulatedResultFactory();
         }
 
@@ -121,7 +120,7 @@ public class OllamaService : IAIService
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Ollama request failed. Status={Status}, Body={Body}", response.StatusCode, raw);
+            _logger.Error("Ollama request failed. Status={Status}, Body={Body}", response.StatusCode, raw);
             throw new InvalidOperationException("Ollama request failed.");
         }
 
@@ -131,7 +130,7 @@ public class OllamaService : IAIService
             : string.Empty;
 
         var usage = ReadUsage(doc.RootElement, prompt, text);
-        _logger.LogDebug("Ollama prompt={Prompt} response={Response} in={Input} out={Output}", prompt, text, usage.InputTokens, usage.OutputTokens);
+        _logger.Info("Ollama prompt={Prompt} response={Response} in={Input} out={Output}", prompt, text, usage.InputTokens, usage.OutputTokens);
 
         return parse(text, usage, false);
     }

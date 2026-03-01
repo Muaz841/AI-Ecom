@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace EcomAI.Platform.Infrastructure.ExternalServices;
@@ -15,12 +14,12 @@ public class OpenAIService : IAIService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AISettings _settings;
-    private readonly ILogger<OpenAIService> _logger;
+    private readonly IApplicationLogger _logger;
 
     public OpenAIService(
         IHttpClientFactory httpClientFactory,
         IOptions<AISettings> settings,
-        ILogger<OpenAIService> logger)
+        IApplicationLogger logger)
     {
         _httpClientFactory = httpClientFactory;
         _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
@@ -166,7 +165,7 @@ public class OpenAIService : IAIService
     {
         if (simulateOnly)
         {
-            _logger.LogDebug("OpenAI simulate-only prompt: {Prompt}", prompt);
+            _logger.Info("OpenAI simulate-only prompt: {Prompt}", prompt);
             return simulatedResultFactory();
         }
 
@@ -188,7 +187,7 @@ public class OpenAIService : IAIService
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("OpenAI request failed. Status={Status}, Body={Body}", response.StatusCode, raw);
+            _logger.Error("OpenAI request failed. Status={Status}, Body={Body}", response.StatusCode, raw);
             throw new InvalidOperationException("OpenAI request failed.");
         }
 
@@ -196,7 +195,7 @@ public class OpenAIService : IAIService
         var text = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? string.Empty;
         var usage = ReadUsage(doc.RootElement);
 
-        _logger.LogDebug(
+        _logger.Info(
             "OpenAI prompt={Prompt} response={Response} inputTokens={InputTokens} outputTokens={OutputTokens}",
             prompt,
             text,

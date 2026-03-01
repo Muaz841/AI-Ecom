@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
-using Microsoft.Extensions.Logging;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 
@@ -17,7 +16,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
     private readonly IProductRepository _productRepository;
     private readonly IAIService _aiService;
     private readonly IMetaMessagingService _metaService;
-    private readonly ILogger<ProcessIncomingMessageHandler> _logger;
+    private readonly IApplicationLogger _logger;
 
     public ProcessIncomingMessageHandler(
         IMessageRepository messageRepository,
@@ -25,7 +24,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         IProductRepository productRepository,
         IAIService aiService,
         IMetaMessagingService metaService,
-        ILogger<ProcessIncomingMessageHandler> logger)
+        IApplicationLogger logger)
     {
         _messageRepository = messageRepository;
         _conversationThreadRepository = conversationThreadRepository;
@@ -38,7 +37,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
     public async Task<ProcessIncomingMessageResult> Handle(ProcessIncomingMessageCommand request, CancellationToken cancellationToken)
     {
         var provider = _aiService.GetCurrentProviderInfo();
-        _logger.LogInformation(
+        _logger.Info(
             "Processing incoming message with AI provider {Provider}/{Model} for client {ClientId} on {Platform}",
             provider.ProviderName,
             provider.ModelVersion,
@@ -89,7 +88,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         if (!replyResult.Success)
         {
-            _logger.LogWarning("AI reply generation failed for message {MessageId}: {Error}", message.Id, replyResult.ErrorMessage);
+            _logger.Warning("AI reply generation failed for message {MessageId}: {Error}", message.Id, replyResult.ErrorMessage);
             return new ProcessIncomingMessageResult(false, null, intentResult.DetectedIntent, message.Id, replyResult.ErrorMessage);
         }
 
@@ -104,7 +103,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         if (!sendResult.Success)
         {
-            _logger.LogError("Failed to send reply to {From} on {Platform}: {Error}", request.From, request.Platform, sendResult.ErrorMessage);
+            _logger.Error("Failed to send reply to {From} on {Platform}: {Error}", request.From, request.Platform, sendResult.ErrorMessage);
             return new ProcessIncomingMessageResult(false, null, intentResult.DetectedIntent, message.Id, sendResult.ErrorMessage);
         }
 

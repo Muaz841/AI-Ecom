@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace EcomAI.Platform.Infrastructure.ExternalServices;
@@ -15,12 +14,12 @@ public class GeminiService : IAIService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AISettings _settings;
-    private readonly ILogger<GeminiService> _logger;
+    private readonly IApplicationLogger _logger;
 
     public GeminiService(
         IHttpClientFactory httpClientFactory,
         IOptions<AISettings> settings,
-        ILogger<GeminiService> logger)
+        IApplicationLogger logger)
     {
         _httpClientFactory = httpClientFactory;
         _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
@@ -102,7 +101,7 @@ public class GeminiService : IAIService
     {
         if (simulateOnly)
         {
-            _logger.LogDebug("Gemini simulate-only prompt: {Prompt}", prompt);
+            _logger.Info("Gemini simulate-only prompt: {Prompt}", prompt);
             return simulatedResultFactory();
         }
 
@@ -129,7 +128,7 @@ public class GeminiService : IAIService
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Gemini request failed. Status={Status}, Body={Body}", response.StatusCode, raw);
+            _logger.Error("Gemini request failed. Status={Status}, Body={Body}", response.StatusCode, raw);
             throw new InvalidOperationException("Gemini request failed.");
         }
 
@@ -141,7 +140,7 @@ public class GeminiService : IAIService
             .GetString() ?? string.Empty;
 
         var usage = ReadUsage(doc.RootElement, prompt);
-        _logger.LogDebug("Gemini prompt={Prompt} response={Response} in={Input} out={Output}", prompt, text, usage.InputTokens, usage.OutputTokens);
+        _logger.Info("Gemini prompt={Prompt} response={Response} in={Input} out={Output}", prompt, text, usage.InputTokens, usage.OutputTokens);
 
         return parse(text, usage, false);
     }

@@ -1,7 +1,5 @@
 using EcomAI.Platform.Business.Interfaces;
-using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
-using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Registry;
 using System;
@@ -19,8 +17,7 @@ public class MetaMessagingService : IMetaMessagingService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ClientRepository _clientRepository;
-    private readonly IRepository<AppLog> _appLogRepository;
-    private readonly ILogger<MetaMessagingService> _logger;
+    private readonly IApplicationLogger _appLogger;
     private readonly ResiliencePipeline _sendPipeline;
 
     public const string MetaHttpClientName = "MetaGraphApi";
@@ -31,14 +28,12 @@ public class MetaMessagingService : IMetaMessagingService
     public MetaMessagingService(
         IHttpClientFactory httpClientFactory,
         ClientRepository clientRepository,
-        IRepository<AppLog> appLogRepository,
-        ILogger<MetaMessagingService> logger,
+        IApplicationLogger appLogger,
         ResiliencePipelineRegistry<string> pipelineRegistry)
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _clientRepository = clientRepository ?? throw new ArgumentNullException(nameof(clientRepository));
-        _appLogRepository = appLogRepository ?? throw new ArgumentNullException(nameof(appLogRepository));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _appLogger = appLogger ?? throw new ArgumentNullException(nameof(appLogger));
 
         _sendPipeline = pipelineRegistry.GetPipeline(SendPipelineKey)
             ?? throw new InvalidOperationException($"Resilience pipeline '{SendPipelineKey}' not found in registry.");
@@ -55,7 +50,7 @@ public class MetaMessagingService : IMetaMessagingService
         var clientEntity = await _clientRepository.GetByIdAsync(clientId);
         if (clientEntity == null || string.IsNullOrWhiteSpace(clientEntity.MetaAccessToken))
         {
-            _logger.LogError("Cannot send message: Client {ClientId} not found or missing token", clientId);
+            _appLogger.Error("Cannot send message: Client {ClientId} not found or missing token", clientId);
             await TryWriteOutboundLogAsync(
                 tenantId: clientId,
                 operation: "send-text",
@@ -96,7 +91,7 @@ public class MetaMessagingService : IMetaMessagingService
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<MetaSendResponse>(cancellationToken: cancellationToken);
-                _logger.LogInformation("Message sent to {Recipient} on {Platform} for client {ClientId}", recipient, platform, clientId);
+                _appLogger.Info("Message sent to {Recipient} on {Platform} for client {ClientId}", recipient, platform, clientId);
                 await TryWriteOutboundLogAsync(
                     tenantId: clientId,
                     operation: "send-text",
@@ -110,7 +105,7 @@ public class MetaMessagingService : IMetaMessagingService
             }
 
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("Meta API error {StatusCode}: {Error}", response.StatusCode, errorContent);
+            _appLogger.Error("Meta API error {StatusCode}: {Error}", response.StatusCode, errorContent);
             await TryWriteOutboundLogAsync(
                 tenantId: clientId,
                 operation: "send-text",
@@ -125,7 +120,7 @@ public class MetaMessagingService : IMetaMessagingService
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError(ex, "Exception sending message to Meta for client {ClientId}", clientId);
+            _appLogger.Error(ex, "Exception sending message to Meta for client {ClientId}", clientId);
             await TryWriteOutboundLogAsync(
                 tenantId: clientId,
                 operation: "send-text",
@@ -168,7 +163,7 @@ public class MetaMessagingService : IMetaMessagingService
         string messageId,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Mark as read requested for message {MessageId} (stub)", messageId);
+        _appLogger.Info("Mark as read requested for message {MessageId} (stub)", messageId);
         return Task.CompletedTask;
     }
 
@@ -200,7 +195,7 @@ public class MetaMessagingService : IMetaMessagingService
     {
         try
         {
-            var appLog = AppLog.CreateOutgoing(
+            await _appLogger.LogOutgoingAsync(
                 tenantId: tenantId,
                 channel: "meta-graph-api",
                 operation: operation,
@@ -211,13 +206,10 @@ public class MetaMessagingService : IMetaMessagingService
                 responsePayload: responsePayload,
                 errorMessage: errorMessage,
                 correlationId: Guid.NewGuid().ToString("N"));
-
-            await _appLogRepository.AddAsync(appLog);
-            await _appLogRepository.SaveChangesAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to persist outbound Meta API log.");
+            _appLogger.Error(ex, "Failed to persist outbound Meta API log.");
         }
     }
 }

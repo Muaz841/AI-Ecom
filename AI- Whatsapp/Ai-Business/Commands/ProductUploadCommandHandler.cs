@@ -4,18 +4,17 @@ using System.Threading.Tasks;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace EcomAI.Platform.Business.Commands;
 
 public class ProductUploadCommandHandler : IRequestHandler<ProductUploadCommand, ProductUploadResult>
 {
     private readonly IRepository<Product> _productRepository;
-    private readonly ILogger<ProductUploadCommandHandler> _logger;
+    private readonly IApplicationLogger _logger;
 
     public ProductUploadCommandHandler(
         IRepository<Product> productRepository,
-        ILogger<ProductUploadCommandHandler> logger)
+        IApplicationLogger logger)
     {
         _productRepository = productRepository;
         _logger = logger;
@@ -52,12 +51,12 @@ public class ProductUploadCommandHandler : IRequestHandler<ProductUploadCommand,
             await _productRepository.AddAsync(product);
             await _productRepository.SaveChangesAsync();
 
-            _logger.LogInformation("Product {ProductId} uploaded for client {ClientId}", product.Id, request.ClientId);
+            _logger.Info("Product {ProductId} uploaded for client {ClientId}", product.Id, request.ClientId);
             return new ProductUploadResult(true, product.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to upload product for client {ClientId}", request.ClientId);
+            _logger.Error(ex, "Failed to upload product for client {ClientId}", request.ClientId);
             return new ProductUploadResult(false, null, ex.Message);
         }
     }

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Infrastructure.Tenant;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace EcomAI.Platform.Infrastructure.Persistence;
 
@@ -18,16 +17,13 @@ public class PlatformDbContext : DbContext
         ?? throw new InvalidOperationException("Failed to resolve tenant accessor method.");
 
     private readonly ICurrentTenantAccessor _tenantAccessor;
-    private readonly ILogger<PlatformDbContext> _logger;
 
     public PlatformDbContext(
         DbContextOptions<PlatformDbContext> options,
-        ICurrentTenantAccessor tenantAccessor,
-        ILogger<PlatformDbContext> logger)
+        ICurrentTenantAccessor tenantAccessor)
         : base(options)
     {
         _tenantAccessor = tenantAccessor;
-        _logger = logger;
     }
 
     public DbSet<Client> Clients { get; set; } = null!;
@@ -181,7 +177,6 @@ public class PlatformDbContext : DbContext
             }
         }
 
-        _logger.LogDebug("Saving {Count} changes to database", ChangeTracker.Entries().Count());
         return await base.SaveChangesAsync(cancellationToken);
     }
 }

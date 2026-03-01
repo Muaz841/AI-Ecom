@@ -54,6 +54,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ScheduledPostRepository>();
         services.AddScoped<IMetaMessagingService, MetaMessagingService>();
+        services.AddScoped<IApplicationLogger, ApplicationLogger>();
         services.Configure<AISettings>(configuration.GetSection("AI"));
         services.AddSingleton<TenantEnricher>();
         services.AddScoped<MockAIService>();

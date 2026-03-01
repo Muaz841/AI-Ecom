@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace EcomAI.Platform.Infrastructure.ExternalServices;
@@ -13,19 +12,19 @@ public class AIServiceFactory : IAIService
     private readonly IServiceProvider _serviceProvider;
     private readonly MockAIService _mockService;
     private readonly AISettings _settings;
-    private readonly ILogger<AIServiceFactory> _logger;
+    private readonly IApplicationLogger _logger;
 
     public AIServiceFactory(
         IServiceProvider serviceProvider,
         IOptions<AISettings> settings,
-        ILogger<AIServiceFactory> logger)
+        IApplicationLogger logger)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _mockService = serviceProvider.GetRequiredService<MockAIService>();
 
-        _logger.LogInformation(
+        _logger.Info(
             "AI factory initialized. Active provider: {Provider} | Debug mode: {DebugMode}",
             _settings.Provider,
             _settings.DebugModeEnabled);
@@ -35,7 +34,7 @@ public class AIServiceFactory : IAIService
     {
         if (simulateOnly || _settings.DebugModeEnabled)
         {
-            _logger.LogDebug(
+            _logger.Info(
                 "AI call routed to MOCK provider (simulateOnly={SimulateOnly}, DebugMode={DebugMode})",
                 simulateOnly,
                 _settings.DebugModeEnabled);
