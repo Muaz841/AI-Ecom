@@ -1,10 +1,15 @@
 using EcomAI.Platform.Api.Extensions;
+using EcomAI.Platform.Infrastructure.BackgroundJobs;
+using EcomAI.Platform.Infrastructure.Logging;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((ctx, lc) => lc
+builder.Host.UseSerilog((ctx, services, lc) => lc
+    .Enrich.FromLogContext()
+    .Enrich.With(services.GetRequiredService<TenantEnricher>())
     .MinimumLevel.Information()
     .WriteTo.Console());
 
@@ -29,6 +34,13 @@ builder.Services.AddCoreInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 app.UseCoreMiddleware();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHangfireDashboard("/hangfire");
+}
+
+var scheduler = app.Services.GetRequiredService<HangfireJobScheduler>();
+scheduler.RegisterAllJobs();
 
 app.MapControllers();
 app.MapHealthChecks("/health");

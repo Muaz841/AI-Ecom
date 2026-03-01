@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,25 +5,45 @@ namespace EcomAI.Platform.Business.Interfaces;
 
 public interface IAIService
 {
-    Task<IntentDetectionResult> DetectIntentAsync(IntentRequest request, CancellationToken cancellationToken = default);
+    Task<IntentDetectionResult> DetectIntentAsync(
+        IntentRequest request,
+        bool simulateOnly = false,
+        CancellationToken cancellationToken = default);
 
-    Task<ReplyGenerationResult> GenerateReplyAsync(ReplyRequest request, CancellationToken cancellationToken = default);
+    Task<ReplyGenerationResult> GenerateReplyAsync(
+        ReplyRequest request,
+        bool simulateOnly = false,
+        CancellationToken cancellationToken = default);
 
-    Task<CaptionGenerationResult> GenerateCaptionAsync(CaptionRequest request, CancellationToken cancellationToken = default);
+    Task<CaptionGenerationResult> GenerateCaptionAsync(
+        CaptionRequest request,
+        bool simulateOnly = false,
+        CancellationToken cancellationToken = default);
 
-    Task<AdCopiesResult> GenerateAdCopiesAsync(AdRequest request, CancellationToken cancellationToken = default);
+    Task<AdCopiesResult> GenerateAdCopiesAsync(
+        AdRequest request,
+        bool simulateOnly = false,
+        bool estimateTokensOnly = false,
+        CancellationToken cancellationToken = default);
+
+    (string ProviderName, string ModelVersion) GetCurrentProviderInfo();
 }
 
 public record IntentRequest(
     string MessageContent,
     string InventoryContext,
-    string Platform);
+    string Platform,
+    string? CustomerLanguageHint = null);
 
 public record IntentDetectionResult(
     string DetectedIntent,
     double ConfidenceScore,
-    bool Success = true,
-    string? Error = null);
+    string RawPromptUsed,
+    string RawResponseFromModel,
+    int InputTokensUsed,
+    int OutputTokensUsed,
+    bool WasSimulated,
+    string? ErrorMessage = null);
 
 public record ReplyRequest(
     string MessageContent,
@@ -35,20 +54,32 @@ public record ReplyRequest(
 public record ReplyGenerationResult(
     bool Success,
     string? GeneratedReply,
-    string? Error = null);
+    string RawPromptUsed,
+    string RawResponseFromModel,
+    int InputTokensUsed,
+    int OutputTokensUsed,
+    bool WasModeratedAsUnsafe,
+    bool WasSimulated,
+    string? ErrorMessage = null);
 
 public record CaptionRequest(
     string ProductName,
     string ProductDescription,
     decimal Price,
     string Currency,
-    string StylePreferences);
+    string StylePreferences,
+    int MaxLength = 2200);
 
 public record CaptionGenerationResult(
     bool Success,
     string? GeneratedCaption,
-    List<string>? Hashtags,
-    string? Error = null);
+    IReadOnlyList<string>? Hashtags,
+    string RawPromptUsed,
+    string RawResponseFromModel,
+    int InputTokensUsed,
+    int OutputTokensUsed,
+    bool WasSimulated,
+    string? ErrorMessage = null);
 
 public record AdRequest(
     string ProductName,
@@ -58,5 +89,11 @@ public record AdRequest(
 
 public record AdCopiesResult(
     bool Success,
-    List<string>? Variations,
-    string? Error = null);
+    IReadOnlyList<string>? Variations,
+    string RawPromptUsed,
+    string RawResponseFromModel,
+    int InputTokensUsed,
+    int OutputTokensUsed,
+    int EstimatedTokensBeforeCall,
+    bool WasSimulated,
+    string? ErrorMessage = null);

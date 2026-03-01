@@ -37,6 +37,14 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
     public async Task<ProcessIncomingMessageResult> Handle(ProcessIncomingMessageCommand request, CancellationToken cancellationToken)
     {
+        var provider = _aiService.GetCurrentProviderInfo();
+        _logger.LogInformation(
+            "Processing incoming message with AI provider {Provider}/{Model} for client {ClientId} on {Platform}",
+            provider.ProviderName,
+            provider.ModelVersion,
+            request.ClientId,
+            request.Platform);
+
         var thread = await _conversationThreadRepository.GetOrCreateAsync(
             request.ClientId,
             request.Platform,
@@ -67,7 +75,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         var intentResult = await _aiService.DetectIntentAsync(
             new IntentRequest(request.Content, inventoryContext, request.Platform),
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         message.MarkAsHandledByAI(intentResult.DetectedIntent);
 
@@ -77,12 +85,12 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
                 intentResult.DetectedIntent,
                 inventoryContext,
                 message.Id.ToString()),
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         if (!replyResult.Success)
         {
-            _logger.LogWarning("AI reply generation failed for message {MessageId}: {Error}", message.Id, replyResult.Error);
-            return new ProcessIncomingMessageResult(false, null, intentResult.DetectedIntent, message.Id, replyResult.Error);
+            _logger.LogWarning("AI reply generation failed for message {MessageId}: {Error}", message.Id, replyResult.ErrorMessage);
+            return new ProcessIncomingMessageResult(false, null, intentResult.DetectedIntent, message.Id, replyResult.ErrorMessage);
         }
 
         var generatedReply = replyResult.GeneratedReply ?? string.Empty;

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Serilog;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -14,6 +15,7 @@ public static class ApplicationBuilderExtensions
         }
 
         app.UseHttpsRedirection();
+        app.UseSerilogRequestLogging();
         app.UseCors("AllowDevelopment");
         app.UseAuthentication();
         app.UseAuthorization();

@@ -69,7 +69,7 @@ public class Product : Entity<Guid>, ITenantEntity
         };
     }
 
-    public void AddVariant(string size, string color, int stock, decimal? priceOverride = null)
+    public void AddVariant(string size, string? color, int stock, decimal? priceOverride = null)
     {
         if (string.IsNullOrWhiteSpace(size))
         {

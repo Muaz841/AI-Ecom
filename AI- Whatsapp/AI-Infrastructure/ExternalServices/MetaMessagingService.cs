@@ -21,7 +21,7 @@ public class MetaMessagingService : IMetaMessagingService
     private readonly ClientRepository _clientRepository;
     private readonly IRepository<AppLog> _appLogRepository;
     private readonly ILogger<MetaMessagingService> _logger;
-    private readonly ResiliencePipeline<HttpResponseMessage> _sendPipeline;
+    private readonly ResiliencePipeline _sendPipeline;
 
     public const string MetaHttpClientName = "MetaGraphApi";
     public const string SendPipelineKey = "meta-send";    
@@ -40,7 +40,7 @@ public class MetaMessagingService : IMetaMessagingService
         _appLogRepository = appLogRepository ?? throw new ArgumentNullException(nameof(appLogRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        _sendPipeline = pipelineRegistry.GetPipeline<HttpResponseMessage>(SendPipelineKey)
+        _sendPipeline = pipelineRegistry.GetPipeline(SendPipelineKey)
             ?? throw new InvalidOperationException($"Resilience pipeline '{SendPipelineKey}' not found in registry.");
     }
 

@@ -36,6 +36,7 @@ public class PlatformDbContext : DbContext
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<ProductVariant> ProductVariants { get; set; } = null!;
     public DbSet<ProductImage> ProductImages { get; set; } = null!;
+    public DbSet<ScheduledPost> ScheduledPosts { get; set; } = null!;
     public DbSet<AppLog> AppLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -123,6 +124,18 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.CorrelationId).HasMaxLength(200);
             entity.Property(e => e.RequestPayload).HasColumnType("nvarchar(max)");
             entity.Property(e => e.ResponsePayload).HasColumnType("nvarchar(max)");
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
+        });
+
+        modelBuilder.Entity<ScheduledPost>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Platform).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Content).IsRequired().HasMaxLength(5000);
+            entity.Property(e => e.MediaUrl).HasMaxLength(2000);
+            entity.Property(e => e.MetaPostId).HasMaxLength(200);
+            entity.Property(e => e.Status).HasConversion<int>();
+            entity.HasIndex(e => new { e.TenantId, e.Status, e.ScheduledFor });
             entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
         });
     }

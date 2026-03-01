@@ -4,6 +4,8 @@ using EcomAI.Platform.Business.Commands;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Infrastructure.ExternalServices;
+using EcomAI.Platform.Infrastructure.BackgroundJobs;
+using EcomAI.Platform.Infrastructure.Logging;
 using EcomAI.Platform.Infrastructure.Persistence;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using EcomAI.Platform.Infrastructure.Tenant;
@@ -12,6 +14,8 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
@@ -48,8 +52,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IConversationThreadRepository, ConversationThreadRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ScheduledPostRepository>();
         services.AddScoped<IMetaMessagingService, MetaMessagingService>();
-        services.AddScoped<IAIService, StubAIService>();
+        services.Configure<AISettings>(configuration.GetSection("AI"));
+        services.AddSingleton<TenantEnricher>();
+        services.AddScoped<MockAIService>();
+        services.AddScoped<OpenAIService>();
+        services.AddScoped<GeminiService>();
+        services.AddScoped<OllamaService>();
+        services.AddScoped<IAIService, AIServiceFactory>();
         services.AddHttpClient(MetaMessagingService.MetaHttpClientName, client =>
         {
             client.BaseAddress = new Uri("https://graph.facebook.com/");
@@ -87,6 +98,20 @@ public static class ServiceCollectionExtensions
             })
             .ValidateDataAnnotations();
         services.AddSingleton<IValidateOptions<MetaSecrets>, MetaSecretsValidator>();
+
+        var defaultConnection = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+        services.AddHangfire(config => config
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSqlServerStorage(defaultConnection, new SqlServerStorageOptions()));
+        services.AddHangfireServer();
+
+        services.AddScoped<PublishScheduledPostsJob>();
+        services.AddScoped<SendFollowUpRemindersJob>();
+        services.AddSingleton<HangfireJobScheduler>();
 
         return services;
     }

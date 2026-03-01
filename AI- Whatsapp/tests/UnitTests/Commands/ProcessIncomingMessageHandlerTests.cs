@@ -152,21 +152,60 @@ public class ProcessIncomingMessageHandlerTests
             _shouldReplyFail = shouldReplyFail;
         }
 
-        public Task<IntentDetectionResult> DetectIntentAsync(IntentRequest request, CancellationToken cancellationToken = default)
-            => Task.FromResult(new IntentDetectionResult("inquiry", 0.97));
+        public Task<IntentDetectionResult> DetectIntentAsync(
+            IntentRequest request,
+            bool simulateOnly = false,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new IntentDetectionResult(
+                "inquiry",
+                0.97,
+                "prompt",
+                "{\"intent\":\"inquiry\"}",
+                10,
+                4,
+                simulateOnly));
 
-        public Task<ReplyGenerationResult> GenerateReplyAsync(ReplyRequest request, CancellationToken cancellationToken = default)
+        public Task<ReplyGenerationResult> GenerateReplyAsync(
+            ReplyRequest request,
+            bool simulateOnly = false,
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_shouldReplyFail
-                ? new ReplyGenerationResult(false, null, "ai-reply-failed")
-                : new ReplyGenerationResult(true, "Auto reply"));
+                ? new ReplyGenerationResult(false, null, "prompt", "{}", 8, 0, false, simulateOnly, "ai-reply-failed")
+                : new ReplyGenerationResult(true, "Auto reply", "prompt", "{\"reply\":\"Auto reply\"}", 8, 5, false, simulateOnly));
         }
 
-        public Task<CaptionGenerationResult> GenerateCaptionAsync(CaptionRequest request, CancellationToken cancellationToken = default)
-            => Task.FromResult(new CaptionGenerationResult(true, "caption", new List<string>()));
+        public Task<CaptionGenerationResult> GenerateCaptionAsync(
+            CaptionRequest request,
+            bool simulateOnly = false,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new CaptionGenerationResult(
+                true,
+                "caption",
+                new List<string>(),
+                "prompt",
+                "{}",
+                7,
+                4,
+                simulateOnly));
 
-        public Task<AdCopiesResult> GenerateAdCopiesAsync(AdRequest request, CancellationToken cancellationToken = default)
-            => Task.FromResult(new AdCopiesResult(true, new List<string> { "ad1" }));
+        public Task<AdCopiesResult> GenerateAdCopiesAsync(
+            AdRequest request,
+            bool simulateOnly = false,
+            bool estimateTokensOnly = false,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new AdCopiesResult(
+                true,
+                estimateTokensOnly ? Array.Empty<string>() : new List<string> { "ad1" },
+                "prompt",
+                "{}",
+                6,
+                5,
+                11,
+                simulateOnly));
+
+        public (string ProviderName, string ModelVersion) GetCurrentProviderInfo()
+            => ("FakeAI", "test-v1");
     }
 
     private sealed class FakeMetaMessagingService : IMetaMessagingService
