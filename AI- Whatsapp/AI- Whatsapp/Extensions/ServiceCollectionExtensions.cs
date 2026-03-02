@@ -10,10 +10,7 @@ using EcomAI.Platform.Infrastructure.Persistence;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using EcomAI.Platform.Infrastructure.Tenant;
 using FluentValidation;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.Extensions.Options;
@@ -68,6 +65,7 @@ public static class ServiceCollectionExtensions
             client.Timeout = TimeSpan.FromSeconds(30);
         });
         services.AddResiliencePipelineRegistry<string>();
+
         services.AddResiliencePipeline(MetaMessagingService.SendMessagePipeline, builder =>
         {
             builder.AddRetry(new RetryStrategyOptions

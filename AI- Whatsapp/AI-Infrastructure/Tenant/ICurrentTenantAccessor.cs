@@ -18,7 +18,7 @@ public class CurrentTenantAccessor : ICurrentTenantAccessor
     {
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
     }
-
+     
     public Guid? GetCurrentTenantId()
     {
         if (_overrideTenantId.HasValue)

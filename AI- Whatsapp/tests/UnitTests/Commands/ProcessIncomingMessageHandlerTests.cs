@@ -12,7 +12,7 @@ namespace UnitTests.Commands;
 public class ProcessIncomingMessageHandlerTests
 {
     [Fact]
-    public async Task Handle_Returns_Failure_When_AiReply_Generation_Fails()
+    public async Task Handle_Uses_Fallback_Reply_When_AiReply_Generation_Fails()
     {
         var handler = new ProcessIncomingMessageHandler(
             new FakeMessageRepository(),
@@ -24,8 +24,8 @@ public class ProcessIncomingMessageHandlerTests
 
         var result = await handler.Handle(CreateRequest(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        Assert.True(result.Success);
+        Assert.Equal("Thanks for your message. Our team will get back to you shortly.", result.ReplySent);
     }
 
     [Fact]
@@ -62,6 +62,24 @@ public class ProcessIncomingMessageHandlerTests
         Assert.Equal("inquiry", result.DetectedIntent);
         Assert.Equal("Auto reply", result.ReplySent);
         Assert.NotNull(result.CreatedMessageId);
+    }
+
+    [Fact]
+    public async Task Handle_Uses_Fallback_Intent_And_Reply_When_AiDetectIntent_Throws()
+    {
+        var handler = new ProcessIncomingMessageHandler(
+            new FakeMessageRepository(),
+            new FakeConversationThreadRepository(),
+            new FakeProductRepository(),
+            new FakeAiService(shouldDetectThrow: true),
+            new FakeMetaMessagingService(),
+            new FakeApplicationLogger());
+
+        var result = await handler.Handle(CreateRequest(), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal("unhandled", result.DetectedIntent);
+        Assert.Equal("Thanks for your message. Our team will get back to you shortly.", result.ReplySent);
     }
 
     private static ProcessIncomingMessageCommand CreateRequest()
@@ -145,24 +163,38 @@ public class ProcessIncomingMessageHandlerTests
     private sealed class FakeAiService : IAIService
     {
         private readonly bool _shouldReplyFail;
+        private readonly bool _shouldDetectThrow;
+        private readonly string _intent;
 
-        public FakeAiService(bool shouldReplyFail = false)
+        public FakeAiService(
+            bool shouldReplyFail = false,
+            bool shouldDetectThrow = false,
+            string intent = "inquiry")
         {
             _shouldReplyFail = shouldReplyFail;
+            _shouldDetectThrow = shouldDetectThrow;
+            _intent = intent;
         }
 
         public Task<IntentDetectionResult> DetectIntentAsync(
             IntentRequest request,
             bool simulateOnly = false,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(new IntentDetectionResult(
-                "inquiry",
+        {
+            if (_shouldDetectThrow)
+            {
+                throw new InvalidOperationException("ai-detect-failed");
+            }
+
+            return Task.FromResult(new IntentDetectionResult(
+                _intent,
                 0.97,
                 "prompt",
-                "{\"intent\":\"inquiry\"}",
+                $"{{\"intent\":\"{_intent}\"}}",
                 10,
                 4,
                 simulateOnly));
+        }
 
         public Task<ReplyGenerationResult> GenerateReplyAsync(
             ReplyRequest request,

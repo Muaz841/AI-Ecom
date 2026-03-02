@@ -11,6 +11,19 @@ namespace EcomAI.Platform.Business.Commands;
 
 public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMessageCommand, ProcessIncomingMessageResult>
 {
+    private static readonly HashSet<string> AllowedIntents = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "greeting",
+        "order_start",
+        "inquiry",
+        "complaint",
+        "unhandled"
+    };
+
+    private const int MaxAiCallsPerMessage = 2;
+    private const string FallbackIntent = "unhandled";
+    private const string FallbackReply = "Thanks for your message. Our team will get back to you shortly.";
+
     private readonly IMessageRepository _messageRepository;
     private readonly IConversationThreadRepository _conversationThreadRepository;
     private readonly IProductRepository _productRepository;
@@ -36,6 +49,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
     public async Task<ProcessIncomingMessageResult> Handle(ProcessIncomingMessageCommand request, CancellationToken cancellationToken)
     {
+        var aiCallsUsed = 0;
         var provider = _aiService.GetCurrentProviderInfo();
         _logger.Info(
             "Processing incoming message with AI provider {Provider}/{Model} for client {ClientId} on {Platform}",
@@ -72,27 +86,75 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         var inventoryContext = BuildInventoryContext(availableProducts);
 
-        var intentResult = await _aiService.DetectIntentAsync(
-            new IntentRequest(request.Content, inventoryContext, request.Platform),
-            cancellationToken: cancellationToken);
-
-        message.MarkAsHandledByAI(intentResult.DetectedIntent);
-
-        var replyResult = await _aiService.GenerateReplyAsync(
-            new ReplyRequest(
-                request.Content,
-                intentResult.DetectedIntent,
-                inventoryContext,
-                message.Id.ToString()),
-            cancellationToken: cancellationToken);
-
-        if (!replyResult.Success)
+        var detectedIntent = FallbackIntent;
+        var intentDetectedSuccessfully = false;
+        try
         {
-            _logger.Warning("AI reply generation failed for message {MessageId}: {Error}", message.Id, replyResult.ErrorMessage);
-            return new ProcessIncomingMessageResult(false, null, intentResult.DetectedIntent, message.Id, replyResult.ErrorMessage);
+            EnsureAiBudget(aiCallsUsed);
+            aiCallsUsed++;
+
+            var intentResult = await _aiService.DetectIntentAsync(
+                new IntentRequest(request.Content, inventoryContext, request.Platform),
+                cancellationToken: cancellationToken);
+
+            if (IsValidIntent(intentResult.DetectedIntent))
+            {
+                detectedIntent = intentResult.DetectedIntent;
+                intentDetectedSuccessfully = true;
+            }
+            else
+            {
+                _logger.Warning(
+                    "AI returned invalid intent for message {MessageId}. Falling back to '{FallbackIntent}'. Intent was: {Intent}",
+                    message.Id,
+                    FallbackIntent,
+                    intentResult.DetectedIntent);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Intent detection failed for message {MessageId}. Falling back to '{FallbackIntent}'", message.Id, FallbackIntent);
         }
 
-        var generatedReply = replyResult.GeneratedReply ?? string.Empty;
+        message.MarkAsHandledByAI(detectedIntent);
+
+        var generatedReply = FallbackReply;
+        if (intentDetectedSuccessfully)
+        {
+            try
+            {
+                EnsureAiBudget(aiCallsUsed);
+                aiCallsUsed++;
+
+                var replyResult = await _aiService.GenerateReplyAsync(
+                    new ReplyRequest(
+                        request.Content,
+                        detectedIntent,
+                        inventoryContext,
+                        message.Id.ToString()),
+                    cancellationToken: cancellationToken);
+
+                if (replyResult.Success && !string.IsNullOrWhiteSpace(replyResult.GeneratedReply))
+                {
+                    generatedReply = replyResult.GeneratedReply.Trim();
+                }
+                else
+                {
+                    _logger.Warning(
+                        "AI reply generation returned invalid/failed result for message {MessageId}. Using deterministic fallback reply. Error: {Error}",
+                        message.Id,
+                        replyResult.ErrorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "AI reply generation failed for message {MessageId}. Using deterministic fallback reply.", message.Id);
+            }
+        }
+        else
+        {
+            _logger.Warning("Skipping AI reply generation for message {MessageId} due to failed intent detection.", message.Id);
+        }
 
         var sendResult = await _metaService.SendTextMessageAsync(
             request.ClientId,
@@ -104,7 +166,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         if (!sendResult.Success)
         {
             _logger.Error("Failed to send reply to {From} on {Platform}: {Error}", request.From, request.Platform, sendResult.ErrorMessage);
-            return new ProcessIncomingMessageResult(false, null, intentResult.DetectedIntent, message.Id, sendResult.ErrorMessage);
+            return new ProcessIncomingMessageResult(false, null, detectedIntent, message.Id, sendResult.ErrorMessage);
         }
 
         message.MarkAsSent(DateTime.UtcNow);
@@ -123,7 +185,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         thread.TouchWithMessage("outgoing", generatedReply, DateTime.UtcNow);
         await _conversationThreadRepository.UpdateAsync(thread, cancellationToken);
 
-        if (intentResult.DetectedIntent == "order_start")
+        if (detectedIntent == "order_start")
         {
             // TODO: Dispatch CreateOrderCommand
         }
@@ -131,7 +193,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         return new ProcessIncomingMessageResult(
             true,
             generatedReply,
-            intentResult.DetectedIntent,
+            detectedIntent,
             message.Id);
     }
 
@@ -144,5 +206,16 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         return string.Join("\n", products.Take(15).Select(p =>
             $"{p.Name} - {p.BasePrice:C} ({p.Currency}) | Stock: {p.TotalStock} | Variants: {p.Variants.Count}"));
+    }
+
+    private static bool IsValidIntent(string? intent)
+        => !string.IsNullOrWhiteSpace(intent) && AllowedIntents.Contains(intent.Trim());
+
+    private static void EnsureAiBudget(int callsUsed)
+    {
+        if (callsUsed >= MaxAiCallsPerMessage)
+        {
+            throw new InvalidOperationException($"AI call budget exceeded. Max allowed per message: {MaxAiCallsPerMessage}");
+        }
     }
 }
