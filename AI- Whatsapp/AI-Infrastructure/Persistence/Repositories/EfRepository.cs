@@ -28,7 +28,9 @@ public class EfRepository<T> : IRepository<T>
 
     public virtual async Task<IReadOnlyList<T>> ListAllAsync()
     {
-        return await _dbSet.ToListAsync();
+        return await _dbSet
+            .AsNoTracking()
+            .ToListAsync();
     }
 
     public virtual async Task<IReadOnlyList<T>> ListAsync(
@@ -38,15 +40,7 @@ public class EfRepository<T> : IRepository<T>
         int pageSize = 50,
         params Expression<Func<T, object>>[] includes)
     {
-        IQueryable<T> query = _dbSet;
-
-        if (includes != null)
-        {
-            foreach (var include in includes)
-            {
-                query = query.Include(include);
-            }
-        }
+        IQueryable<T> query = ApplyIncludes(_dbSet.AsNoTracking(), includes);
 
         if (predicate != null)
         {
@@ -71,15 +65,7 @@ public class EfRepository<T> : IRepository<T>
         Expression<Func<T, bool>> predicate,
         params Expression<Func<T, object>>[] includes)
     {
-        IQueryable<T> query = _dbSet;
-
-        if (includes != null)
-        {
-            foreach (var include in includes)
-            {
-                query = query.Include(include);
-            }
-        }
+        IQueryable<T> query = ApplyIncludes(_dbSet.AsNoTracking(), includes);
 
         return await query.FirstOrDefaultAsync(predicate);
     }
@@ -125,5 +111,27 @@ public class EfRepository<T> : IRepository<T>
     public virtual async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();
+    }
+
+    private static IQueryable<T> ApplyIncludes(
+        IQueryable<T> query,
+        IReadOnlyCollection<Expression<Func<T, object>>>? includes)
+    {
+        if (includes is null || includes.Count == 0)
+        {
+            return query;
+        }
+
+        if (includes.Count > 1)
+        {
+            query = query.AsSplitQuery();
+        }
+
+        foreach (var include in includes)
+        {
+            query = query.Include(include);
+        }
+
+        return query;
     }
 }

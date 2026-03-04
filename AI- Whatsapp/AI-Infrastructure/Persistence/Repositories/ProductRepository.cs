@@ -15,9 +15,47 @@ public class ProductRepository : EfRepository<Product>, IProductRepository
     {
     }
 
+    public async Task<IReadOnlyList<ProductInventoryItem>> GetAvailableInventoryAsync(
+        Guid clientId,
+        int? maxItems = 20,
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet
+            .AsNoTracking()
+            .Where(p => p.ClientId == clientId && p.TotalStock > 0);
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchTerm = searchTerm.Trim();
+            query = query.Where(p =>
+                EF.Functions.Like(p.Name, $"%{searchTerm}%") ||
+                EF.Functions.Like(p.Sku ?? string.Empty, $"%{searchTerm}%"));
+        }
+
+        var projected = query
+            .OrderBy(p => p.Name)
+            .Select(p => new ProductInventoryItem(
+                p.Id,
+                p.Name,
+                p.BasePrice,
+                p.Currency,
+                p.TotalStock,
+                p.Sku));
+
+        if (maxItems.HasValue && maxItems.Value > 0)
+        {
+            projected = projected.Take(maxItems.Value);
+        }
+
+        var results = await projected.ToListAsync(cancellationToken);
+        return results.AsReadOnly();
+    }
+
     public async Task<Product?> GetByIdAsync(Guid clientId, Guid productId, CancellationToken cancellationToken = default)
     {
         return await _dbSet
+            .AsSplitQuery()
             .Include(p => p.Variants)
             .Include(p => p.Images)
             .FirstOrDefaultAsync(p => p.Id == productId && p.ClientId == clientId, cancellationToken);
@@ -41,6 +79,7 @@ public class ProductRepository : EfRepository<Product>, IProductRepository
         }
 
         IQueryable<Product> ordered = query
+            .AsSplitQuery()
             .Include(p => p.Variants)
             .Include(p => p.Images.Where(i => i.IsPrimary))
             .OrderBy(p => p.Name);
@@ -61,6 +100,7 @@ public class ProductRepository : EfRepository<Product>, IProductRepository
     {
         var results = await _dbSet
             .Where(p => p.ClientId == clientId && p.TotalStock <= threshold && p.TotalStock > 0)
+            .AsSplitQuery()
             .Include(p => p.Variants)
             .OrderBy(p => p.TotalStock)
             .ThenBy(p => p.Name)

@@ -17,15 +17,50 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
+using Serilog;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace EcomAI.Platform.Api.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddCoreInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddApiServices(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IWebHostEnvironment environment)
     {
-        services.AddHttpContextAccessor();
+        services.AddControllers();
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(c => c.EnableAnnotations());
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer();
+        services.AddAuthorization();
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowDevelopment", policy =>
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            });
+        });
+
+        services.AddHealthChecks();
+
+        return services;
+    }
+
+    public static IServiceCollection AddCoreInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IWebHostEnvironment environment)
+    {
+        
         services.AddScoped<ICurrentTenantAccessor, CurrentTenantAccessor>();
+        services.AddHttpContextAccessor();
 
         services.AddDbContext<PlatformDbContext>(options =>
         {
@@ -38,9 +73,10 @@ public static class ServiceCollectionExtensions
                 sqlOptions.MigrationsAssembly(typeof(PlatformDbContext).Assembly.FullName);
             });
 
-
-            options.EnableSensitiveDataLogging();
-
+            if (environment.IsDevelopment())
+            {
+                options.EnableSensitiveDataLogging();
+            }
         });
 
         services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
@@ -113,6 +149,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<HangfireJobScheduler>();
 
         return services;
+    }
+}
+
+public static class HostBuilderExtensions
+{
+    public static ConfigureHostBuilder AddStructuredLogging(this ConfigureHostBuilder host)
+    {
+        host.UseSerilog((ctx, services, lc) => lc
+            .Enrich.FromLogContext()
+            .Enrich.With(services.GetRequiredService<TenantEnricher>())
+            .MinimumLevel.Information()
+            .WriteTo.Console());
+
+        return host;
     }
 }
 

@@ -6,6 +6,7 @@ using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Infrastructure.Tenant;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace EcomAI.Platform.Infrastructure.Logging;
@@ -13,18 +14,18 @@ namespace EcomAI.Platform.Infrastructure.Logging;
 public class ApplicationLogger : IApplicationLogger
 {
     private readonly ILogger<ApplicationLogger> _logger;
-    private readonly IRepository<AppLog> _appLogRepository;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ICurrentTenantAccessor _tenantAccessor;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public ApplicationLogger(
         ILogger<ApplicationLogger> logger,
-        IRepository<AppLog> appLogRepository,
+        IServiceScopeFactory scopeFactory,
         ICurrentTenantAccessor tenantAccessor,
         IHttpContextAccessor httpContextAccessor)
     {
         _logger = logger;
-        _appLogRepository = appLogRepository;
+        _scopeFactory = scopeFactory;
         _tenantAccessor = tenantAccessor;
         _httpContextAccessor = httpContextAccessor;
     }
@@ -111,8 +112,11 @@ public class ApplicationLogger : IApplicationLogger
     {
         try
         {
-            await _appLogRepository.AddAsync(appLog);
-            await _appLogRepository.SaveChangesAsync();
+            using var scope = _scopeFactory.CreateScope();
+            var appLogRepository = scope.ServiceProvider.GetRequiredService<IRepository<AppLog>>();
+
+            await appLogRepository.AddAsync(appLog);
+            await appLogRepository.SaveChangesAsync();
         }
         catch (Exception ex)
         {

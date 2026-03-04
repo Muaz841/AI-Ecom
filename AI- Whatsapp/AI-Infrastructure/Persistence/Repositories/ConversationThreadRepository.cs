@@ -68,7 +68,7 @@ public class ConversationThreadRepository : IConversationThreadRepository
         CancellationToken cancellationToken = default)
     {
         var data = await _context.Set<ConversationThread>()
-            .Where(x => x.ClientId == clientId)
+            .Where(x => x.ClientId == clientId).AsNoTracking()
             .OrderByDescending(x => x.LastMessageAt ?? x.CreatedAt)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
@@ -80,6 +80,21 @@ public class ConversationThreadRepository : IConversationThreadRepository
     public async Task UpdateAsync(ConversationThread thread, CancellationToken cancellationToken = default)
     {
         _context.Set<ConversationThread>().Update(thread);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task SaveThreadWithMessagesAsync(
+        ConversationThread thread,
+        IReadOnlyCollection<Message> messages,
+        CancellationToken cancellationToken = default)
+    {
+        _context.Set<ConversationThread>().Update(thread);
+
+        if (messages.Count > 0)
+        {
+            _context.Set<Message>().UpdateRange(messages);
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
     }
 }

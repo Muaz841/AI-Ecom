@@ -28,4 +28,9 @@ public interface IConversationThreadRepository
         CancellationToken cancellationToken = default);
 
     Task UpdateAsync(ConversationThread thread, CancellationToken cancellationToken = default);
+
+    Task SaveThreadWithMessagesAsync(
+        ConversationThread thread,
+        IReadOnlyCollection<Message> messages,
+        CancellationToken cancellationToken = default);
 }

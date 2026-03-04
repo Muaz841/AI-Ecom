@@ -15,7 +15,6 @@ public class ProcessIncomingMessageHandlerTests
     public async Task Handle_Uses_Fallback_Reply_When_AiReply_Generation_Fails()
     {
         var handler = new ProcessIncomingMessageHandler(
-            new FakeMessageRepository(),
             new FakeConversationThreadRepository(),
             new FakeProductRepository(),
             new FakeAiService(shouldReplyFail: true),
@@ -32,7 +31,6 @@ public class ProcessIncomingMessageHandlerTests
     public async Task Handle_Returns_Failure_When_Meta_Send_Fails()
     {
         var handler = new ProcessIncomingMessageHandler(
-            new FakeMessageRepository(),
             new FakeConversationThreadRepository(),
             new FakeProductRepository(),
             new FakeAiService(),
@@ -49,7 +47,6 @@ public class ProcessIncomingMessageHandlerTests
     public async Task Handle_Returns_Success_When_Ai_And_Meta_Succeed()
     {
         var handler = new ProcessIncomingMessageHandler(
-            new FakeMessageRepository(),
             new FakeConversationThreadRepository(),
             new FakeProductRepository(),
             new FakeAiService(),
@@ -68,7 +65,6 @@ public class ProcessIncomingMessageHandlerTests
     public async Task Handle_Uses_Fallback_Intent_And_Reply_When_AiDetectIntent_Throws()
     {
         var handler = new ProcessIncomingMessageHandler(
-            new FakeMessageRepository(),
             new FakeConversationThreadRepository(),
             new FakeProductRepository(),
             new FakeAiService(shouldDetectThrow: true),
@@ -92,34 +88,6 @@ public class ProcessIncomingMessageHandlerTests
             "Do you have shirts?");
     }
 
-    private sealed class FakeMessageRepository : IMessageRepository
-    {
-        public Task AddAsync(Message message, CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task UpdateAsync(Message message, CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task<Message?> GetByIdAsync(Guid clientId, Guid messageId, CancellationToken cancellationToken = default)
-            => Task.FromResult<Message?>(null);
-
-        public Task<IReadOnlyList<Message>> GetRecentUnprocessedAsync(
-            Guid clientId,
-            int maxCount = 50,
-            TimeSpan? withinLast = null,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<Message>>(Array.Empty<Message>());
-
-        public Task<bool> ExistsAsync(Guid clientId, string externalMessageId, CancellationToken cancellationToken = default)
-            => Task.FromResult(false);
-
-        public Task<IReadOnlyList<Message>> GetByConversationThreadAsync(
-            Guid clientId,
-            Guid conversationThreadId,
-            int pageIndex = 0,
-            int pageSize = 200,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<Message>>(Array.Empty<Message>());
-    }
-
     private sealed class FakeConversationThreadRepository : IConversationThreadRepository
     {
         public Task<ConversationThread> GetOrCreateAsync(Guid clientId, string platform, string customerIdentifier, string businessIdentifier, string? customerDisplayName = null, CancellationToken cancellationToken = default)
@@ -133,10 +101,20 @@ public class ProcessIncomingMessageHandlerTests
 
         public Task UpdateAsync(ConversationThread thread, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task SaveThreadWithMessagesAsync(ConversationThread thread, IReadOnlyCollection<Message> messages, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class FakeProductRepository : IProductRepository
     {
+        public Task<IReadOnlyList<ProductInventoryItem>> GetAvailableInventoryAsync(
+            Guid clientId,
+            int? maxItems = 20,
+            string? searchTerm = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProductInventoryItem>>(Array.Empty<ProductInventoryItem>());
+
         public Task<Product?> GetByIdAsync(Guid clientId, Guid productId, CancellationToken cancellationToken = default)
             => Task.FromResult<Product?>(null);
 

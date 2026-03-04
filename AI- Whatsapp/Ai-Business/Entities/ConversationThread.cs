@@ -80,4 +80,50 @@ public class ConversationThread : Entity<Guid>, ITenantEntity
         MessageCount += 1;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public Message AddIncomingMessage(
+        string from,
+        string to,
+        string content,
+        string? rawPayloadJson = null,
+        string? externalMessageId = null,
+        string messageType = "text")
+    {
+        var message = Message.CreateIncoming(
+            clientId: ClientId,
+            platform: Platform,
+            from: from,
+            to: to,
+            content: content,
+            rawPayloadJson: rawPayloadJson,
+            conversationThreadId: Id,
+            externalMessageId: externalMessageId,
+            messageType: messageType);
+
+        TouchWithMessage("incoming", content, message.ReceivedAt);
+        return message;
+    }
+
+    public Message AddOutgoingMessage(
+        string from,
+        string to,
+        string content,
+        string? externalMessageId = null,
+        string messageType = "text",
+        string? rawPayloadJson = null)
+    {
+        var message = Message.CreateOutgoing(
+            clientId: ClientId,
+            platform: Platform,
+            from: from,
+            to: to,
+            content: content,
+            conversationThreadId: Id,
+            externalMessageId: externalMessageId,
+            messageType: messageType,
+            rawPayloadJson: rawPayloadJson);
+
+        TouchWithMessage("outgoing", content, message.ReceivedAt);
+        return message;
+    }
 }

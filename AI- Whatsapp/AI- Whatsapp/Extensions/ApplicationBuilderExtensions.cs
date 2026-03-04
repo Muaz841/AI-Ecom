@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Builder;
+using Hangfire;
+using EcomAI.Platform.Infrastructure.BackgroundJobs;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
 namespace EcomAI.Platform.Api.Extensions;
@@ -19,6 +22,29 @@ public static class ApplicationBuilderExtensions
         app.UseCors("AllowDevelopment");
         app.UseAuthentication();
         app.UseAuthorization();
+
+        return app;
+    }
+
+    public static WebApplication UseBackgroundProcessing(this WebApplication app)
+    {
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseHangfireDashboard("/hangfire");
+        }
+
+        var scheduler = app.Services.GetRequiredService<HangfireJobScheduler>();
+        scheduler.RegisterAllJobs();
+
+        return app;
+    }
+
+    public static WebApplication MapCoreEndpoints(this WebApplication app)
+    {
+        app.MapControllers();
+        app.MapHealthChecks("/health");
+        app.MapGet("/", (IWebHostEnvironment env) =>
+            env.IsDevelopment() ? Results.Redirect("/swagger") : Results.Ok("API is running"));
 
         return app;
     }

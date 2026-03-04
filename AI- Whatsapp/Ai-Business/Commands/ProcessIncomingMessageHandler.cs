@@ -24,7 +24,6 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
     private const string FallbackIntent = "unhandled";
     private const string FallbackReply = "Thanks for your message. Our team will get back to you shortly.";
 
-    private readonly IMessageRepository _messageRepository;
     private readonly IConversationThreadRepository _conversationThreadRepository;
     private readonly IProductRepository _productRepository;
     private readonly IAIService _aiService;
@@ -32,14 +31,12 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
     private readonly IApplicationLogger _logger;
 
     public ProcessIncomingMessageHandler(
-        IMessageRepository messageRepository,
         IConversationThreadRepository conversationThreadRepository,
         IProductRepository productRepository,
         IAIService aiService,
         IMetaMessagingService metaService,
         IApplicationLogger logger)
     {
-        _messageRepository = messageRepository;
         _conversationThreadRepository = conversationThreadRepository;
         _productRepository = productRepository;
         _aiService = aiService;
@@ -65,21 +62,14 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             request.To,
             cancellationToken: cancellationToken);
 
-        var message = Message.CreateIncoming(
-            request.ClientId,
-            request.Platform,
-            request.From,
-            request.To,
-            request.Content,
-            request.RawPayloadJson,
-            conversationThreadId: thread.Id,
+        var message = thread.AddIncomingMessage(
+            from: request.From,
+            to: request.To,
+            content: request.Content,
+            rawPayloadJson: request.RawPayloadJson,
             externalMessageId: request.ExternalMessageId);
 
-        await _messageRepository.AddAsync(message, cancellationToken);
-        thread.TouchWithMessage("incoming", request.Content, DateTime.UtcNow);
-        await _conversationThreadRepository.UpdateAsync(thread, cancellationToken);
-
-        var availableProducts = await _productRepository.GetAvailableProductsAsync(
+        var availableProducts = await _productRepository.GetAvailableInventoryAsync(
             request.ClientId,
             maxItems: 15,
             cancellationToken: cancellationToken);
@@ -170,20 +160,16 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         }
 
         message.MarkAsSent(DateTime.UtcNow);
-
-        await _messageRepository.UpdateAsync(message, cancellationToken);
-
-        var outgoing = Message.CreateOutgoing(
-            request.ClientId,
-            request.Platform,
-            request.To,
-            request.From,
-            generatedReply,
-            conversationThreadId: thread.Id);
+        var outgoing = thread.AddOutgoingMessage(
+            from: request.To,
+            to: request.From,
+            content: generatedReply);
         outgoing.MarkAsSent(DateTime.UtcNow);
-        await _messageRepository.AddAsync(outgoing, cancellationToken);
-        thread.TouchWithMessage("outgoing", generatedReply, DateTime.UtcNow);
-        await _conversationThreadRepository.UpdateAsync(thread, cancellationToken);
+
+        await _conversationThreadRepository.SaveThreadWithMessagesAsync(
+            thread,
+            new[] { message, outgoing },
+            cancellationToken);
 
         if (detectedIntent == "order_start")
         {
@@ -197,7 +183,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             message.Id);
     }
 
-    private static string BuildInventoryContext(IReadOnlyList<Product> products)
+    private static string BuildInventoryContext(IReadOnlyList<ProductInventoryItem> products)
     {
         if (!products.Any())
         {
@@ -205,7 +191,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         }
 
         return string.Join("\n", products.Take(15).Select(p =>
-            $"{p.Name} - {p.BasePrice:C} ({p.Currency}) | Stock: {p.TotalStock} | Variants: {p.Variants.Count}"));
+            $"{p.Name} - {p.BasePrice:C} ({p.Currency}) | Stock: {p.TotalStock}"));
     }
 
     private static bool IsValidIntent(string? intent)

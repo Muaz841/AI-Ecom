@@ -14,8 +14,8 @@ public class Product : Entity<Guid>, ITenantEntity
     public int TotalStock { get; private set; }
     public string? Sku { get; private set; }
     public string? ExternalId { get; private set; }
-    public List<ProductVariant> Variants { get; private set; } = new();
-    public List<ProductImage> Images { get; private set; } = new();
+    public virtual List<ProductVariant> Variants { get; private set; } = new();
+    public virtual List<ProductImage> Images { get; private set; } = new();
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 

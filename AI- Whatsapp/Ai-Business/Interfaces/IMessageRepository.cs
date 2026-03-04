@@ -8,10 +8,6 @@ namespace EcomAI.Platform.Business.Interfaces;
 
 public interface IMessageRepository
 {
-    Task AddAsync(Message message, CancellationToken cancellationToken = default);
-
-    Task UpdateAsync(Message message, CancellationToken cancellationToken = default);
-
     Task<Message?> GetByIdAsync(Guid clientId, Guid messageId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Message>> GetRecentUnprocessedAsync(

@@ -18,18 +18,6 @@ public class MessageRepository : IMessageRepository
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    public async Task AddAsync(Message message, CancellationToken cancellationToken = default)
-    {
-        await _context.Messages.AddAsync(message, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task UpdateAsync(Message message, CancellationToken cancellationToken = default)
-    {
-        _context.Messages.Update(message);
-        await _context.SaveChangesAsync(cancellationToken);
-    }
-
     public async Task<Message?> GetByIdAsync(Guid clientId, Guid messageId, CancellationToken cancellationToken = default)
     {
         return await _context.Messages
