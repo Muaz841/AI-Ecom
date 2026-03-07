@@ -223,7 +223,7 @@ public class OpenAIService : IAIService
         => text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static string[] ExtractHashtags(string text)
-        => text.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        => text.Split(' ', StringSplitOptions.RemoveEmptyEntries)   
             .Where(t => t.StartsWith('#'))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();

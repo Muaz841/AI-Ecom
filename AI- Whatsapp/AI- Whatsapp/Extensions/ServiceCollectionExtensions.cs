@@ -19,7 +19,11 @@ using Polly.CircuitBreaker;
 using Polly.Retry;
 using Serilog;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
+using EcomAI.Platform.Infrastructure.Security;
+using System.Text;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -34,8 +38,26 @@ public static class ServiceCollectionExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(c => c.EnableAnnotations());
 
+        services.Configure<JwtAuthSettings>(configuration.GetSection("Authentication:Jwt"));
+        var jwt = configuration.GetSection("Authentication:Jwt").Get<JwtAuthSettings>() ?? new JwtAuthSettings();
+
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer();
+            .AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = true;
+                options.SaveToken = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidateLifetime = true,
+                    ValidIssuer = jwt.Issuer,
+                    ValidAudience = jwt.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
+                    ClockSkew = TimeSpan.FromSeconds(30)
+                };
+            });
         services.AddAuthorization();
 
         services.AddCors(options =>
@@ -87,6 +109,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ScheduledPostRepository>();
         services.AddScoped<IMetaMessagingService, MetaMessagingService>();
+        services.AddScoped<IAuthService, JwtAuthService>();
+        services.AddScoped<IRbacService, RbacService>();
+        services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
         services.AddScoped<IApplicationLogger, ApplicationLogger>();
         services.Configure<AISettings>(configuration.GetSection("AI"));
         services.AddSingleton<TenantEnricher>();
@@ -133,6 +158,7 @@ public static class ServiceCollectionExtensions
             })
             .ValidateDataAnnotations();
         services.AddSingleton<IValidateOptions<MetaSecrets>, MetaSecretsValidator>();
+        services.Configure<BootstrapSettings>(configuration.GetSection("Bootstrap"));
 
         var defaultConnection = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -147,6 +173,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<PublishScheduledPostsJob>();
         services.AddScoped<SendFollowUpRemindersJob>();
         services.AddSingleton<HangfireJobScheduler>();
+        services.AddHostedService<RbacSeedHostedService>();
 
         return services;
     }

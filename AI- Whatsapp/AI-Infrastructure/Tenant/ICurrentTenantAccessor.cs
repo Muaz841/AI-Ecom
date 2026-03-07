@@ -30,7 +30,7 @@ public class CurrentTenantAccessor : ICurrentTenantAccessor
         if (httpContext?.User?.Identity?.IsAuthenticated == true)
         {
             var tenantClaim = httpContext.User.FindFirst("client_id")?.Value
-                           ?? httpContext.User.FindFirst("sub")?.Value;
+                           ?? httpContext.User.FindFirst("tenant_id")?.Value;
 
             if (Guid.TryParse(tenantClaim, out var tenantId))
             {

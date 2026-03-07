@@ -34,6 +34,13 @@ public class PlatformDbContext : DbContext
     public DbSet<ProductImage> ProductImages { get; set; } = null!;
     public DbSet<ScheduledPost> ScheduledPosts { get; set; } = null!;
     public DbSet<AppLog> AppLogs { get; set; } = null!;
+    public DbSet<UserAccount> UserAccounts { get; set; } = null!;
+    public DbSet<UserRefreshToken> UserRefreshTokens { get; set; } = null!;
+    public DbSet<UserPasswordResetToken> UserPasswordResetTokens { get; set; } = null!;
+    public DbSet<Role> Roles { get; set; } = null!;
+    public DbSet<Permission> Permissions { get; set; } = null!;
+    public DbSet<RolePermission> RolePermissions { get; set; } = null!;
+    public DbSet<UserRole> UserRoles { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -133,6 +140,73 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.Status).HasConversion<int>();
             entity.HasIndex(e => new { e.TenantId, e.Status, e.ScheduledFor });
             entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
+        });
+
+        modelBuilder.Entity<UserAccount>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(320);
+            entity.Property(e => e.NormalizedEmail).IsRequired().HasMaxLength(320);
+            entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Role).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => new { e.TenantId, e.NormalizedEmail }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.ClientId });
+            entity.HasMany(e => e.RefreshTokens).WithOne().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.PasswordResetTokens).WithOne().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.UserRoles).WithOne().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserRefreshToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.RevokedReason).HasMaxLength(500);
+            entity.HasIndex(e => new { e.TenantId, e.UserAccountId });
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+        });
+
+        modelBuilder.Entity<UserPasswordResetToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(256);
+            entity.HasIndex(e => new { e.TenantId, e.UserAccountId });
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+        });
+
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+        });
+
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+        });
+
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.RoleId, e.PermissionId }).IsUnique();
+            entity.HasOne<Role>().WithMany().HasForeignKey(e => e.RoleId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Permission>().WithMany().HasForeignKey(e => e.PermissionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserRole>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.UserAccountId, e.RoleId }).IsUnique();
+            entity.HasOne<UserAccount>().WithMany(x => x.UserRoles).HasForeignKey(e => e.UserAccountId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Role>().WithMany().HasForeignKey(e => e.RoleId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 

@@ -4,12 +4,14 @@ using System.Threading.Tasks;
 using EcomAI.Platform.Business.Clients;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace EcomAI.Platform.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/clients")]
 public class ClientsController : ControllerBase
 {

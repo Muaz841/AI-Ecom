@@ -5,12 +5,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace EcomAI.Platform.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/conversations")]
 public class ConversationsController : ControllerBase
 {
