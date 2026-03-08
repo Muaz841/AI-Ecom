@@ -25,7 +25,9 @@ public sealed class RbacSeedHostedService : IHostedService
         ("Manage Conversations", PermissionCodes.ConversationsManage, "Respond/assign/close conversations"),
         ("View Logs", PermissionCodes.LogsRead, "Read integration and application logs"),
         ("Manage AI", PermissionCodes.AiManage, "Configure AI provider and policies"),
-        ("Manage Webhooks", PermissionCodes.WebhooksManage, "Manage webhook and integration settings")
+        ("Manage Webhooks", PermissionCodes.WebhooksManage, "Manage webhook and integration settings"),
+        ("View Integrations", PermissionCodes.IntegrationsRead, "Read channel integration connection status"),
+        ("Manage Integrations", PermissionCodes.IntegrationsManage, "Connect/disconnect Meta channel integrations")
     };
 
     private readonly IServiceScopeFactory _scopeFactory;

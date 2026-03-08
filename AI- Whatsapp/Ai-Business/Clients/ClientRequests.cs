@@ -13,9 +13,9 @@ namespace EcomAI.Platform.Business.Clients;
 public record CreateClientCommand(
     string Name,
     string BusinessName,
-    string MetaAccessToken,
-    string MetaPageId,
-    string WhatsAppBusinessAccountId,
+    string? MetaAccessToken,
+    string? MetaPageId,
+    string? WhatsAppBusinessAccountId,
     string? ShopifyStoreId,
     string? WooCommerceStoreId) : IRequest<ClientDto>;
 
@@ -23,9 +23,9 @@ public record UpdateClientCommand(
     Guid Id,
     string Name,
     string BusinessName,
-    string MetaAccessToken,
-    string MetaPageId,
-    string WhatsAppBusinessAccountId,
+    string? MetaAccessToken,
+    string? MetaPageId,
+    string? WhatsAppBusinessAccountId,
     string? ShopifyStoreId,
     string? WooCommerceStoreId) : IRequest<ClientDto?>;
 
@@ -162,9 +162,8 @@ public class CreateClientCommandValidator : AbstractValidator<CreateClientComman
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.BusinessName).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.MetaAccessToken).NotEmpty();
-        RuleFor(x => x.MetaPageId).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.WhatsAppBusinessAccountId).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.MetaPageId).MaximumLength(200);
+        RuleFor(x => x.WhatsAppBusinessAccountId).MaximumLength(200);
     }
 }
 
@@ -175,9 +174,8 @@ public class UpdateClientCommandValidator : AbstractValidator<UpdateClientComman
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.BusinessName).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.MetaAccessToken).NotEmpty();
-        RuleFor(x => x.MetaPageId).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.WhatsAppBusinessAccountId).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.MetaPageId).MaximumLength(200);
+        RuleFor(x => x.WhatsAppBusinessAccountId).MaximumLength(200);
     }
 }
 

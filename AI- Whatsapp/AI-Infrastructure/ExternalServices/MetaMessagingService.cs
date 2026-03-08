@@ -1,5 +1,8 @@
 using EcomAI.Platform.Business.Interfaces;
+using EcomAI.Platform.Business.Entities;
+using EcomAI.Platform.Infrastructure.Persistence;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
+using Microsoft.EntityFrameworkCore;
 using Polly;
 using Polly.Registry;
 using System;
@@ -16,7 +19,9 @@ namespace EcomAI.Platform.Infrastructure.ExternalServices;
 public class MetaMessagingService : IMetaMessagingService
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly PlatformDbContext _dbContext;
     private readonly ClientRepository _clientRepository;
+    private readonly ITokenProtector _tokenProtector;
     private readonly IApplicationLogger _appLogger;
     private readonly ResiliencePipeline _sendPipeline;
 
@@ -27,12 +32,16 @@ public class MetaMessagingService : IMetaMessagingService
 
     public MetaMessagingService(
         IHttpClientFactory httpClientFactory,
+        PlatformDbContext dbContext,
         ClientRepository clientRepository,
+        ITokenProtector tokenProtector,
         IApplicationLogger appLogger,
         ResiliencePipelineRegistry<string> pipelineRegistry)
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _clientRepository = clientRepository ?? throw new ArgumentNullException(nameof(clientRepository));
+        _tokenProtector = tokenProtector ?? throw new ArgumentNullException(nameof(tokenProtector));
         _appLogger = appLogger ?? throw new ArgumentNullException(nameof(appLogger));
 
         _sendPipeline = pipelineRegistry.GetPipeline(SendPipelineKey)
@@ -47,8 +56,8 @@ public class MetaMessagingService : IMetaMessagingService
         string? messagingType = "RESPONSE",
         CancellationToken cancellationToken = default)
     {
-        var clientEntity = await _clientRepository.GetByIdAsync(clientId);
-        if (clientEntity == null || string.IsNullOrWhiteSpace(clientEntity.MetaAccessToken))
+        var accessToken = await ResolveAccessTokenAsync(clientId, platform, cancellationToken);
+        if (string.IsNullOrWhiteSpace(accessToken))
         {
             _appLogger.Error("Cannot send message: Client {ClientId} not found or missing token", clientId);
             await TryWriteOutboundLogAsync(
@@ -64,7 +73,7 @@ public class MetaMessagingService : IMetaMessagingService
         }
 
         var httpClient = _httpClientFactory.CreateClient(MetaHttpClientName);
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", clientEntity.MetaAccessToken);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         string endpoint = platform.ToLowerInvariant() switch
         {
@@ -132,6 +141,38 @@ public class MetaMessagingService : IMetaMessagingService
                 errorMessage: ex.Message);
             return new MessagingSendResult(false, null, ex.Message);
         }
+    }
+
+    private async Task<string?> ResolveAccessTokenAsync(Guid clientId, string platform, CancellationToken cancellationToken)
+    {
+        var normalizedChannel = platform.Trim().ToLowerInvariant() switch
+        {
+            "whatsapp" => MetaChannelTypes.WhatsApp,
+            "instagram" => MetaChannelTypes.Instagram,
+            "facebook" => MetaChannelTypes.Facebook,
+            _ => platform.Trim().ToLowerInvariant()
+        };
+
+        var connection = await _dbContext.MetaChannelConnections
+            .AsNoTracking()
+            .Where(x => x.TenantId == clientId && x.Channel == normalizedChannel && x.Status == MetaConnectionStatuses.Active)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (connection is not null)
+        {
+            try
+            {
+                return _tokenProtector.Unprotect(connection.AccessTokenCiphertext);
+            }
+            catch (Exception ex)
+            {
+                _appLogger.Error(ex, "Failed to decrypt tenant token for client {ClientId} channel {Channel}", clientId, normalizedChannel);
+            }
+        }
+
+        // Backward compatibility fallback: legacy token on Client entity.
+        var clientEntity = await _clientRepository.GetByIdAsync(clientId);
+        return clientEntity?.MetaAccessToken;
     }
 
     public Task<MessagingSendResult> SendTemplateMessageAsync(

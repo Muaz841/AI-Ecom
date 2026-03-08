@@ -175,17 +175,17 @@ public class ClientsController : ControllerBase
 public record CreateClientRequest(
     string Name,
     string BusinessName,
-    string MetaAccessToken,
-    string MetaPageId,
-    string WhatsAppBusinessAccountId,
+    string? MetaAccessToken,
+    string? MetaPageId,
+    string? WhatsAppBusinessAccountId,
     string? ShopifyStoreId,
     string? WooCommerceStoreId);
 
 public record UpdateClientRequest(
     string Name,
     string BusinessName,
-    string MetaAccessToken,
-    string MetaPageId,
-    string WhatsAppBusinessAccountId,
+    string? MetaAccessToken,
+    string? MetaPageId,
+    string? WhatsAppBusinessAccountId,
     string? ShopifyStoreId,
     string? WooCommerceStoreId);

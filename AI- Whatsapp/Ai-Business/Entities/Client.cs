@@ -6,9 +6,9 @@ public class Client : Entity<Guid>, ITenantEntity
 {
     public string Name { get; private set; } = null!;
     public string BusinessName { get; private set; } = null!;
-    public string MetaAccessToken { get; private set; } = null!;
-    public string MetaPageId { get; private set; } = null!;
-    public string WhatsAppBusinessAccountId { get; private set; } = null!;
+    public string? MetaAccessToken { get; private set; }
+    public string? MetaPageId { get; private set; }
+    public string? WhatsAppBusinessAccountId { get; private set; }
     public string? ShopifyStoreId { get; private set; }
     public string? WooCommerceStoreId { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -21,9 +21,9 @@ public class Client : Entity<Guid>, ITenantEntity
     public static Client Create(
         string name,
         string businessName,
-        string metaAccessToken,
-        string metaPageId,
-        string whatsAppBusinessAccountId,
+        string? metaAccessToken = null,
+        string? metaPageId = null,
+        string? whatsAppBusinessAccountId = null,
         string? shopifyStoreId = null,
         string? wooCommerceStoreId = null)
     {
@@ -37,21 +37,6 @@ public class Client : Entity<Guid>, ITenantEntity
             throw new ArgumentException("Business name required", nameof(businessName));
         }
 
-        if (string.IsNullOrWhiteSpace(metaAccessToken))
-        {
-            throw new ArgumentException("Meta access token required", nameof(metaAccessToken));
-        }
-
-        if (string.IsNullOrWhiteSpace(metaPageId))
-        {
-            throw new ArgumentException("Meta Page ID required", nameof(metaPageId));
-        }
-
-        if (string.IsNullOrWhiteSpace(whatsAppBusinessAccountId))
-        {
-            throw new ArgumentException("WhatsApp Business Account ID required", nameof(whatsAppBusinessAccountId));
-        }
-
         var id = Guid.NewGuid();
 
         return new Client
@@ -60,9 +45,9 @@ public class Client : Entity<Guid>, ITenantEntity
             TenantId = id,
             Name = name.Trim(),
             BusinessName = businessName.Trim(),
-            MetaAccessToken = metaAccessToken,
-            MetaPageId = metaPageId.Trim(),
-            WhatsAppBusinessAccountId = whatsAppBusinessAccountId.Trim(),
+            MetaAccessToken = string.IsNullOrWhiteSpace(metaAccessToken) ? null : metaAccessToken.Trim(),
+            MetaPageId = string.IsNullOrWhiteSpace(metaPageId) ? null : metaPageId.Trim(),
+            WhatsAppBusinessAccountId = string.IsNullOrWhiteSpace(whatsAppBusinessAccountId) ? null : whatsAppBusinessAccountId.Trim(),
             ShopifyStoreId = shopifyStoreId?.Trim(),
             WooCommerceStoreId = wooCommerceStoreId?.Trim(),
             CreatedAt = DateTime.UtcNow,
@@ -98,27 +83,12 @@ public class Client : Entity<Guid>, ITenantEntity
     }
 
     public void UpdateMetaConfiguration(
-        string metaAccessToken,
-        string metaPageId,
-        string whatsAppBusinessAccountId)
+        string? metaAccessToken,
+        string? metaPageId,
+        string? whatsAppBusinessAccountId)
     {
-        if (string.IsNullOrWhiteSpace(metaAccessToken))
-        {
-            throw new ArgumentException("Meta access token required", nameof(metaAccessToken));
-        }
-
-        if (string.IsNullOrWhiteSpace(metaPageId))
-        {
-            throw new ArgumentException("Meta Page ID required", nameof(metaPageId));
-        }
-
-        if (string.IsNullOrWhiteSpace(whatsAppBusinessAccountId))
-        {
-            throw new ArgumentException("WhatsApp Business Account ID required", nameof(whatsAppBusinessAccountId));
-        }
-
-        MetaAccessToken = metaAccessToken.Trim();
-        MetaPageId = metaPageId.Trim();
-        WhatsAppBusinessAccountId = whatsAppBusinessAccountId.Trim();
+        MetaAccessToken = string.IsNullOrWhiteSpace(metaAccessToken) ? null : metaAccessToken.Trim();
+        MetaPageId = string.IsNullOrWhiteSpace(metaPageId) ? null : metaPageId.Trim();
+        WhatsAppBusinessAccountId = string.IsNullOrWhiteSpace(whatsAppBusinessAccountId) ? null : whatsAppBusinessAccountId.Trim();
     }
 }

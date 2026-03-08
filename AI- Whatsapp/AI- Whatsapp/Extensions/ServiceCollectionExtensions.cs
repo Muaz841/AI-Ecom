@@ -122,9 +122,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMetaMessagingService, MetaMessagingService>();
         services.AddScoped<IAuthService, JwtAuthService>();
         services.AddScoped<IRbacService, RbacService>();
+        services.AddScoped<IMetaIntegrationService, MetaIntegrationService>();
+        services.AddSingleton<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
         services.AddScoped<IApplicationLogger, ApplicationLogger>();
         services.Configure<AISettings>(configuration.GetSection("AI"));
+        services.Configure<MetaOAuthSettings>(configuration.GetSection("MetaOAuth"));
         services.AddSingleton<TenantEnricher>();
         services.AddScoped<MockAIService>();
         services.AddScoped<OpenAIService>();
@@ -132,6 +135,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<OllamaService>();
         services.AddScoped<IAIService, AIServiceFactory>();
         services.AddHttpClient(MetaMessagingService.MetaHttpClientName, client =>
+        {
+            client.BaseAddress = new Uri("https://graph.facebook.com/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        services.AddHttpClient(MetaIntegrationService.MetaOAuthHttpClientName, client =>
         {
             client.BaseAddress = new Uri("https://graph.facebook.com/");
             client.Timeout = TimeSpan.FromSeconds(30);

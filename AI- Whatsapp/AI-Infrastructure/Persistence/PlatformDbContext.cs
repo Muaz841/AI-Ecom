@@ -41,6 +41,8 @@ public class PlatformDbContext : DbContext
     public DbSet<Permission> Permissions { get; set; } = null!;
     public DbSet<RolePermission> RolePermissions { get; set; } = null!;
     public DbSet<UserRole> UserRoles { get; set; } = null!;
+    public DbSet<MetaChannelConnection> MetaChannelConnections { get; set; } = null!;
+    public DbSet<MetaOAuthState> MetaOAuthStates { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -58,7 +60,8 @@ public class PlatformDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.BusinessName).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.MetaAccessToken).IsRequired();
+            entity.Property(e => e.MetaPageId).HasMaxLength(200);
+            entity.Property(e => e.WhatsAppBusinessAccountId).HasMaxLength(200);
             entity.HasIndex(e => e.Name).IsUnique(false);
             entity.HasIndex(e => e.TenantId);
         });
@@ -207,6 +210,30 @@ public class PlatformDbContext : DbContext
             entity.HasIndex(e => new { e.TenantId, e.UserAccountId, e.RoleId }).IsUnique();
             entity.HasOne<UserAccount>().WithMany(x => x.UserRoles).HasForeignKey(e => e.UserAccountId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Role>().WithMany().HasForeignKey(e => e.RoleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MetaChannelConnection>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Channel).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.ExternalBusinessId).HasMaxLength(200);
+            entity.Property(e => e.ExternalAccountId).HasMaxLength(200);
+            entity.Property(e => e.AccessTokenCiphertext).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property(e => e.RefreshTokenCiphertext).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ScopesCsv).HasMaxLength(2000);
+            entity.Property(e => e.LastError).HasMaxLength(2000);
+            entity.HasIndex(e => new { e.TenantId, e.Channel }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Status });
+        });
+
+        modelBuilder.Entity<MetaOAuthState>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Channel).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.State).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.State).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Channel, e.ExpiresAtUtc });
         });
     }
 
