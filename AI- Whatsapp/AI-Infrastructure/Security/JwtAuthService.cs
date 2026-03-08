@@ -136,6 +136,48 @@ public sealed class JwtAuthService : IAuthService
         return result;
     }
 
+    public async Task<AuthProfileResult?> GetProfileAsync(Guid clientId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        if (clientId == Guid.Empty || userId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var user = await _dbContext.UserAccounts
+            .FirstOrDefaultAsync(x => x.Id == userId && x.ClientId == clientId && x.IsActive, cancellationToken);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        var roleCodes = await (
+            from userRole in _dbContext.Set<UserRole>()
+            join role in _dbContext.Set<Role>() on userRole.RoleId equals role.Id
+            where userRole.UserAccountId == user.Id && userRole.ClientId == user.ClientId
+            select role.Code)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var permissionCodes = await (
+            from userRole in _dbContext.Set<UserRole>()
+            join rolePermission in _dbContext.Set<RolePermission>() on userRole.RoleId equals rolePermission.RoleId
+            join permission in _dbContext.Set<Permission>() on rolePermission.PermissionId equals permission.Id
+            where userRole.UserAccountId == user.Id && userRole.ClientId == user.ClientId
+            select permission.Code)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return new AuthProfileResult(
+            user.Id,
+            user.ClientId,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            roleCodes,
+            permissionCodes);
+    }
+
     public async Task LogoutAsync(LogoutRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.RefreshToken))

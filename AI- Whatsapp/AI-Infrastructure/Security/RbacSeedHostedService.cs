@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Entities;
+using EcomAI.Platform.Business.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,16 +16,16 @@ public sealed class RbacSeedHostedService : IHostedService
 {
     private static readonly (string Name, string Code, string Description)[] DefaultPermissions =
     {
-        ("Manage Users", "users.manage", "Create/update/deactivate users"),
-        ("Manage Roles", "roles.manage", "Create/update/delete roles"),
-        ("Manage Permissions", "permissions.manage", "Create/update/delete permissions and role permissions"),
-        ("Manage Clients", "clients.manage", "Manage tenant client settings"),
-        ("Manage Products", "products.manage", "Create/update/delete products"),
-        ("View Conversations", "conversations.read", "Read inbox and message timelines"),
-        ("Manage Conversations", "conversations.manage", "Respond/assign/close conversations"),
-        ("View Logs", "logs.read", "Read integration and application logs"),
-        ("Manage AI", "ai.manage", "Configure AI provider and policies"),
-        ("Manage Webhooks", "webhooks.manage", "Manage webhook and integration settings")
+        ("Manage Users", PermissionCodes.UsersManage, "Create/update/deactivate users"),
+        ("Manage Roles", PermissionCodes.RolesManage, "Create/update/delete roles"),
+        ("Manage Permissions", PermissionCodes.PermissionsManage, "Create/update/delete permissions and role permissions"),
+        ("Manage Clients", PermissionCodes.ClientsManage, "Manage tenant client settings"),
+        ("Manage Products", PermissionCodes.ProductsManage, "Create/update/delete products"),
+        ("View Conversations", PermissionCodes.ConversationsRead, "Read inbox and message timelines"),
+        ("Manage Conversations", PermissionCodes.ConversationsManage, "Respond/assign/close conversations"),
+        ("View Logs", PermissionCodes.LogsRead, "Read integration and application logs"),
+        ("Manage AI", PermissionCodes.AiManage, "Configure AI provider and policies"),
+        ("Manage Webhooks", PermissionCodes.WebhooksManage, "Manage webhook and integration settings")
     };
 
     private readonly IServiceScopeFactory _scopeFactory;

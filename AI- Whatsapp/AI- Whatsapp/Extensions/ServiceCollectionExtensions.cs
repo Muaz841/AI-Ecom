@@ -18,11 +18,14 @@ using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
 using Serilog;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
 using EcomAI.Platform.Infrastructure.Security;
+using EcomAI.Platform.Api.Security;
+using EcomAI.Platform.Business.Security;
 using System.Text;
 
 namespace EcomAI.Platform.Api.Extensions;
@@ -58,7 +61,15 @@ public static class ServiceCollectionExtensions
                     ClockSkew = TimeSpan.FromSeconds(30)
                 };
             });
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            foreach (var permission in PermissionCodes.All)
+            {
+                options.AddPolicy(permission, policy =>
+                    policy.Requirements.Add(new PermissionRequirement(permission)));
+            }
+        });
+        services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
         services.AddCors(options =>
         {

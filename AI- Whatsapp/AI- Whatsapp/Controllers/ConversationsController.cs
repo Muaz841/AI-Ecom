@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
+using EcomAI.Platform.Business.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -12,7 +13,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace EcomAI.Platform.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PermissionCodes.ConversationsRead)]
 [Route("api/conversations")]
 public class ConversationsController : ControllerBase
 {

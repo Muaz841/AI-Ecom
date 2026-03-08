@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +10,7 @@ public interface IAuthService
     Task<AuthResult> RegisterAsync(RegisterUserRequest request, CancellationToken cancellationToken = default);
     Task<AuthResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
     Task<AuthResult> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default);
+    Task<AuthProfileResult?> GetProfileAsync(Guid clientId, Guid userId, CancellationToken cancellationToken = default);
     Task LogoutAsync(LogoutRequest request, CancellationToken cancellationToken = default);
     Task RequestPasswordResetAsync(RequestPasswordResetRequest request, CancellationToken cancellationToken = default);
     Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default);
@@ -49,3 +51,12 @@ public sealed record AuthResult(
     string? Email = null,
     string? Role = null,
     string? ErrorMessage = null);
+
+public sealed record AuthProfileResult(
+    Guid UserId,
+    Guid ClientId,
+    string Email,
+    string FirstName,
+    string LastName,
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<string> Permissions);

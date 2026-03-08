@@ -1,7 +1,9 @@
 using System;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
+using EcomAI.Platform.Business.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,7 +20,7 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
-    [AllowAnonymous]
+    [Authorize(Policy = PermissionCodes.UsersManage)]
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
     {
@@ -74,6 +76,27 @@ public class AuthController : ControllerBase
         }
 
         return Ok(result);
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> Me(CancellationToken cancellationToken)
+    {
+        var clientClaim = User.FindFirstValue("client_id") ?? User.FindFirstValue("tenant_id");
+        var userClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+
+        if (!Guid.TryParse(clientClaim, out var clientId) || !Guid.TryParse(userClaim, out var userId))
+        {
+            return Unauthorized("Invalid auth claims.");
+        }
+
+        var profile = await _authService.GetProfileAsync(clientId, userId, cancellationToken);
+        if (profile is null)
+        {
+            return NotFound("User profile not found.");
+        }
+
+        return Ok(profile);
     }
 
     [Authorize]

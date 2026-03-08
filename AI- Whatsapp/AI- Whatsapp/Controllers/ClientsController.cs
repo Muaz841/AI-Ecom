@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Clients;
+using EcomAI.Platform.Business.Security;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +12,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace EcomAI.Platform.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PermissionCodes.ClientsManage)]
 [Route("api/clients")]
 public class ClientsController : ControllerBase
 {
