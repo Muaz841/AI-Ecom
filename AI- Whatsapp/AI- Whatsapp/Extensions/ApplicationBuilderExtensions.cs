@@ -3,6 +3,7 @@ using Hangfire;
 using EcomAI.Platform.Infrastructure.BackgroundJobs;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using EcomAI.Platform.Api.Middleware;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -10,9 +11,10 @@ public static class ApplicationBuilderExtensions
 {
     public static WebApplication UseCoreMiddleware(this WebApplication app)
     {
+        app.UseMiddleware<GlobalExceptionMiddleware>();
+
         if (app.Environment.IsDevelopment())
         {
-            app.UseDeveloperExceptionPage();
             app.UseSwagger();
             app.UseSwaggerUI();
         }

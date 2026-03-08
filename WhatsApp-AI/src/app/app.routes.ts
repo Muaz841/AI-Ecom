@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/auth/permission.guard';
-import { AuthPlaceholderComponent } from './features/auth/auth-placeholder.component';
+import { LoginComponent } from './features/auth/login.component';
 import { DashboardPlaceholderComponent } from './features/system/dashboard-placeholder.component';
 import { UnauthorizedComponent } from './features/system/unauthorized.component';
 
@@ -13,7 +13,7 @@ export const routes: Routes = [
   },
   {
     path: 'auth/login',
-    component: AuthPlaceholderComponent,
+    component: LoginComponent,
   },
   {
     path: 'admin/rbac',
