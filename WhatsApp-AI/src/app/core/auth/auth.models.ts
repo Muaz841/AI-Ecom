@@ -20,6 +20,7 @@ export interface UserProfile {
   userId: string;
   email: string;
   tenantId: string;
+  tenantName: string | null;
   roles: string[];
   permissions: string[];
 }

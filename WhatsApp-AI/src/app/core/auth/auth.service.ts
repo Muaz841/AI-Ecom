@@ -14,6 +14,9 @@ export class AuthService {
 
   readonly session$ = this.sessionSubject.asObservable();
   readonly isAuthenticated$ = this.session$.pipe(map((s) => !!s));
+  readonly tenantId$ = this.session$.pipe(map((s) => s?.profile.tenantId ?? null));
+  readonly tenantName$ = this.session$.pipe(map((s) => s?.profile.tenantName ?? null));
+  readonly userProfile$ = this.session$.pipe(map((s) => s?.profile ?? null));
 
   constructor(
     private readonly apiClient: ApiClientService,
@@ -109,6 +112,28 @@ export class AuthService {
     return current.profile.permissions.includes(permissionCode);
   }
 
+  hasAnyPermission(permissionCodes: string[]): boolean {
+    const current = this.sessionSubject.value;
+    if (!current) {
+      return false;
+    }
+
+    if (permissionCodes.length === 0) {
+      return true;
+    }
+
+    return permissionCodes.some((permission) => current.profile.permissions.includes(permission));
+  }
+
+  hasRole(roleCode: string): boolean {
+    const current = this.sessionSubject.value;
+    if (!current) {
+      return false;
+    }
+
+    return current.profile.roles.includes(roleCode);
+  }
+
   private setSession(session: AuthSession): void {
     this.tokenStore.setTokens(session.accessToken, session.refreshToken, session.accessTokenExpiresAtUtc);
     this.sessionSubject.next(session);
@@ -141,17 +166,24 @@ export class AuthService {
 
   private createProfileFromToken(accessToken: string): UserProfile | null {
     const payload = decodeJwtPayload(accessToken);
-    if (!payload?.sub || !payload.email || !payload.tenant_id) {
+    const userId = getClaimValue(payload, ['sub']);
+    const email = getClaimValue(payload, ['email', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress']);
+    const tenantId = getClaimValue(payload, ['tenant_id']);
+    const tenantName = getClaimValue(payload, ['tenant_name', 'tenant']);
+    if (!userId || !email || !tenantId) {
       return null;
     }
 
-    const roleClaims = normalizeClaimValues(payload.role);
-    const permissionClaims = normalizeClaimValues(payload.permission);
+    const roleClaims = normalizeClaimValues(
+      getClaimValues(payload, ['role', 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role']),
+    );
+    const permissionClaims = normalizeClaimValues(getClaimValues(payload, ['permission']));
 
     return {
-      userId: payload.sub,
-      email: payload.email,
-      tenantId: payload.tenant_id || '',
+      userId,
+      email,
+      tenantId,
+      tenantName,
       roles: roleClaims,
       permissions: permissionClaims,
     };
@@ -191,4 +223,40 @@ function normalizeClaimValues(value: string | string[] | undefined): string[] {
   }
 
   return [value];
+}
+
+function getClaimValue(payload: Record<string, unknown> | null, keys: string[]): string | null {
+  if (!payload) {
+    return null;
+  }
+
+  for (const key of keys) {
+    const raw = payload[key];
+    if (typeof raw === 'string' && raw.trim().length > 0) {
+      return raw;
+    }
+  }
+
+  return null;
+}
+
+function getClaimValues(payload: Record<string, unknown> | null, keys: string[]): string[] {
+  if (!payload) {
+    return [];
+  }
+
+  const values: string[] = [];
+  for (const key of keys) {
+    const raw = payload[key];
+    if (typeof raw === 'string' && raw.trim().length > 0) {
+      values.push(raw);
+      continue;
+    }
+
+    if (Array.isArray(raw)) {
+      values.push(...raw.filter((item): item is string => typeof item === 'string' && item.trim().length > 0));
+    }
+  }
+
+  return values;
 }

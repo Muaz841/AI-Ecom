@@ -3,7 +3,7 @@ import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { SIDEBAR_PIPELINE, SidebarModule } from '../../core/navigation/nav-pipeline';
+import { resolveVisibleSidebarModules, SIDEBAR_PIPELINE, SidebarModule } from '../../core/navigation/nav-pipeline';
 
 @Component({
   selector: 'app-shell',
@@ -28,14 +28,15 @@ export class AppShellComponent {
         return [] as SidebarModule[];
       }
 
-      const roles = session.profile.roles;
-      const permissions = session.profile.permissions;
-
-      return SIDEBAR_PIPELINE
-        .filter((module) => this.canAccessModule(module, roles, permissions))
-        .sort((a, b) => a.order - b.order);
+      return resolveVisibleSidebarModules(
+        SIDEBAR_PIPELINE,
+        session.profile.roles,
+        session.profile.permissions,
+      );
     }),
   );
+
+  readonly profile$ = this.authService.userProfile$;
 
   isSidebarCollapsed = false;
   isMobileSidebarOpen = false;
@@ -60,12 +61,5 @@ export class AppShellComponent {
   logout(): void {
     this.authService.logout();
     void this.router.navigateByUrl('/auth/login');
-  }
-
-  private canAccessModule(module: SidebarModule, roles: string[], permissions: string[]): boolean {
-    const permissionPass =
-      !module.requiredPermissions || module.requiredPermissions.every((permission) => permissions.includes(permission));
-    const rolePass = !module.requiredRoles || module.requiredRoles.some((role) => roles.includes(role));
-    return permissionPass && rolePass;
   }
 }

@@ -5,10 +5,12 @@ import { APP_CONFIG } from '../config/app-config';
 
 @Injectable({ providedIn: 'root' })
 export class ApiClientService {
+  static readonly skipGlobalErrorToastHeader = 'X-Skip-Global-Error-Toast';
+
   constructor(private readonly http: HttpClient) {}
 
-  get<T>(path: string, query?: Record<string, unknown>): Observable<T> {
-    return this.http.get<T>(this.buildUrl(path), { params: this.toParams(query) });
+  get<T>(path: string, query?: Record<string, unknown>, headers?: HttpHeaders): Observable<T> {
+    return this.http.get<T>(this.buildUrl(path), { params: this.toParams(query), headers });
   }
 
   post<T>(path: string, body: unknown, headers?: HttpHeaders): Observable<T> {
@@ -19,8 +21,8 @@ export class ApiClientService {
     return this.http.put<T>(this.buildUrl(path), body);
   }
 
-  delete<T>(path: string, query?: Record<string, unknown>): Observable<T> {
-    return this.http.delete<T>(this.buildUrl(path), { params: this.toParams(query) });
+  delete<T>(path: string, query?: Record<string, unknown>, headers?: HttpHeaders): Observable<T> {
+    return this.http.delete<T>(this.buildUrl(path), { params: this.toParams(query), headers });
   }
 
   buildUrl(path: string): string {

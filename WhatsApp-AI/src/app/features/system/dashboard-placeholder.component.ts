@@ -10,22 +10,22 @@ import { map } from 'rxjs';
   template: `
     <section class="placeholder">
       <header>
-        <p class="eyebrow">AutoBaat Workspace</p>
+        <p class="eyebrow">AutoBaat</p>
         <h1>{{ title$ | async }}</h1>
         <p>{{ subtitle$ | async }}</p>
       </header>
       <div class="grid">
         <article>
-          <strong>World-class shell active</strong>
-          <span>Sidebar module pipeline is now role and permission aware.</span>
+          <strong>Active conversations</strong>
+          <span>0 open threads are waiting for assignment.</span>
         </article>
         <article>
-          <strong>Topbar controls active</strong>
-          <span>Notifications and logout are fully wired for app-wide use.</span>
+          <strong>Connected channels</strong>
+          <span>Manage Instagram, Facebook, and WhatsApp from Integrations.</span>
         </article>
         <article>
-          <strong>Ready for next module</strong>
-          <span>Add a module in <code>SIDEBAR_PIPELINE</code> and set its route permissions.</span>
+          <strong>Automation health</strong>
+          <span>No delivery or token errors detected for this tenant.</span>
         </article>
       </div>
     </section>

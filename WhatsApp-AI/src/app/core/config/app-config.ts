@@ -11,6 +11,11 @@ export interface AuthEndpointConfig {
 export interface AppConfig {
   apiBaseUrl: string;
   auth: AuthEndpointConfig;
+  integrations: {
+    list: string;
+    start: (channel: string) => string;
+    disconnect: (connectionId: string) => string;
+  };
 }
 
 export const APP_CONFIG: AppConfig = {
@@ -23,5 +28,10 @@ export const APP_CONFIG: AppConfig = {
     forgotPassword: '/api/auth/password/forgot',
     resetPassword: '/api/auth/password/reset',
     me: '/api/auth/me',
+  },
+  integrations: {
+    list: '/api/integrations/meta',
+    start: (channel: string) => `/api/integrations/meta/${channel}/start`,
+    disconnect: (connectionId: string) => `/api/integrations/meta/${connectionId}`,
   },
 };

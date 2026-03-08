@@ -4,17 +4,95 @@ export interface SidebarModule {
   route: string;
   icon: string;
   order: number;
+  subtitle?: string;
   requiredPermissions?: string[];
   requiredRoles?: string[];
+  roleMatchMode?: 'any' | 'all';
 }
 
+export function resolveVisibleSidebarModules(
+  modules: SidebarModule[],
+  roles: string[],
+  permissions: string[],
+): SidebarModule[] {
+  return modules
+    .filter((module) => {
+      const permissionPass =
+        !module.requiredPermissions ||
+        module.requiredPermissions.every((permission) => permissions.includes(permission));
+      const rolePass =
+        !module.requiredRoles ||
+        (module.roleMatchMode === 'all'
+          ? module.requiredRoles.every((role) => roles.includes(role))
+          : module.requiredRoles.some((role) => roles.includes(role)));
+      return permissionPass && rolePass;
+    })
+    .sort((a, b) => a.order - b.order);
+}
 
 export const SIDEBAR_PIPELINE: SidebarModule[] = [
-  { id: 'dashboard', label: 'Dashboard', route: '/dashboard', icon: 'pi pi-home', order: 10 },  
-  { id: 'messaging', label: 'Messaging', route: '/messaging', icon: 'pi pi-comments', order: 20, requiredPermissions: ['conversations.read'] },
-  { id: 'content', label: 'Content AI', route: '/content', icon: 'pi pi-bolt', order: 30, requiredPermissions: ['ai.manage'] },
-  { id: 'products', label: 'Products', route: '/products', icon: 'pi pi-box', order: 40, requiredPermissions: ['products.manage'] },
-  { id: 'scheduling', label: 'Scheduling', route: '/scheduling', icon: 'pi pi-calendar', order: 50, requiredPermissions: ['products.manage'] },
-  { id: 'settings', label: 'Settings', route: '/settings', icon: 'pi pi-cog', order: 60, requiredPermissions: ['integrations.read'] },
-  { id: 'rbac', label: 'RBAC', route: '/admin/rbac', icon: 'pi pi-shield', order: 70, requiredPermissions: ['roles.manage'], requiredRoles: ['super_admin'] },
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    route: '/dashboard',
+    icon: 'pi pi-home',
+    order: 10,
+    subtitle: 'Live operational pulse of your tenant.',
+  },
+  {
+    id: 'messaging',
+    label: 'Messaging',
+    route: '/messaging',
+    icon: 'pi pi-comments',
+    order: 20,
+    requiredPermissions: ['conversations.read'],
+    subtitle: 'Unified inbox with AI-assisted handling flow.',
+  },
+  {
+    id: 'content',
+    label: 'Content AI',
+    route: '/content',
+    icon: 'pi pi-bolt',
+    order: 30,
+    requiredPermissions: ['ai.manage'],
+    subtitle: 'Generate conversion-first captions and campaign copy.',
+  },
+  {
+    id: 'products',
+    label: 'Products',
+    route: '/products',
+    icon: 'pi pi-box',
+    order: 40,
+    requiredPermissions: ['products.manage'],
+    subtitle: 'Catalog intelligence, stock visibility, and variant control.',
+  },
+  {
+    id: 'scheduling',
+    label: 'Scheduling',
+    route: '/scheduling',
+    icon: 'pi pi-calendar',
+    order: 50,
+    requiredPermissions: ['products.manage'],
+    subtitle: 'Plan and publish channel content with confidence.',
+  },
+  {
+    id: 'settings',
+    label: 'Integrations',
+    route: '/settings',
+    icon: 'pi pi-cog',
+    order: 60,
+    requiredPermissions: ['integrations.read'],
+    subtitle: 'Connect Instagram, Facebook, and WhatsApp channels.',
+  },
+  {
+    id: 'rbac',
+    label: 'RBAC',
+    route: '/admin/rbac',
+    icon: 'pi pi-shield',
+    order: 70,
+    requiredPermissions: ['roles.manage'],
+    requiredRoles: ['super_admin'],
+    roleMatchMode: 'any',
+    subtitle: 'Tenant role, permission, and assignment management.',
+  },
 ];

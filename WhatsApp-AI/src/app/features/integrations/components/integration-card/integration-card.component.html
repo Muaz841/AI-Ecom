@@ -1,0 +1,24 @@
+<p-card styleClass="h-100">
+  <ng-template pTemplate="header">
+    <div class="d-flex align-items-center justify-content-between p-3 pb-0">
+      <div class="d-flex align-items-center gap-2">
+        <span class="icon-shell">
+          <i [class]="icon"></i>
+        </span>
+        <strong>{{ title }}</strong>
+      </div>
+      <p-tag [value]="statusLabel" [severity]="statusSeverity"></p-tag>
+    </div>
+  </ng-template>
+
+  <p class="mb-3 text-muted">{{ description }}</p>
+
+  <button
+    pButton
+    type="button"
+    [label]="actionLabel"
+    [loading]="isBusy"
+    [outlined]="status === 'connected'"
+    (click)="onPrimaryAction()"
+  ></button>
+</p-card>

@@ -44,6 +44,12 @@
       </div>
 
       <div class="right">
+        @if (profile$ | async; as profile) {
+          <div class="identity">
+            <strong>{{ profile.tenantName || profile.tenantId }}</strong>
+            <span>{{ profile.email }}</span>
+          </div>
+        }
         <div class="notification-wrap">
           <button type="button" class="icon-btn" (click)="toggleNotifications()">
             <i class="pi pi-bell"></i>

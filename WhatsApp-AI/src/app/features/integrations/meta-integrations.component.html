@@ -1,0 +1,113 @@
+<section class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <p-toolbar>
+        <ng-template pTemplate="start">
+          <div class="d-flex flex-column">
+            <h2 class="m-0">Channel Integrations</h2>
+            <small class="text-muted">
+              Connect your social messaging channels to automate customer conversations.
+            </small>
+          </div>
+        </ng-template>
+        <ng-template pTemplate="end">
+          <button
+            pButton
+            type="button"
+            icon="pi pi-question-circle"
+            label="Help"
+            severity="secondary"
+            [outlined]="true"
+            pTooltip="Connect each channel using Meta OAuth. Tokens are stored tenant-wise on server."
+          ></button>
+        </ng-template>
+      </p-toolbar>
+    </div>
+  </div>
+
+  <div class="row mt-4 g-3">
+    @for (item of channels; track item.platform) {
+      <div class="col-lg-4 col-md-6 col-sm-12">
+        <app-integration-card
+          [platform]="item.platform"
+          [title]="item.title"
+          [description]="item.description"
+          [status]="statusForChannel(item.platform)"
+          [icon]="item.icon"
+          [isBusy]="isConnecting === item.platform || disconnectingConnectionId !== null"
+          (connect)="connect(item.platform)"
+          (disconnect)="disconnectChannel(item.platform)"
+        />
+      </div>
+    }
+  </div>
+
+  <div class="row mt-5">
+    <div class="col-12">
+      @if (isLoading) {
+        <div class="d-flex justify-content-center p-4">
+          <p-progressSpinner strokeWidth="5"></p-progressSpinner>
+        </div>
+      } @else if (rows.length > 0) {
+        <p-table
+          [value]="rows"
+          [paginator]="true"
+          [rows]="10"
+          responsiveLayout="scroll"
+          [rowHover]="true"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="platformLabel">Platform <p-sortIcon field="platformLabel"></p-sortIcon></th>
+              <th pSortableColumn="accountName">Account Name <p-sortIcon field="accountName"></p-sortIcon></th>
+              <th pSortableColumn="businessId">Business ID / Page ID <p-sortIcon field="businessId"></p-sortIcon></th>
+              <th pSortableColumn="statusLabel">Status <p-sortIcon field="statusLabel"></p-sortIcon></th>
+              <th pSortableColumn="connectedAtUtc">Connected Date <p-sortIcon field="connectedAtUtc"></p-sortIcon></th>
+              <th>Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr>
+              <td>{{ row.platformLabel }}</td>
+              <td>{{ row.accountName }}</td>
+              <td>{{ row.businessId }}</td>
+              <td><p-tag [value]="row.statusLabel" [severity]="row.statusTagSeverity"></p-tag></td>
+              <td>{{ row.connectedDateDisplay }}</td>
+              <td>
+                <button
+                  pButton
+                  type="button"
+                  label="Disconnect"
+                  severity="danger"
+                  [outlined]="true"
+                  [disabled]="disconnectingConnectionId !== null"
+                  (click)="disconnect(row.id)"
+                ></button>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="6" class="text-center p-4">No connected accounts yet.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </div>
+  </div>
+</section>
+
+<p-dialog
+  [(visible)]="showDisconnectDialog"
+  [modal]="true"
+  [closable]="false"
+  [draggable]="false"
+  [resizable]="false"
+  header="Confirm Disconnect"
+>
+  <p class="m-0">Are you sure you want to disconnect this channel?</p>
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cancel" severity="secondary" [outlined]="true" (click)="cancelDisconnect()"></button>
+    <button pButton type="button" label="Disconnect" severity="danger" (click)="confirmDisconnect()"></button>
+  </ng-template>
+</p-dialog>

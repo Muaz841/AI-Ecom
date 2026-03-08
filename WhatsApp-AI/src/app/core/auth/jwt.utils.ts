@@ -1,7 +1,9 @@
 export interface JwtPayload {
+  [key: string]: unknown;
   sub?: string;
   email?: string;
   tenant_id?: string;
+  tenant_name?: string;
   role?: string | string[];
   permission?: string | string[];
   exp?: number;

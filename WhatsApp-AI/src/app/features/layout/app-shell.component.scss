@@ -113,6 +113,22 @@
   gap: 0.75rem;
 }
 
+.identity {
+  display: grid;
+  gap: 0.1rem;
+  text-align: right;
+}
+
+.identity strong {
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+}
+
+.identity span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
 .search {
   width: min(560px, 52vw);
   display: flex;
@@ -274,5 +290,9 @@
 
   .search {
     width: min(56vw, 22rem);
+  }
+
+  .identity {
+    display: none;
   }
 }

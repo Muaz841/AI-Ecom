@@ -1,3 +1,5 @@
+@import 'bootstrap/dist/css/bootstrap-grid.min.css';
+@import 'bootstrap/dist/css/bootstrap-utilities.min.css';
 @import 'primeicons/primeicons.css';
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 
@@ -26,4 +28,50 @@ body {
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+.p-toast {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  left: auto;
+  width: min(24rem, calc(100vw - 2rem));
+  z-index: 1300;
+}
+
+.p-toast .p-toast-message {
+  border-radius: 0.8rem;
+  border: 1px solid var(--line);
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.96));
+  color: var(--text-primary);
+  box-shadow: 0 18px 35px rgba(2, 6, 23, 0.45);
+}
+
+.p-toast .p-toast-message-content {
+  padding: 0.75rem 0.9rem;
+}
+
+.p-toast .p-toast-summary {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.p-toast .p-toast-detail {
+  color: var(--text-secondary);
+}
+
+.p-toast .p-toast-message-success {
+  border-left: 4px solid #10b981;
+}
+
+.p-toast .p-toast-message-info {
+  border-left: 4px solid #06b6d4;
+}
+
+.p-toast .p-toast-message-warn {
+  border-left: 4px solid #f59e0b;
+}
+
+.p-toast .p-toast-message-error {
+  border-left: 4px solid #ef4444;
 }

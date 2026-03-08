@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep .p-card {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  overflow: hidden;
+  background: linear-gradient(155deg, rgba(15, 23, 42, 0.86), rgba(30, 41, 59, 0.72));
+  box-shadow: 0 18px 34px rgba(2, 6, 23, 0.22);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+:host ::ng-deep .p-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 40px rgba(2, 6, 23, 0.32);
+}
+
+:host ::ng-deep .p-card-content {
+  padding-top: 0.25rem;
+}
+
+.icon-shell {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.6rem;
+  display: inline-grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(30, 64, 175, 0.2));
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.icon-shell i {
+  font-size: 1.1rem;
+  color: #dbeafe;
+}
+
+.text-muted {
+  color: var(--text-secondary);
+}

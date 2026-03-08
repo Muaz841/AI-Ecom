@@ -11,14 +11,20 @@ import { ToastService } from '../ui/toast.service';
 
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
+  private static readonly skipToastHeader = 'X-Skip-Global-Error-Toast';
+
   constructor(private readonly toastService: ToastService) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    const skipGlobalToast = request.headers.get(ErrorInterceptor.skipToastHeader) === 'true';
+
     return next.handle(request).pipe(
       catchError((error: unknown) => {
         if (error instanceof HttpErrorResponse) {
           const message = this.extractMessage(error);
-          this.toastService.error('Request failed', message);
+          if (!skipGlobalToast) {
+            this.toastService.error('Request failed', message);
+          }
 
           const normalizedError = {
             status: error.status,
