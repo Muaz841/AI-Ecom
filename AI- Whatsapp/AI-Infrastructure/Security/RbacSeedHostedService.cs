@@ -158,7 +158,23 @@ public sealed class RbacSeedHostedService : IHostedService
             return host;
         }
 
-        return await db.Set<Client>().OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+        var existing = await db.Set<Client>().OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        // Safety fallback for first startup: always bootstrap one host client if DB is empty.
+        var fallbackHost = Client.Create(
+            name: _settings.HostClientName ?? "host-tenant",
+            businessName: _settings.HostBusinessName ?? "Host Tenant",
+            metaAccessToken: "seed-placeholder-token",
+            metaPageId: "seed-placeholder-page",
+            whatsAppBusinessAccountId: "seed-placeholder-waba");
+
+        await db.Set<Client>().AddAsync(fallbackHost, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return fallbackHost;
     }
 }
 

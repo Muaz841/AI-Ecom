@@ -1,0 +1,182 @@
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: linear-gradient(145deg, #f4f8ff 0%, #eef6f0 55%, #ffffff 100%);
+}
+
+.brand-panel {
+  padding: 4rem 3.5rem;
+  background: radial-gradient(circle at 20% 20%, #d8ebff 0%, transparent 48%),
+    radial-gradient(circle at 85% 75%, #d9f5df 0%, transparent 44%);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2a668f;
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font-size: 2rem;
+  line-height: 1.2;
+  color: #11213b;
+}
+
+.intro {
+  margin: 0 0 1.5rem;
+  color: #3c4f66;
+}
+
+ul {
+  padding-left: 1rem;
+  color: #2a425f;
+}
+
+li + li {
+  margin-top: 0.5rem;
+}
+
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3rem;
+  max-width: 34rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: #0d1e33;
+}
+
+.subtext {
+  margin: 0.5rem 0 1.5rem;
+  color: #4d5f75;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+label {
+  font-size: 0.85rem;
+  color: #253c57;
+}
+
+input {
+  border: 1px solid #c7d7ea;
+  border-radius: 10px;
+  padding: 0.8rem 0.9rem;
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: #2173ba;
+}
+
+.error {
+  color: #b3261e;
+  font-size: 0.78rem;
+  margin-bottom: 0.35rem;
+}
+
+.server-error {
+  margin: 0.35rem 0;
+  color: #b3261e;
+  font-size: 0.86rem;
+}
+
+button[type='submit'] {
+  margin-top: 0.5rem;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  background: #186bb6;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.divider {
+  margin: 1.25rem 0 1rem;
+  text-align: center;
+  color: #66798f;
+  font-size: 0.8rem;
+}
+
+.divider span {
+  position: relative;
+  padding: 0 0.75rem;
+}
+
+.divider span::before,
+.divider span::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 2.2rem;
+  height: 1px;
+  background: #d3deea;
+}
+
+.divider span::before {
+  right: 100%;
+}
+
+.divider span::after {
+  left: 100%;
+}
+
+.oauth-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.oauth-actions button {
+  border: 1px solid #c7d7ea;
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  background: #fff;
+  color: #20344d;
+  cursor: pointer;
+}
+
+.links {
+  margin-top: 1rem;
+}
+
+.links a {
+  color: #155fa3;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 960px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-panel {
+    padding: 2rem 1.25rem 1rem;
+  }
+
+  .auth-panel {
+    padding: 1.25rem;
+  }
+}
