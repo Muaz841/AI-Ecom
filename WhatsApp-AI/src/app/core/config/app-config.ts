@@ -14,7 +14,7 @@ export interface AppConfig {
 }
 
 export const APP_CONFIG: AppConfig = {
-  apiBaseUrl: 'http://localhost:5131',
+  apiBaseUrl: 'https://localhost:44372',
   auth: {
     register: '/api/auth/register',
     login: '/api/auth/login',

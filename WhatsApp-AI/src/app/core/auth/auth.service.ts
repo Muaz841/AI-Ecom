@@ -141,7 +141,7 @@ export class AuthService {
 
   private createProfileFromToken(accessToken: string): UserProfile | null {
     const payload = decodeJwtPayload(accessToken);
-    if (!payload?.sub || !payload.email || (!payload.client_id && !payload.tenant_id)) {
+    if (!payload?.sub || !payload.email || !payload.tenant_id) {
       return null;
     }
 
@@ -151,7 +151,7 @@ export class AuthService {
     return {
       userId: payload.sub,
       email: payload.email,
-      tenantId: payload.client_id || payload.tenant_id || '',
+      tenantId: payload.tenant_id || '',
       roles: roleClaims,
       permissions: permissionClaims,
     };

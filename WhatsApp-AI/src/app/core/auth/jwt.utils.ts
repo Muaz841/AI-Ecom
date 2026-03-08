@@ -1,7 +1,6 @@
 export interface JwtPayload {
   sub?: string;
   email?: string;
-  client_id?: string;
   tenant_id?: string;
   role?: string | string[];
   permission?: string | string[];

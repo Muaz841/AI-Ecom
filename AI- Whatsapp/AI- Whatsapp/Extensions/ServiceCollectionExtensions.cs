@@ -25,8 +25,10 @@ using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
 using EcomAI.Platform.Infrastructure.Security;
 using EcomAI.Platform.Api.Security;
+using EcomAI.Platform.Api.Validation;
 using EcomAI.Platform.Business.Security;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -37,7 +39,25 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
-        services.AddControllers();
+        services.AddScoped<FluentValidationActionFilter>();
+        services.AddControllers(options =>
+        {
+            options.Filters.AddService<FluentValidationActionFilter>();
+        });
+        services.Configure<ApiBehaviorOptions>(options =>
+        {
+            options.SuppressModelStateInvalidFilter = false;
+            options.InvalidModelStateResponseFactory = context =>
+            {
+                var details = new ValidationProblemDetails(context.ModelState)
+                {
+                    Title = "Validation failed",
+                    Status = StatusCodes.Status400BadRequest,
+                    Type = "https://httpstatuses.com/400"
+                };
+                return new BadRequestObjectResult(details);
+            };
+        });
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(c => c.EnableAnnotations());
 
@@ -171,6 +191,7 @@ public static class ServiceCollectionExtensions
             cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
         });
         services.AddValidatorsFromAssembly(typeof(ProcessIncomingMessageCommand).Assembly);
+        services.AddValidatorsFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
         services.AddOptions<MetaSecrets>()
             .Configure<IConfiguration>((secrets, cfg) =>
             {

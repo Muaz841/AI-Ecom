@@ -1,6 +1,6 @@
 <main class="login-page">
   <section class="brand-panel">
-    <p class="eyebrow">AI Commerce Support</p>
+    <p class="eyebrow">AutoBaat</p>
     <h1>Unified Inbox for WhatsApp, Instagram, and Facebook</h1>
     <p class="intro">
       Sign in to route customer conversations through your tenant-aware automation workspace.
@@ -17,10 +17,10 @@
     <p class="subtext">Use your tenant credentials to access the dashboard.</p>
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <label for="clientId">Tenant ID</label>
-      <input id="clientId" type="text" formControlName="clientId" placeholder="e.g. 2ce9d..." />
-      @if (form.controls.clientId.touched && form.controls.clientId.invalid) {
-        <small class="error">Tenant ID is required.</small>
+      <label for="tenantName">Tenant Name</label>
+      <input id="tenantName" type="text" formControlName="tenantName" placeholder="e.g. acme-store" />
+      @if (form.controls.tenantName.touched && form.controls.tenantName.invalid) {
+        <small class="error">Tenant name is required.</small>
       }
 
       <label for="email">Email</label>
@@ -35,10 +35,6 @@
         <small class="error">Password must be at least 8 characters.</small>
       }
 
-      @if (serverError) {
-        <p class="server-error">{{ serverError }}</p>
-      }
-
       <button type="submit" [disabled]="isSubmitting">
         {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
       </button>
@@ -46,11 +42,11 @@
 
     <div class="divider"><span>or continue with</span></div>
 
-    <div class="oauth-actions">
+    <!-- <div class="oauth-actions">
       <button type="button" (click)="continueWithGoogle()">Google</button>
       <button type="button" (click)="connectInstagram()">Connect Instagram Business</button>
       <button type="button" (click)="connectWhatsApp()">Connect WhatsApp Business</button>
-    </div>
+    </div> -->
 
     <div class="links">
       <a routerLink="/auth/login">Forgot password (coming next)</a>

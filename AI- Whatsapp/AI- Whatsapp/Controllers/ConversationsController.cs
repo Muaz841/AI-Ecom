@@ -32,22 +32,14 @@ public class ConversationsController : ControllerBase
     [SwaggerOperation(Summary = "List conversations", Description = "Returns paginated conversation threads for a tenant/client.")]
     [ProducesResponseType(typeof(IReadOnlyList<ConversationThreadDto>), 200)]
     public async Task<ActionResult<IReadOnlyList<ConversationThreadDto>>> List(
-        [FromQuery] Guid TenantId,
-        [FromQuery] int pageIndex = 0,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] ListConversationsQueryRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (TenantId == Guid.Empty)
-        {
-            return BadRequest("TenantId is required.");
-        }
-
-        if (pageIndex < 0 || pageSize <= 0 || pageSize > 200)
-        {
-            return BadRequest("Invalid paging parameters.");
-        }
-
-        var threads = await _conversationThreadRepository.ListRecentAsync(TenantId, pageIndex, pageSize, cancellationToken);
+        var threads = await _conversationThreadRepository.ListRecentAsync(
+            request.TenantId,
+            request.PageIndex,
+            request.PageSize,
+            cancellationToken);
         return Ok(threads.Select(ToDto).ToList());
     }
 
@@ -57,23 +49,21 @@ public class ConversationsController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<IReadOnlyList<ConversationMessageDto>>> GetMessages(
         Guid conversationThreadId,
-        [FromQuery] Guid TenantId,
-        [FromQuery] int pageIndex = 0,
-        [FromQuery] int pageSize = 200,
+        [FromQuery] ConversationMessagesQueryRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (TenantId == Guid.Empty)
-        {
-            return BadRequest("TenantId is required.");
-        }
-
-        var thread = await _conversationThreadRepository.GetByIdAsync(TenantId, conversationThreadId, cancellationToken);
+        var thread = await _conversationThreadRepository.GetByIdAsync(request.TenantId, conversationThreadId, cancellationToken);
         if (thread is null)
         {
             return NotFound();
         }
 
-        var messages = await _messageRepository.GetByConversationThreadAsync(TenantId, conversationThreadId, pageIndex, pageSize, cancellationToken);
+        var messages = await _messageRepository.GetByConversationThreadAsync(
+            request.TenantId,
+            conversationThreadId,
+            request.PageIndex,
+            request.PageSize,
+            cancellationToken);
         return Ok(messages.Select(ToDto).ToList());
     }
 
@@ -139,4 +129,14 @@ public record ConversationMessageDto(
     string? DeliveryStatus,
     DateTime ReceivedAt,
     DateTime? SentAt);
+
+public sealed record ListConversationsQueryRequest(
+    Guid TenantId,
+    int PageIndex = 0,
+    int PageSize = 50);
+
+public sealed record ConversationMessagesQueryRequest(
+    Guid TenantId,
+    int PageIndex = 0,
+    int PageSize = 200);
 

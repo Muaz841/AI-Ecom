@@ -1,0 +1,79 @@
+<div class="app-shell">
+  <aside class="sidebar" [class.collapsed]="isSidebarCollapsed" [class.mobile-open]="isMobileSidebarOpen">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      @if (!isSidebarCollapsed) {
+        <div class="brand-text">
+          <strong>AutoBaat</strong>
+          <span>Automation Console</span>
+        </div>
+      }
+    </div>
+
+    <nav class="nav">
+      @for (module of visibleModules$ | async; track module.id) {
+        <a
+          [routerLink]="module.route"
+          routerLinkActive="active"
+          class="nav-item"
+          [title]="module.label"
+          (click)="closeMobileSidebar()"
+        >
+          <i [class]="module.icon"></i>
+          @if (!isSidebarCollapsed) {
+            <span>{{ module.label }}</span>
+          }
+        </a>
+      }
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="left">
+        <button type="button" class="icon-btn mobile-only" (click)="toggleMobileSidebar()">
+          <i class="pi pi-bars"></i>
+        </button>
+        <button type="button" class="icon-btn desktop-only" (click)="toggleSidebar()">
+          <i class="pi" [class.pi-angle-left]="!isSidebarCollapsed" [class.pi-angle-right]="isSidebarCollapsed"></i>
+        </button>
+        <div class="search">
+          <i class="pi pi-search"></i>
+          <input type="text" placeholder="Search conversations, products, settings..." />
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="notification-wrap">
+          <button type="button" class="icon-btn" (click)="toggleNotifications()">
+            <i class="pi pi-bell"></i>
+            <span class="badge">{{ notifications.length }}</span>
+          </button>
+          @if (isNotificationPanelOpen) {
+            <section class="notification-panel">
+              <h4>Notifications</h4>
+              @for (item of notifications; track item.title) {
+                <article>
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.detail }}</p>
+                </article>
+              }
+            </section>
+          }
+        </div>
+        <button type="button" class="logout-btn" (click)="logout()">
+          <i class="pi pi-sign-out"></i>
+          Logout
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+@if (isMobileSidebarOpen) {
+  <button type="button" class="backdrop" (click)="closeMobileSidebar()"></button>
+}

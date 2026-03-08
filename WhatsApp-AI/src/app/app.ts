@@ -9,5 +9,5 @@ import { Toast } from 'primeng/toast';
   styleUrl: './app.scss'
 })
 export class App {
-  protected readonly title = signal('WhatsApp-AI');
+  protected readonly title = signal('AutoBaat');
 }

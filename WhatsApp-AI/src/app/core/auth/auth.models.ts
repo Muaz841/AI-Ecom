@@ -1,5 +1,6 @@
 export interface LoginRequest {
-  clientId: string;
+  tenantId?: string;
+  tenantName?: string;
   email: string;
   password: string;
 }
