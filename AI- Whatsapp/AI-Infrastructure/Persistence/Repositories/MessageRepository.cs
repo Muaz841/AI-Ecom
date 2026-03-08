@@ -18,20 +18,20 @@ public class MessageRepository : IMessageRepository
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    public async Task<Message?> GetByIdAsync(Guid clientId, Guid messageId, CancellationToken cancellationToken = default)
+    public async Task<Message?> GetByIdAsync(Guid TenantId, Guid messageId, CancellationToken cancellationToken = default)
     {
         return await _context.Messages
-            .FirstOrDefaultAsync(m => m.Id == messageId && m.ClientId == clientId, cancellationToken);
+            .FirstOrDefaultAsync(m => m.Id == messageId && m.TenantId == TenantId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<Message>> GetRecentUnprocessedAsync(
-        Guid clientId,
+        Guid TenantId,
         int maxCount = 50,
         TimeSpan? withinLast = null,
         CancellationToken cancellationToken = default)
     {
         var query = _context.Messages
-            .Where(m => m.ClientId == clientId && !m.IsHandledByAI);
+            .Where(m => m.TenantId == TenantId && !m.IsHandledByAI);
 
         if (withinLast.HasValue)
         {
@@ -47,25 +47,25 @@ public class MessageRepository : IMessageRepository
         return results.AsReadOnly();
     }
 
-    public async Task<bool> ExistsAsync(Guid clientId, string externalMessageId, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsAsync(Guid TenantId, string externalMessageId, CancellationToken cancellationToken = default)
     {
         return await _context.Messages
             .AnyAsync(
-                m => m.ClientId == clientId
+                m => m.TenantId == TenantId
                      && ((m.ExternalMessageId != null && m.ExternalMessageId == externalMessageId)
                          || (m.RawPayloadJson != null && EF.Functions.Like(m.RawPayloadJson, $"%\"id\":\"{externalMessageId}\"%"))),
                 cancellationToken);
     }
 
     public async Task<IReadOnlyList<Message>> GetByConversationThreadAsync(
-        Guid clientId,
+        Guid TenantId,
         Guid conversationThreadId,
         int pageIndex = 0,
         int pageSize = 200,
         CancellationToken cancellationToken = default)
     {
         var messages = await _context.Messages
-            .Where(m => m.ClientId == clientId && m.ConversationThreadId == conversationThreadId)
+            .Where(m => m.TenantId == TenantId && m.ConversationThreadId == conversationThreadId)
             .OrderBy(m => m.ReceivedAt)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
@@ -74,3 +74,4 @@ public class MessageRepository : IMessageRepository
         return messages.AsReadOnly();
     }
 }
+

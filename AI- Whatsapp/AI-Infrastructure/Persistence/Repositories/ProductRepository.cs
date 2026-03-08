@@ -16,14 +16,14 @@ public class ProductRepository : EfRepository<Product>, IProductRepository
     }
 
     public async Task<IReadOnlyList<ProductInventoryItem>> GetAvailableInventoryAsync(
-        Guid clientId,
+        Guid TenantId,
         int? maxItems = 20,
         string? searchTerm = null,
         CancellationToken cancellationToken = default)
     {
         var query = _dbSet
             .AsNoTracking()
-            .Where(p => p.ClientId == clientId && p.TotalStock > 0);
+            .Where(p => p.TenantId == TenantId && p.TotalStock > 0);
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
@@ -52,23 +52,23 @@ public class ProductRepository : EfRepository<Product>, IProductRepository
         return results.AsReadOnly();
     }
 
-    public async Task<Product?> GetByIdAsync(Guid clientId, Guid productId, CancellationToken cancellationToken = default)
+    public async Task<Product?> GetByIdAsync(Guid TenantId, Guid productId, CancellationToken cancellationToken = default)
     {
         return await _dbSet
             .AsSplitQuery()
             .Include(p => p.Variants)
             .Include(p => p.Images)
-            .FirstOrDefaultAsync(p => p.Id == productId && p.ClientId == clientId, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == productId && p.TenantId == TenantId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<Product>> GetAvailableProductsAsync(
-        Guid clientId,
+        Guid TenantId,
         int? maxItems = 20,
         string? searchTerm = null,
         CancellationToken cancellationToken = default)
     {
         var query = _dbSet
-            .Where(p => p.ClientId == clientId && p.TotalStock > 0);
+            .Where(p => p.TenantId == TenantId && p.TotalStock > 0);
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
@@ -94,12 +94,12 @@ public class ProductRepository : EfRepository<Product>, IProductRepository
     }
 
     public async Task<IReadOnlyList<Product>> GetLowStockProductsAsync(
-        Guid clientId,
+        Guid TenantId,
         int threshold = 5,
         CancellationToken cancellationToken = default)
     {
         var results = await _dbSet
-            .Where(p => p.ClientId == clientId && p.TotalStock <= threshold && p.TotalStock > 0)
+            .Where(p => p.TenantId == TenantId && p.TotalStock <= threshold && p.TotalStock > 0)
             .AsSplitQuery()
             .Include(p => p.Variants)
             .OrderBy(p => p.TotalStock)
@@ -133,14 +133,15 @@ public class ProductRepository : EfRepository<Product>, IProductRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<bool> ExistsAsync(Guid clientId, string skuOrName, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsAsync(Guid TenantId, string skuOrName, CancellationToken cancellationToken = default)
     {
         var term = skuOrName.Trim();
 
         return await _dbSet.AnyAsync(
-            p => p.ClientId == clientId &&
+            p => p.TenantId == TenantId &&
                  ((p.Sku != null && EF.Functions.Like(p.Sku, $"%{term}%")) ||
                   EF.Functions.Like(p.Name, $"%{term}%")),
             cancellationToken);
     }
 }
+

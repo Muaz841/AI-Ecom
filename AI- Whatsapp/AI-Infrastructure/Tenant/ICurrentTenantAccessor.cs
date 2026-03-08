@@ -29,8 +29,7 @@ public class CurrentTenantAccessor : ICurrentTenantAccessor
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext?.User?.Identity?.IsAuthenticated == true)
         {
-            var tenantClaim = httpContext.User.FindFirst("client_id")?.Value
-                           ?? httpContext.User.FindFirst("tenant_id")?.Value;
+            var tenantClaim = httpContext.User.FindFirst("tenant_id")?.Value;
 
             if (Guid.TryParse(tenantClaim, out var tenantId))
             {
@@ -51,3 +50,4 @@ public class CurrentTenantAccessor : ICurrentTenantAccessor
         _overrideTenantId = tenantId;
     }
 }
+

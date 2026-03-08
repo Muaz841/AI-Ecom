@@ -21,7 +21,7 @@ public class MetaMessagingService : IMetaMessagingService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly PlatformDbContext _dbContext;
-    private readonly ClientRepository _clientRepository;
+    private readonly ClientSecretsRepository _clientSecretsRepository;
     private readonly ITokenProtector _tokenProtector;
     private readonly IApplicationLogger _appLogger;
     private readonly ResiliencePipeline _sendPipeline;
@@ -35,7 +35,7 @@ public class MetaMessagingService : IMetaMessagingService
     public MetaMessagingService(
         IHttpClientFactory httpClientFactory,
         PlatformDbContext dbContext,
-        ClientRepository clientRepository,
+        ClientSecretsRepository clientSecretsRepository,
         ITokenProtector tokenProtector,
         IApplicationLogger appLogger,
         ResiliencePipelineRegistry<string> pipelineRegistry,
@@ -43,7 +43,7 @@ public class MetaMessagingService : IMetaMessagingService
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _clientRepository = clientRepository ?? throw new ArgumentNullException(nameof(clientRepository));
+        _clientSecretsRepository = clientSecretsRepository ?? throw new ArgumentNullException(nameof(clientSecretsRepository));
         _tokenProtector = tokenProtector ?? throw new ArgumentNullException(nameof(tokenProtector));
         _appLogger = appLogger ?? throw new ArgumentNullException(nameof(appLogger));
         var configuredVersion = metaOAuthSettings.Value.GraphVersion?.Trim();
@@ -54,27 +54,27 @@ public class MetaMessagingService : IMetaMessagingService
     }
 
     public async Task<MessagingSendResult> SendTextMessageAsync(
-        Guid clientId,
+        Guid tenantId,
         string platform,
         string recipient,
         string messageText,
         string? messagingType = "RESPONSE",
         CancellationToken cancellationToken = default)
     {
-        var accessToken = await ResolveAccessTokenAsync(clientId, platform, cancellationToken);
+        var accessToken = await ResolveAccessTokenAsync(tenantId, platform, cancellationToken);
         if (string.IsNullOrWhiteSpace(accessToken))
         {
-            _appLogger.Error("Cannot send message: Client {ClientId} not found or missing token", clientId);
+            _appLogger.Error("Cannot send message: Tenant {TenantId} not found or missing token", tenantId);
             await TryWriteOutboundLogAsync(
-                tenantId: clientId,
+                tenantId: tenantId,
                 operation: "send-text",
                 endpoint: null,
                 requestPayload: messageText,
                 isSuccess: false,
                 statusCode: 400,
                 responsePayload: null,
-                errorMessage: "Client configuration missing.");
-            return new MessagingSendResult(false, null, "Client configuration missing", 400);
+                errorMessage: "Tenant configuration missing.");
+            return new MessagingSendResult(false, null, "Tenant configuration missing", 400);
         }
 
         var httpClient = _httpClientFactory.CreateClient(MetaHttpClientName);
@@ -105,9 +105,9 @@ public class MetaMessagingService : IMetaMessagingService
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<MetaSendResponse>(cancellationToken: cancellationToken);
-                _appLogger.Info("Message sent to {Recipient} on {Platform} for client {ClientId}", recipient, platform, clientId);
+                _appLogger.Info("Message sent to {Recipient} on {Platform} for tenant {TenantId}", recipient, platform, tenantId);
                 await TryWriteOutboundLogAsync(
-                    tenantId: clientId,
+                    tenantId: tenantId,
                     operation: "send-text",
                     endpoint: endpoint,
                     requestPayload: requestPayload,
@@ -119,9 +119,9 @@ public class MetaMessagingService : IMetaMessagingService
             }
 
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            _appLogger.Error("Meta API error {StatusCode}: {Error}", response.StatusCode, errorContent);
-            await TryWriteOutboundLogAsync(
-                tenantId: clientId,
+                _appLogger.Error("Meta API error {StatusCode}: {Error}", response.StatusCode, errorContent);
+                await TryWriteOutboundLogAsync(
+                tenantId: tenantId,
                 operation: "send-text",
                 endpoint: endpoint,
                 requestPayload: requestPayload,
@@ -134,9 +134,9 @@ public class MetaMessagingService : IMetaMessagingService
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _appLogger.Error(ex, "Exception sending message to Meta for client {ClientId}", clientId);
+            _appLogger.Error(ex, "Exception sending message to Meta for tenant {TenantId}", tenantId);
             await TryWriteOutboundLogAsync(
-                tenantId: clientId,
+                tenantId: tenantId,
                 operation: "send-text",
                 endpoint: endpoint,
                 requestPayload: requestPayload,
@@ -148,7 +148,7 @@ public class MetaMessagingService : IMetaMessagingService
         }
     }
 
-    private async Task<string?> ResolveAccessTokenAsync(Guid clientId, string platform, CancellationToken cancellationToken)
+    private async Task<string?> ResolveAccessTokenAsync(Guid tenantId, string platform, CancellationToken cancellationToken)
     {
         var normalizedChannel = platform.Trim().ToLowerInvariant() switch
         {
@@ -160,7 +160,7 @@ public class MetaMessagingService : IMetaMessagingService
 
         var connection = await _dbContext.MetaChannelConnections
             .AsNoTracking()
-            .Where(x => x.TenantId == clientId && x.Channel == normalizedChannel && x.Status == MetaConnectionStatuses.Active)
+            .Where(x => x.TenantId == tenantId && x.Channel == normalizedChannel && x.Status == MetaConnectionStatuses.Active)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (connection is not null)
@@ -171,17 +171,16 @@ public class MetaMessagingService : IMetaMessagingService
             }
             catch (Exception ex)
             {
-                _appLogger.Error(ex, "Failed to decrypt tenant token for client {ClientId} channel {Channel}", clientId, normalizedChannel);
+                _appLogger.Error(ex, "Failed to decrypt tenant token for tenant {TenantId} channel {Channel}", tenantId, normalizedChannel);
             }
         }
 
-        // Backward compatibility fallback: legacy token on Client entity.
-        var clientEntity = await _clientRepository.GetByIdAsync(clientId);
-        return clientEntity?.MetaAccessToken;
+        var secrets = await _clientSecretsRepository.FirstOrDefaultAsync(x => x.TenantRefId == tenantId);
+        return secrets?.MetaAccessToken;
     }
 
     public Task<MessagingSendResult> SendTemplateMessageAsync(
-        Guid clientId,
+        Guid tenantId,
         string platform,
         string recipient,
         string templateName,
@@ -192,7 +191,7 @@ public class MetaMessagingService : IMetaMessagingService
     }
 
     public Task<MessagingSendResult> SendImageMessageAsync(
-        Guid clientId,
+        Guid tenantId,
         string platform,
         string recipient,
         string imageUrl,
@@ -203,7 +202,7 @@ public class MetaMessagingService : IMetaMessagingService
     }
 
     public Task MarkMessageAsReadAsync(
-        Guid clientId,
+        Guid tenantId,
         string platform,
         string recipient,
         string messageId,
@@ -214,7 +213,7 @@ public class MetaMessagingService : IMetaMessagingService
     }
 
     public Task<MessagingSendResult> SendQuickRepliesAsync(
-        Guid clientId,
+        Guid tenantId,
         string platform,
         string recipient,
         string text,
@@ -259,3 +258,4 @@ public class MetaMessagingService : IMetaMessagingService
         }
     }
 }
+

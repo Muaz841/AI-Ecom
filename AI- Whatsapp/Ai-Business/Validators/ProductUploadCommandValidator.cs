@@ -6,8 +6,8 @@ public class ProductUploadCommandValidator : AbstractValidator<ProductUploadComm
 {
     public ProductUploadCommandValidator()
     {
-        RuleFor(x => x.ClientId)
-            .NotEmpty().WithMessage("ClientId is required.");
+        RuleFor(x => x.TenantId)
+            .NotEmpty().WithMessage("TenantId is required.");
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Product name is required.")
@@ -44,3 +44,4 @@ public class ProductUploadCommandValidator : AbstractValidator<ProductUploadComm
             .MaximumLength(2000).WithMessage("Image URL too long.");
     }
 }
+

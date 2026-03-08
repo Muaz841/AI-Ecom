@@ -113,8 +113,9 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
-        services.AddScoped<ClientRepository>();
-        services.AddScoped<IRepository<Client>, ClientRepository>();
+        services.AddScoped<ClientSecretsRepository>();
+        services.AddScoped<IRepository<Tenant>, EfRepository<Tenant>>();
+        services.AddScoped<IRepository<ClientSecrets>, EfRepository<ClientSecrets>>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IConversationThreadRepository, ConversationThreadRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();

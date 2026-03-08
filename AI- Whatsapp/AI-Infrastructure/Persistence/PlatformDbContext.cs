@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Infrastructure.Tenant;
 using Microsoft.EntityFrameworkCore;
+using TenantEntity = EcomAI.Platform.Business.Entities.Tenant;
 
 namespace EcomAI.Platform.Infrastructure.Persistence;
 
@@ -26,7 +27,8 @@ public class PlatformDbContext : DbContext
         _tenantAccessor = tenantAccessor;
     }
 
-    public DbSet<Client> Clients { get; set; } = null!;
+    public DbSet<TenantEntity> Tenants { get; set; } = null!;
+    public DbSet<ClientSecrets> ClientsSecrets { get; set; } = null!;
     public DbSet<Message> Messages { get; set; } = null!;
     public DbSet<ConversationThread> ConversationThreads { get; set; } = null!;
     public DbSet<Product> Products { get; set; } = null!;
@@ -55,15 +57,29 @@ public class PlatformDbContext : DbContext
                 .HasQueryFilter(BuildTenantFilterExpression(entityType.ClrType));
         }
 
-        modelBuilder.Entity<Client>(entity =>
+        modelBuilder.Entity<TenantEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.BusinessName).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasIndex(e => e.TenantId);
+            entity.ToTable("Tenants");
+        });
+
+        modelBuilder.Entity<ClientSecrets>(entity =>
+        {
+            entity.HasKey(e => e.Id);
             entity.Property(e => e.MetaPageId).HasMaxLength(200);
             entity.Property(e => e.WhatsAppBusinessAccountId).HasMaxLength(200);
-            entity.HasIndex(e => e.Name).IsUnique(false);
+            entity.Property(e => e.TenantRefId).IsRequired();
+            entity.HasIndex(e => e.TenantRefId).IsUnique();
             entity.HasIndex(e => e.TenantId);
+            entity.HasOne<TenantEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.TenantRefId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable("ClientsSecrets");
         });
 
         modelBuilder.Entity<Message>(entity =>
@@ -155,10 +171,14 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Role).IsRequired().HasMaxLength(50);
             entity.HasIndex(e => new { e.TenantId, e.NormalizedEmail }).IsUnique();
-            entity.HasIndex(e => new { e.TenantId, e.ClientId });
+            entity.HasIndex(e => e.TenantId);
             entity.HasMany(e => e.RefreshTokens).WithOne().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.PasswordResetTokens).WithOne().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.UserRoles).WithOne().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<TenantEntity>()
+                .WithMany()
+                .HasForeignKey("TenantId")
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<UserRefreshToken>(entity =>
@@ -281,3 +301,4 @@ public class PlatformDbContext : DbContext
         return await base.SaveChangesAsync(cancellationToken);
     }
 }
+

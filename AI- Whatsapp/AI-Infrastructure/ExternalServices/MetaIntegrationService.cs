@@ -117,7 +117,11 @@ public sealed class MetaIntegrationService : IMetaIntegrationService
 
         stateEntity.MarkConsumed();
         await _dbContext.SaveChangesAsync(cancellationToken);
-        var tenantId = stateEntity.TenantId ?? stateEntity.ClientId;
+        var tenantId = stateEntity.TenantId;
+        if (!tenantId.HasValue)
+        {
+            return new MetaConnectCallbackResult(false, null, null, "OAuth state is missing tenant context.");
+        }
 
         var callbackUrl = BuildCallbackUrl(normalizedChannel, returnUrl);
         var tokenResult = await ExchangeCodeForTokenAsync(code, callbackUrl, cancellationToken);
@@ -156,7 +160,7 @@ public sealed class MetaIntegrationService : IMetaIntegrationService
         if (connection is null)
         {
             connection = MetaChannelConnection.Create(
-                tenantId,
+                tenantId.Value,
                 normalizedChannel,
                 encryptedAccessToken,
                 expiresAt,
@@ -366,3 +370,4 @@ public sealed class MetaOAuthSettings
             && !string.IsNullOrWhiteSpace(CallbackBaseUrl);
     }
 }
+

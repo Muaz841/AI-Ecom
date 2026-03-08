@@ -6,13 +6,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EcomAI.Platform.Infrastructure.Persistence.Repositories;
 
-public class ClientRepository : EfRepository<Client>
+public class ClientSecretsRepository : EfRepository<ClientSecrets>
 {
-    public ClientRepository(PlatformDbContext context) : base(context)
+    public ClientSecretsRepository(PlatformDbContext context) : base(context)
     {
     }
 
-    public async Task<Client?> GetByMetaIdentifiersAsync(
+    public async Task<ClientSecrets?> GetByMetaIdentifiersAsync(
         string? metaPageId = null,
         string? whatsAppBusinessAccountId = null)
     {
@@ -21,7 +21,7 @@ public class ClientRepository : EfRepository<Client>
             return null;
         }
 
-        IQueryable<Client> query = _dbSet;
+        IQueryable<ClientSecrets> query = _dbSet;
 
         if (!string.IsNullOrWhiteSpace(metaPageId))
         {
@@ -36,7 +36,7 @@ public class ClientRepository : EfRepository<Client>
         return await query.FirstOrDefaultAsync();
     }
 
-    public async Task<Client?> GetByExternalStoreIdAsync(string externalStoreId)
+    public async Task<ClientSecrets?> GetByExternalStoreIdAsync(string externalStoreId)
     {
         if (string.IsNullOrWhiteSpace(externalStoreId))
         {

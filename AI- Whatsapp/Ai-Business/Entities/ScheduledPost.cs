@@ -4,7 +4,6 @@ namespace EcomAI.Platform.Business.Entities;
 
 public class ScheduledPost : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public string Platform { get; private set; } = null!;
     public string Content { get; private set; } = null!;
     public string? MediaUrl { get; private set; }
@@ -21,15 +20,15 @@ public class ScheduledPost : Entity<Guid>, ITenantEntity
     }
 
     public static ScheduledPost Create(
-        Guid clientId,
+        Guid tenantId,
         string platform,
         string content,
         string? mediaUrl,
         DateTime scheduledFor)
     {
-        if (clientId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId required", nameof(clientId));
+            throw new ArgumentException("TenantId required", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(platform))
@@ -50,8 +49,7 @@ public class ScheduledPost : Entity<Guid>, ITenantEntity
         return new ScheduledPost
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             Platform = platform.Trim().ToLowerInvariant(),
             Content = content.Trim(),
             MediaUrl = mediaUrl?.Trim(),
@@ -100,3 +98,5 @@ public enum PostStatus
     Published = 3,
     Failed = 4
 }
+
+

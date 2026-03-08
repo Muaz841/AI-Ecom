@@ -4,7 +4,6 @@ namespace EcomAI.Platform.Business.Entities;
 
 public class Message : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public Guid? ConversationThreadId { get; private set; }
     public string Platform { get; private set; } = null!;
     public string From { get; private set; } = null!;
@@ -27,7 +26,7 @@ public class Message : Entity<Guid>, ITenantEntity
     }
 
     public static Message CreateIncoming(
-        Guid clientId,
+        Guid tenantId,
         string platform,
         string from,
         string to,
@@ -37,9 +36,9 @@ public class Message : Entity<Guid>, ITenantEntity
         string? externalMessageId = null,
         string messageType = "text")
     {
-        if (clientId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId is required", nameof(clientId));
+            throw new ArgumentException("TenantId is required", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(platform) || !IsValidPlatform(platform))
@@ -65,8 +64,7 @@ public class Message : Entity<Guid>, ITenantEntity
         return new Message
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             ConversationThreadId = conversationThreadId,
             Platform = platform.ToLowerInvariant().Trim(),
             From = from.Trim(),
@@ -83,7 +81,7 @@ public class Message : Entity<Guid>, ITenantEntity
     }
 
     public static Message CreateOutgoing(
-        Guid clientId,
+        Guid tenantId,
         string platform,
         string from,
         string to,
@@ -93,9 +91,9 @@ public class Message : Entity<Guid>, ITenantEntity
         string messageType = "text",
         string? rawPayloadJson = null)
     {
-        if (clientId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId is required", nameof(clientId));
+            throw new ArgumentException("TenantId is required", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(platform) || !IsValidPlatform(platform))
@@ -121,8 +119,7 @@ public class Message : Entity<Guid>, ITenantEntity
         return new Message
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             ConversationThreadId = conversationThreadId,
             Platform = platform.ToLowerInvariant().Trim(),
             From = from.Trim(),
@@ -186,3 +183,5 @@ public class Message : Entity<Guid>, ITenantEntity
         return lower == "whatsapp" || lower == "instagram";
     }
 }
+
+

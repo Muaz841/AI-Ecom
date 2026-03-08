@@ -4,7 +4,6 @@ namespace EcomAI.Platform.Business.Entities;
 
 public class Permission : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public string Name { get; private set; } = null!;
     public string Code { get; private set; } = null!;
     public string? Description { get; private set; }
@@ -15,11 +14,11 @@ public class Permission : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static Permission Create(Guid clientId, string name, string code, string? description = null, bool isSystem = false)
+    public static Permission Create(Guid tenantId, string name, string code, string? description = null, bool isSystem = false)
     {
-        if (clientId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId is required.", nameof(clientId));
+            throw new ArgumentException("TenantId is required.", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(name))
@@ -35,8 +34,7 @@ public class Permission : Entity<Guid>, ITenantEntity
         return new Permission
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             Name = name.Trim(),
             Code = code.Trim().ToLowerInvariant(),
             Description = description?.Trim(),
@@ -60,7 +58,6 @@ public class Permission : Entity<Guid>, ITenantEntity
 
 public class Role : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public string Name { get; private set; } = null!;
     public string Code { get; private set; } = null!;
     public string? Description { get; private set; }
@@ -71,11 +68,11 @@ public class Role : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static Role Create(Guid clientId, string name, string code, string? description = null, bool isSystem = false)
+    public static Role Create(Guid tenantId, string name, string code, string? description = null, bool isSystem = false)
     {
-        if (clientId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId is required.", nameof(clientId));
+            throw new ArgumentException("TenantId is required.", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code))
@@ -86,8 +83,7 @@ public class Role : Entity<Guid>, ITenantEntity
         return new Role
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             Name = name.Trim(),
             Code = code.Trim().ToLowerInvariant(),
             Description = description?.Trim(),
@@ -111,7 +107,6 @@ public class Role : Entity<Guid>, ITenantEntity
 
 public class RolePermission : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public Guid RoleId { get; private set; }
     public Guid PermissionId { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -120,18 +115,17 @@ public class RolePermission : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static RolePermission Create(Guid clientId, Guid roleId, Guid permissionId)
+    public static RolePermission Create(Guid tenantId, Guid roleId, Guid permissionId)
     {
-        if (clientId == Guid.Empty || roleId == Guid.Empty || permissionId == Guid.Empty)
+        if (tenantId == Guid.Empty || roleId == Guid.Empty || permissionId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId, RoleId and PermissionId are required.");
+            throw new ArgumentException("TenantId, RoleId and PermissionId are required.");
         }
 
         return new RolePermission
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             RoleId = roleId,
             PermissionId = permissionId,
             CreatedAt = DateTime.UtcNow
@@ -141,7 +135,6 @@ public class RolePermission : Entity<Guid>, ITenantEntity
 
 public class UserRole : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public Guid UserAccountId { get; private set; }
     public Guid RoleId { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -150,21 +143,22 @@ public class UserRole : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static UserRole Create(Guid clientId, Guid userAccountId, Guid roleId)
+    public static UserRole Create(Guid tenantId, Guid userAccountId, Guid roleId)
     {
-        if (clientId == Guid.Empty || userAccountId == Guid.Empty || roleId == Guid.Empty)
+        if (tenantId == Guid.Empty || userAccountId == Guid.Empty || roleId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId, UserAccountId and RoleId are required.");
+            throw new ArgumentException("TenantId, UserAccountId and RoleId are required.");
         }
 
         return new UserRole
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             UserAccountId = userAccountId,
             RoleId = roleId,
             CreatedAt = DateTime.UtcNow
         };
     }
 }
+
+

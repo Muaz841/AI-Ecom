@@ -29,7 +29,7 @@ public class CurrentTenantAccessorTests
             HttpContext = new DefaultHttpContext
             {
                 User = new ClaimsPrincipal(new ClaimsIdentity(
-                    new List<Claim> { new("client_id", tenantId.ToString()) },
+                    new List<Claim> { new("tenant_id", tenantId.ToString()) },
                     "Bearer"))
             }
         };
@@ -39,3 +39,4 @@ public class CurrentTenantAccessorTests
         Assert.Equal(tenantId, accessor.GetCurrentTenantId());
     }
 }
+

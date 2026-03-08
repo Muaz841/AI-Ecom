@@ -8,7 +8,7 @@ namespace EcomAI.Platform.Business.Interfaces;
 public interface IMetaMessagingService
 {
     Task<MessagingSendResult> SendTextMessageAsync(
-        Guid clientId,
+        Guid TenantId,
         string platform,
         string recipient,
         string messageText,
@@ -16,7 +16,7 @@ public interface IMetaMessagingService
         CancellationToken cancellationToken = default);
 
     Task<MessagingSendResult> SendTemplateMessageAsync(
-        Guid clientId,
+        Guid TenantId,
         string platform,
         string recipient,
         string templateName,
@@ -24,7 +24,7 @@ public interface IMetaMessagingService
         CancellationToken cancellationToken = default);
 
     Task<MessagingSendResult> SendImageMessageAsync(
-        Guid clientId,
+        Guid TenantId,
         string platform,
         string recipient,
         string imageUrl,
@@ -32,14 +32,14 @@ public interface IMetaMessagingService
         CancellationToken cancellationToken = default);
 
     Task MarkMessageAsReadAsync(
-        Guid clientId,
+        Guid TenantId,
         string platform,
         string recipient,
         string messageId,
         CancellationToken cancellationToken = default);
 
     Task<MessagingSendResult> SendQuickRepliesAsync(
-        Guid clientId,
+        Guid TenantId,
         string platform,
         string recipient,
         string text,
@@ -56,3 +56,4 @@ public record MessagingSendResult(
 public record QuickReplyOption(
     string Title,
     string Payload);
+

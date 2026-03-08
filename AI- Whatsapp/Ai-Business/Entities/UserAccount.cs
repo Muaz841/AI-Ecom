@@ -5,7 +5,6 @@ namespace EcomAI.Platform.Business.Entities;
 
 public class UserAccount : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public string Email { get; private set; } = null!;
     public string NormalizedEmail { get; private set; } = null!;
     public string PasswordHash { get; private set; } = null!;
@@ -25,16 +24,16 @@ public class UserAccount : Entity<Guid>, ITenantEntity
     }
 
     public static UserAccount Create(
-        Guid clientId,
+        Guid tenantId,
         string email,
         string passwordHash,
         string firstName,
         string lastName,
         string role = "user")
     {
-        if (clientId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId is required.", nameof(clientId));
+            throw new ArgumentException("TenantId is required.", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(email))
@@ -65,8 +64,7 @@ public class UserAccount : Entity<Guid>, ITenantEntity
         return new UserAccount
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             Email = email.Trim(),
             NormalizedEmail = email.Trim().ToUpperInvariant(),
             PasswordHash = passwordHash,
@@ -196,3 +194,5 @@ public class UserPasswordResetToken : Entity<Guid>, ITenantEntity
         UsedAt = DateTime.UtcNow;
     }
 }
+
+

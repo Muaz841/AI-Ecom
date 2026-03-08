@@ -9,21 +9,21 @@ namespace EcomAI.Platform.Business.Interfaces;
 public interface IProductRepository
 {
     Task<IReadOnlyList<ProductInventoryItem>> GetAvailableInventoryAsync(
-        Guid clientId,
+        Guid TenantId,
         int? maxItems = 20,
         string? searchTerm = null,
         CancellationToken cancellationToken = default);
 
-    Task<Product?> GetByIdAsync(Guid clientId, Guid productId, CancellationToken cancellationToken = default);
+    Task<Product?> GetByIdAsync(Guid TenantId, Guid productId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Product>> GetAvailableProductsAsync(
-        Guid clientId,
+        Guid TenantId,
         int? maxItems = 20,
         string? searchTerm = null,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Product>> GetLowStockProductsAsync(
-        Guid clientId,
+        Guid TenantId,
         int threshold = 5,
         CancellationToken cancellationToken = default);
 
@@ -33,7 +33,7 @@ public interface IProductRepository
 
     Task DeleteAsync(Guid productId, CancellationToken cancellationToken = default);
 
-    Task<bool> ExistsAsync(Guid clientId, string skuOrName, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(Guid TenantId, string skuOrName, CancellationToken cancellationToken = default);
 }
 
 public sealed record ProductInventoryItem(
@@ -43,3 +43,4 @@ public sealed record ProductInventoryItem(
     string Currency,
     int TotalStock,
     string? Sku);
+

@@ -5,7 +5,7 @@ using MediatR;
 namespace EcomAI.Platform.Business.Commands;
 
 public record ProductUploadCommand(
-    Guid ClientId,
+    Guid TenantId,
     string Name,
     string? Description,
     decimal BasePrice,
@@ -24,3 +24,4 @@ public record ProductUploadResult(
     bool Success,
     Guid? ProductId,
     string? ErrorMessage = null);
+

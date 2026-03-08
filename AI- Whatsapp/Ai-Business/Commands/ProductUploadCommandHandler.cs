@@ -25,7 +25,7 @@ public class ProductUploadCommandHandler : IRequestHandler<ProductUploadCommand,
         try
         {
             var product = Product.Create(
-                request.ClientId,
+                request.TenantId,
                 request.Name,
                 request.BasePrice,
                 request.Description,
@@ -51,13 +51,14 @@ public class ProductUploadCommandHandler : IRequestHandler<ProductUploadCommand,
             await _productRepository.AddAsync(product);
             await _productRepository.SaveChangesAsync();
 
-            _logger.Info("Product {ProductId} uploaded for client {ClientId}", product.Id, request.ClientId);
+            _logger.Info("Product {ProductId} uploaded for tenant {TenantId}", product.Id, request.TenantId);
             return new ProductUploadResult(true, product.Id);
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to upload product for client {ClientId}", request.ClientId);
+            _logger.Error(ex, "Failed to upload product for tenant {TenantId}", request.TenantId);
             return new ProductUploadResult(false, null, ex.Message);
         }
     }
 }
+

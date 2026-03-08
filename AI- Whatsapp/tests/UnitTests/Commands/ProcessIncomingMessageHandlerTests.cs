@@ -90,13 +90,13 @@ public class ProcessIncomingMessageHandlerTests
 
     private sealed class FakeConversationThreadRepository : IConversationThreadRepository
     {
-        public Task<ConversationThread> GetOrCreateAsync(Guid clientId, string platform, string customerIdentifier, string businessIdentifier, string? customerDisplayName = null, CancellationToken cancellationToken = default)
-            => Task.FromResult(ConversationThread.Create(clientId, platform, customerIdentifier, businessIdentifier, customerDisplayName));
+        public Task<ConversationThread> GetOrCreateAsync(Guid TenantId, string platform, string customerIdentifier, string businessIdentifier, string? customerDisplayName = null, CancellationToken cancellationToken = default)
+            => Task.FromResult(ConversationThread.Create(TenantId, platform, customerIdentifier, businessIdentifier, customerDisplayName));
 
-        public Task<ConversationThread?> GetByIdAsync(Guid clientId, Guid conversationThreadId, CancellationToken cancellationToken = default)
+        public Task<ConversationThread?> GetByIdAsync(Guid TenantId, Guid conversationThreadId, CancellationToken cancellationToken = default)
             => Task.FromResult<ConversationThread?>(null);
 
-        public Task<IReadOnlyList<ConversationThread>> ListRecentAsync(Guid clientId, int pageIndex = 0, int pageSize = 50, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<ConversationThread>> ListRecentAsync(Guid TenantId, int pageIndex = 0, int pageSize = 50, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ConversationThread>>(Array.Empty<ConversationThread>());
 
         public Task UpdateAsync(ConversationThread thread, CancellationToken cancellationToken = default)
@@ -109,23 +109,23 @@ public class ProcessIncomingMessageHandlerTests
     private sealed class FakeProductRepository : IProductRepository
     {
         public Task<IReadOnlyList<ProductInventoryItem>> GetAvailableInventoryAsync(
-            Guid clientId,
+            Guid TenantId,
             int? maxItems = 20,
             string? searchTerm = null,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ProductInventoryItem>>(Array.Empty<ProductInventoryItem>());
 
-        public Task<Product?> GetByIdAsync(Guid clientId, Guid productId, CancellationToken cancellationToken = default)
+        public Task<Product?> GetByIdAsync(Guid TenantId, Guid productId, CancellationToken cancellationToken = default)
             => Task.FromResult<Product?>(null);
 
         public Task<IReadOnlyList<Product>> GetAvailableProductsAsync(
-            Guid clientId,
+            Guid TenantId,
             int? maxItems = 20,
             string? searchTerm = null,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Product>>(Array.Empty<Product>());
 
-        public Task<IReadOnlyList<Product>> GetLowStockProductsAsync(Guid clientId, int threshold = 5, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<Product>> GetLowStockProductsAsync(Guid TenantId, int threshold = 5, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Product>>(Array.Empty<Product>());
 
         public Task AddAsync(Product product, CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -134,7 +134,7 @@ public class ProcessIncomingMessageHandlerTests
 
         public Task DeleteAsync(Guid productId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-        public Task<bool> ExistsAsync(Guid clientId, string skuOrName, CancellationToken cancellationToken = default)
+        public Task<bool> ExistsAsync(Guid TenantId, string skuOrName, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
     }
 
@@ -227,7 +227,7 @@ public class ProcessIncomingMessageHandlerTests
         }
 
         public Task<MessagingSendResult> SendTextMessageAsync(
-            Guid clientId,
+            Guid TenantId,
             string platform,
             string recipient,
             string messageText,
@@ -240,7 +240,7 @@ public class ProcessIncomingMessageHandlerTests
         }
 
         public Task<MessagingSendResult> SendTemplateMessageAsync(
-            Guid clientId,
+            Guid TenantId,
             string platform,
             string recipient,
             string templateName,
@@ -249,7 +249,7 @@ public class ProcessIncomingMessageHandlerTests
             => Task.FromResult(new MessagingSendResult(true, Guid.NewGuid().ToString(), null, 200));
 
         public Task<MessagingSendResult> SendImageMessageAsync(
-            Guid clientId,
+            Guid TenantId,
             string platform,
             string recipient,
             string imageUrl,
@@ -258,7 +258,7 @@ public class ProcessIncomingMessageHandlerTests
             => Task.FromResult(new MessagingSendResult(true, Guid.NewGuid().ToString(), null, 200));
 
         public Task MarkMessageAsReadAsync(
-            Guid clientId,
+            Guid TenantId,
             string platform,
             string recipient,
             string messageId,
@@ -266,7 +266,7 @@ public class ProcessIncomingMessageHandlerTests
             => Task.CompletedTask;
 
         public Task<MessagingSendResult> SendQuickRepliesAsync(
-            Guid clientId,
+            Guid TenantId,
             string platform,
             string recipient,
             string text,
@@ -314,3 +314,4 @@ public class ProcessIncomingMessageHandlerTests
             CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }
+

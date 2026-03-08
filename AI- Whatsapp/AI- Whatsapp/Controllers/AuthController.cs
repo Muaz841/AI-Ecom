@@ -2,6 +2,7 @@ using System;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Business.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -14,10 +15,12 @@ namespace EcomAI.Platform.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IRepository<Tenant> _tenantRepository;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IRepository<Tenant> tenantRepository)
     {
         _authService = authService;
+        _tenantRepository = tenantRepository;
     }
 
     [Authorize(Policy = PermissionCodes.UsersManage)]
@@ -28,7 +31,7 @@ public class AuthController : ControllerBase
         {
             var result = await _authService.RegisterAsync(
                 new RegisterUserRequest(
-                    request.ClientId,
+                    request.TenantId,
                     request.Email,
                     request.Password,
                     request.FirstName,
@@ -53,8 +56,28 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginApiRequest request, CancellationToken cancellationToken)
     {
+        var tenantId = request.TenantId;
+        if (tenantId == Guid.Empty && !string.IsNullOrWhiteSpace(request.TenantName))
+        {
+            var tenantName = request.TenantName.Trim();
+            var tenant = await _tenantRepository.FirstOrDefaultAsync(
+                x => x.Name.ToLower() == tenantName.ToLower() || x.BusinessName.ToLower() == tenantName.ToLower());
+
+            if (tenant is null)
+            {
+                return Unauthorized("Tenant not found.");
+            }
+
+            tenantId = tenant.Id;
+        }
+
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest("TenantId or tenantName is required.");
+        }
+
         var result = await _authService.LoginAsync(
-            new LoginRequest(request.ClientId, request.Email, request.Password),
+            new LoginRequest(tenantId, request.Email, request.Password),
             cancellationToken);
 
         if (!result.Success)
@@ -82,15 +105,15 @@ public class AuthController : ControllerBase
     [HttpGet("me")]
     public async Task<IActionResult> Me(CancellationToken cancellationToken)
     {
-        var clientClaim = User.FindFirstValue("client_id") ?? User.FindFirstValue("tenant_id");
+        var tenantClaim = User.FindFirstValue("tenant_id");
         var userClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
 
-        if (!Guid.TryParse(clientClaim, out var clientId) || !Guid.TryParse(userClaim, out var userId))
+        if (!Guid.TryParse(tenantClaim, out var tenantId) || !Guid.TryParse(userClaim, out var userId))
         {
             return Unauthorized("Invalid auth claims.");
         }
 
-        var profile = await _authService.GetProfileAsync(clientId, userId, cancellationToken);
+        var profile = await _authService.GetProfileAsync(tenantId, userId, cancellationToken);
         if (profile is null)
         {
             return NotFound("User profile not found.");
@@ -112,7 +135,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
         await _authService.RequestPasswordResetAsync(
-            new RequestPasswordResetRequest(request.ClientId, request.Email),
+            new RequestPasswordResetRequest(request.TenantId, request.Email),
             cancellationToken);
 
         return Ok(new { message = "If user exists, reset instructions were generated." });
@@ -125,7 +148,7 @@ public class AuthController : ControllerBase
         try
         {
             await _authService.ResetPasswordAsync(
-                new ResetPasswordRequest(request.ClientId, request.Email, request.ResetToken, request.NewPassword),
+                new ResetPasswordRequest(request.TenantId, request.Email, request.ResetToken, request.NewPassword),
                 cancellationToken);
 
             return NoContent();
@@ -138,7 +161,7 @@ public class AuthController : ControllerBase
 }
 
 public sealed record RegisterRequest(
-    Guid ClientId,
+    Guid TenantId,
     string Email,
     string Password,
     string FirstName,
@@ -146,18 +169,20 @@ public sealed record RegisterRequest(
     string Role = "user");
 
 public sealed record LoginApiRequest(
-    Guid ClientId,
+    Guid TenantId,
+    string? TenantName,
     string Email,
     string Password);
 
 public sealed record RefreshRequest(string RefreshToken);
 
 public sealed record ForgotPasswordRequest(
-    Guid ClientId,
+    Guid TenantId,
     string Email);
 
 public sealed record ResetPasswordApiRequest(
-    Guid ClientId,
+    Guid TenantId,
     string Email,
     string ResetToken,
     string NewPassword);
+

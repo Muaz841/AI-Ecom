@@ -22,7 +22,6 @@ public static class MetaConnectionStatuses
 
 public sealed class MetaChannelConnection : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public string Channel { get; private set; } = null!;
     public string Status { get; private set; } = MetaConnectionStatuses.Active;
     public string? ExternalBusinessId { get; private set; }
@@ -67,7 +66,6 @@ public sealed class MetaChannelConnection : Entity<Guid>, ITenantEntity
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            ClientId = tenantId,
             Channel = channel.Trim().ToLowerInvariant(),
             AccessTokenCiphertext = accessTokenCiphertext,
             AccessTokenExpiresAtUtc = accessTokenExpiresAtUtc,
@@ -142,7 +140,6 @@ public sealed class MetaChannelConnection : Entity<Guid>, ITenantEntity
 
 public sealed class MetaOAuthState : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public Guid UserId { get; private set; }
     public string Channel { get; private set; } = null!;
     public string State { get; private set; } = null!;
@@ -185,7 +182,6 @@ public sealed class MetaOAuthState : Entity<Guid>, ITenantEntity
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            ClientId = tenantId,
             UserId = userId,
             Channel = channel.Trim().ToLowerInvariant(),
             State = state.Trim(),
@@ -201,3 +197,5 @@ public sealed class MetaOAuthState : Entity<Guid>, ITenantEntity
         ConsumedAtUtc = DateTime.UtcNow;
     }
 }
+
+

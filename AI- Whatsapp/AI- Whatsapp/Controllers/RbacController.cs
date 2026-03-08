@@ -23,9 +23,9 @@ public class RbacController : ControllerBase
 
     [HttpGet("permissions")]
     [Authorize(Policy = PermissionCodes.PermissionsManage)]
-    public async Task<ActionResult<IReadOnlyList<PermissionDto>>> ListPermissions([FromQuery] Guid clientId, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<PermissionDto>>> ListPermissions([FromQuery] Guid TenantId, CancellationToken cancellationToken)
     {
-        var result = await _rbacService.ListPermissionsAsync(clientId, cancellationToken);
+        var result = await _rbacService.ListPermissionsAsync(TenantId, cancellationToken);
         return Ok(result);
     }
 
@@ -42,24 +42,24 @@ public class RbacController : ControllerBase
     public async Task<ActionResult<PermissionDto>> UpdatePermission(Guid permissionId, [FromBody] UpdatePermissionApiRequest request, CancellationToken cancellationToken)
     {
         var updated = await _rbacService.UpdatePermissionAsync(
-            new UpdatePermissionRequest(request.ClientId, permissionId, request.Name, request.Code, request.Description),
+            new UpdatePermissionRequest(request.TenantId, permissionId, request.Name, request.Code, request.Description),
             cancellationToken);
         return updated is null ? NotFound() : Ok(updated);
     }
 
     [HttpDelete("permissions/{permissionId:guid}")]
     [Authorize(Policy = PermissionCodes.PermissionsManage)]
-    public async Task<IActionResult> DeletePermission(Guid permissionId, [FromQuery] Guid clientId, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeletePermission(Guid permissionId, [FromQuery] Guid TenantId, CancellationToken cancellationToken)
     {
-        var deleted = await _rbacService.DeletePermissionAsync(clientId, permissionId, cancellationToken);
+        var deleted = await _rbacService.DeletePermissionAsync(TenantId, permissionId, cancellationToken);
         return deleted ? NoContent() : NotFound();
     }
 
     [HttpGet("roles")]
     [Authorize(Policy = PermissionCodes.RolesManage)]
-    public async Task<ActionResult<IReadOnlyList<RoleDto>>> ListRoles([FromQuery] Guid clientId, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<RoleDto>>> ListRoles([FromQuery] Guid TenantId, CancellationToken cancellationToken)
     {
-        var result = await _rbacService.ListRolesAsync(clientId, cancellationToken);
+        var result = await _rbacService.ListRolesAsync(TenantId, cancellationToken);
         return Ok(result);
     }
 
@@ -76,16 +76,16 @@ public class RbacController : ControllerBase
     public async Task<ActionResult<RoleDto>> UpdateRole(Guid roleId, [FromBody] UpdateRoleApiRequest request, CancellationToken cancellationToken)
     {
         var updated = await _rbacService.UpdateRoleAsync(
-            new UpdateRoleRequest(request.ClientId, roleId, request.Name, request.Code, request.Description),
+            new UpdateRoleRequest(request.TenantId, roleId, request.Name, request.Code, request.Description),
             cancellationToken);
         return updated is null ? NotFound() : Ok(updated);
     }
 
     [HttpDelete("roles/{roleId:guid}")]
     [Authorize(Policy = PermissionCodes.RolesManage)]
-    public async Task<IActionResult> DeleteRole(Guid roleId, [FromQuery] Guid clientId, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteRole(Guid roleId, [FromQuery] Guid TenantId, CancellationToken cancellationToken)
     {
-        var deleted = await _rbacService.DeleteRoleAsync(clientId, roleId, cancellationToken);
+        var deleted = await _rbacService.DeleteRoleAsync(TenantId, roleId, cancellationToken);
         return deleted ? NoContent() : NotFound();
     }
 
@@ -93,27 +93,28 @@ public class RbacController : ControllerBase
     [Authorize(Policy = PermissionCodes.PermissionsManage)]
     public async Task<ActionResult<RoleDto>> SetRolePermissions(Guid roleId, [FromBody] SetRolePermissionsRequest request, CancellationToken cancellationToken)
     {
-        var updated = await _rbacService.SetRolePermissionsAsync(request.ClientId, roleId, request.PermissionIds, cancellationToken);
+        var updated = await _rbacService.SetRolePermissionsAsync(request.TenantId, roleId, request.PermissionIds, cancellationToken);
         return updated is null ? NotFound() : Ok(updated);
     }
 
     [HttpPut("users/{userId:guid}/roles/{roleId:guid}")]
     [Authorize(Policy = PermissionCodes.UsersManage)]
-    public async Task<IActionResult> AssignRole(Guid userId, Guid roleId, [FromQuery] Guid clientId, CancellationToken cancellationToken)
+    public async Task<IActionResult> AssignRole(Guid userId, Guid roleId, [FromQuery] Guid TenantId, CancellationToken cancellationToken)
     {
-        var assigned = await _rbacService.AssignRoleToUserAsync(clientId, userId, roleId, cancellationToken);
+        var assigned = await _rbacService.AssignRoleToUserAsync(TenantId, userId, roleId, cancellationToken);
         return assigned ? NoContent() : NotFound();
     }
 
     [HttpDelete("users/{userId:guid}/roles/{roleId:guid}")]
     [Authorize(Policy = PermissionCodes.UsersManage)]
-    public async Task<IActionResult> RemoveRole(Guid userId, Guid roleId, [FromQuery] Guid clientId, CancellationToken cancellationToken)
+    public async Task<IActionResult> RemoveRole(Guid userId, Guid roleId, [FromQuery] Guid TenantId, CancellationToken cancellationToken)
     {
-        var removed = await _rbacService.RemoveRoleFromUserAsync(clientId, userId, roleId, cancellationToken);
+        var removed = await _rbacService.RemoveRoleFromUserAsync(TenantId, userId, roleId, cancellationToken);
         return removed ? NoContent() : NotFound();
     }
 }
 
-public sealed record UpdatePermissionApiRequest(Guid ClientId, string Name, string Code, string? Description);
-public sealed record UpdateRoleApiRequest(Guid ClientId, string Name, string Code, string? Description);
-public sealed record SetRolePermissionsRequest(Guid ClientId, IReadOnlyCollection<Guid> PermissionIds);
+public sealed record UpdatePermissionApiRequest(Guid TenantId, string Name, string Code, string? Description);
+public sealed record UpdateRoleApiRequest(Guid TenantId, string Name, string Code, string? Description);
+public sealed record SetRolePermissionsRequest(Guid TenantId, IReadOnlyCollection<Guid> PermissionIds);
+

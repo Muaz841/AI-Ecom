@@ -37,122 +37,168 @@ public record ListClientsQuery(int PageIndex = 0, int PageSize = 50) : IRequest<
 
 public class CreateClientCommandHandler : IRequestHandler<CreateClientCommand, ClientDto>
 {
-    private readonly IRepository<Client> _repository;
+    private readonly IRepository<Tenant> _tenantRepository;
+    private readonly IRepository<ClientSecrets> _clientSecretsRepository;
 
-    public CreateClientCommandHandler(IRepository<Client> repository)
+    public CreateClientCommandHandler(
+        IRepository<Tenant> tenantRepository,
+        IRepository<ClientSecrets> clientSecretsRepository)
     {
-        _repository = repository;
+        _tenantRepository = tenantRepository;
+        _clientSecretsRepository = clientSecretsRepository;
     }
 
     public async Task<ClientDto> Handle(CreateClientCommand request, CancellationToken cancellationToken)
     {
-        var client = Client.Create(
+        var tenant = Tenant.Create(
             request.Name,
-            request.BusinessName,
-            request.MetaAccessToken,
-            request.MetaPageId,
-            request.WhatsAppBusinessAccountId,
-            request.ShopifyStoreId,
-            request.WooCommerceStoreId);
+            request.BusinessName);
 
-        await _repository.AddAsync(client);
-        await _repository.SaveChangesAsync();
+        await _tenantRepository.AddAsync(tenant);
+        await _tenantRepository.SaveChangesAsync();
 
-        return ClientMapper.ToDto(client);
+        var clientSecrets = ClientSecrets.CreateForTenant(tenant.Id);
+        await _clientSecretsRepository.AddAsync(clientSecrets);
+        await _clientSecretsRepository.SaveChangesAsync();
+
+        return ClientMapper.ToDto(tenant, clientSecrets);
     }
 }
 
 public class UpdateClientCommandHandler : IRequestHandler<UpdateClientCommand, ClientDto?>
 {
-    private readonly IRepository<Client> _repository;
+    private readonly IRepository<Tenant> _tenantRepository;
+    private readonly IRepository<ClientSecrets> _clientSecretsRepository;
 
-    public UpdateClientCommandHandler(IRepository<Client> repository)
+    public UpdateClientCommandHandler(
+        IRepository<Tenant> tenantRepository,
+        IRepository<ClientSecrets> clientSecretsRepository)
     {
-        _repository = repository;
+        _tenantRepository = tenantRepository;
+        _clientSecretsRepository = clientSecretsRepository;
     }
 
     public async Task<ClientDto?> Handle(UpdateClientCommand request, CancellationToken cancellationToken)
     {
-        var client = await _repository.GetByIdAsync(request.Id);
-        if (client is null)
+        var tenant = await _tenantRepository.GetByIdAsync(request.Id);
+        if (tenant is null)
         {
             return null;
         }
 
-        client.UpdateProfile(
-            request.Name,
-            request.BusinessName,
-            request.ShopifyStoreId,
-            request.WooCommerceStoreId);
+        tenant.UpdateProfile(request.Name, request.BusinessName);
+        await _tenantRepository.UpdateAsync(tenant);
+        await _tenantRepository.SaveChangesAsync();
 
-        client.UpdateMetaConfiguration(
+        var clientSecrets = await _clientSecretsRepository.FirstOrDefaultAsync(x => x.TenantRefId == tenant.Id);
+        var isNewSecrets = clientSecrets is null;
+        if (clientSecrets is null)
+        {
+            clientSecrets = ClientSecrets.CreateForTenant(tenant.Id);
+            await _clientSecretsRepository.AddAsync(clientSecrets);
+        }
+
+        clientSecrets.UpdateMetaConfiguration(
             request.MetaAccessToken,
             request.MetaPageId,
             request.WhatsAppBusinessAccountId);
+        clientSecrets.UpdateStoreConfiguration(request.ShopifyStoreId, request.WooCommerceStoreId);
 
-        await _repository.UpdateAsync(client);
-        await _repository.SaveChangesAsync();
+        if (!isNewSecrets)
+        {
+            await _clientSecretsRepository.UpdateAsync(clientSecrets);
+        }
+        await _clientSecretsRepository.SaveChangesAsync();
 
-        return ClientMapper.ToDto(client);
+        return ClientMapper.ToDto(tenant, clientSecrets);
     }
 }
 
 public class DeleteClientCommandHandler : IRequestHandler<DeleteClientCommand, bool>
 {
-    private readonly IRepository<Client> _repository;
+    private readonly IRepository<Tenant> _tenantRepository;
 
-    public DeleteClientCommandHandler(IRepository<Client> repository)
+    public DeleteClientCommandHandler(IRepository<Tenant> tenantRepository)
     {
-        _repository = repository;
+        _tenantRepository = tenantRepository;
     }
 
     public async Task<bool> Handle(DeleteClientCommand request, CancellationToken cancellationToken)
     {
-        var client = await _repository.GetByIdAsync(request.Id);
-        if (client is null)
+        var tenant = await _tenantRepository.GetByIdAsync(request.Id);
+        if (tenant is null)
         {
             return false;
         }
 
-        await _repository.DeleteAsync(client);
-        await _repository.SaveChangesAsync();
+        await _tenantRepository.DeleteAsync(tenant);
+        await _tenantRepository.SaveChangesAsync();
         return true;
     }
 }
 
 public class GetClientByIdQueryHandler : IRequestHandler<GetClientByIdQuery, ClientDto?>
 {
-    private readonly IRepository<Client> _repository;
+    private readonly IRepository<Tenant> _tenantRepository;
+    private readonly IRepository<ClientSecrets> _clientSecretsRepository;
 
-    public GetClientByIdQueryHandler(IRepository<Client> repository)
+    public GetClientByIdQueryHandler(
+        IRepository<Tenant> tenantRepository,
+        IRepository<ClientSecrets> clientSecretsRepository)
     {
-        _repository = repository;
+        _tenantRepository = tenantRepository;
+        _clientSecretsRepository = clientSecretsRepository;
     }
 
     public async Task<ClientDto?> Handle(GetClientByIdQuery request, CancellationToken cancellationToken)
     {
-        var client = await _repository.GetByIdAsync(request.Id);
-        return client is null ? null : ClientMapper.ToDto(client);
+        var tenant = await _tenantRepository.GetByIdAsync(request.Id);
+        if (tenant is null)
+        {
+            return null;
+        }
+
+        var clientSecrets = await _clientSecretsRepository.FirstOrDefaultAsync(x => x.TenantRefId == tenant.Id);
+        return ClientMapper.ToDto(tenant, clientSecrets);
     }
 }
 
 public class ListClientsQueryHandler : IRequestHandler<ListClientsQuery, IReadOnlyList<ClientDto>>
 {
-    private readonly IRepository<Client> _repository;
+    private readonly IRepository<Tenant> _tenantRepository;
+    private readonly IRepository<ClientSecrets> _clientSecretsRepository;
 
-    public ListClientsQueryHandler(IRepository<Client> repository)
+    public ListClientsQueryHandler(
+        IRepository<Tenant> tenantRepository,
+        IRepository<ClientSecrets> clientSecretsRepository)
     {
-        _repository = repository;
+        _tenantRepository = tenantRepository;
+        _clientSecretsRepository = clientSecretsRepository;
     }
 
     public async Task<IReadOnlyList<ClientDto>> Handle(ListClientsQuery request, CancellationToken cancellationToken)
     {
-        var clients = await _repository.ListAsync(
+        var tenants = await _tenantRepository.ListAsync(
             orderBy: q => q.OrderBy(c => c.BusinessName),
             pageIndex: request.PageIndex,
             pageSize: request.PageSize);
 
-        return clients.Select(ClientMapper.ToDto).ToList();
+        if (tenants.Count == 0)
+        {
+            return [];
+        }
+
+        var tenantIds = tenants.Select(x => x.Id).ToList();
+        var allSecrets = await _clientSecretsRepository.ListAsync(x => tenantIds.Contains(x.TenantRefId), pageSize: 0);
+        var secretsByTenant = allSecrets.ToDictionary(x => x.TenantRefId, x => x);
+
+        return tenants
+            .Select(tenant =>
+            {
+                secretsByTenant.TryGetValue(tenant.Id, out var secrets);
+                return ClientMapper.ToDto(tenant, secrets);
+            })
+            .ToList();
     }
 }
 
@@ -206,17 +252,17 @@ public class ListClientsQueryValidator : AbstractValidator<ListClientsQuery>
 
 internal static class ClientMapper
 {
-    public static ClientDto ToDto(Client client)
+    public static ClientDto ToDto(Tenant tenant, ClientSecrets? clientSecrets)
     {
         return new ClientDto(
-            client.Id,
-            client.Name,
-            client.BusinessName,
-            client.MetaPageId,
-            client.WhatsAppBusinessAccountId,
-            client.ShopifyStoreId,
-            client.WooCommerceStoreId,
-            client.CreatedAt,
-            client.LastSyncedAt);
+            tenant.Id,
+            tenant.Name,
+            tenant.BusinessName,
+            clientSecrets?.MetaPageId,
+            clientSecrets?.WhatsAppBusinessAccountId,
+            clientSecrets?.ShopifyStoreId,
+            clientSecrets?.WooCommerceStoreId,
+            tenant.CreatedAt,
+            tenant.LastSyncedAt);
     }
 }

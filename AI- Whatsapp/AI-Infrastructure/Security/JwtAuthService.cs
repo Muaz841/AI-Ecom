@@ -47,7 +47,7 @@ public sealed class JwtAuthService : IAuthService
 
         var normalizedEmail = NormalizeEmail(request.Email);
         var exists = await _dbContext.UserAccounts
-            .AnyAsync(x => x.ClientId == request.ClientId && x.NormalizedEmail == normalizedEmail, cancellationToken);
+            .AnyAsync(x => x.TenantId == request.TenantId && x.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (exists)
         {
@@ -55,7 +55,7 @@ public sealed class JwtAuthService : IAuthService
         }
 
         var temporary = UserAccount.Create(
-            request.ClientId,
+            request.TenantId,
             request.Email.Trim(),
             "placeholder",
             request.FirstName,
@@ -69,11 +69,11 @@ public sealed class JwtAuthService : IAuthService
 
         var requestedRoleCode = (request.Role ?? "user").Trim().ToLowerInvariant();
         var role = await _dbContext.Set<Role>()
-            .FirstOrDefaultAsync(x => x.ClientId == request.ClientId && x.Code == requestedRoleCode, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.Code == requestedRoleCode, cancellationToken);
 
         if (role is not null)
         {
-            await _dbContext.Set<UserRole>().AddAsync(UserRole.Create(request.ClientId, temporary.Id, role.Id), cancellationToken);
+            await _dbContext.Set<UserRole>().AddAsync(UserRole.Create(request.TenantId, temporary.Id, role.Id), cancellationToken);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -83,14 +83,14 @@ public sealed class JwtAuthService : IAuthService
 
     public async Task<AuthResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.ClientId == Guid.Empty || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+        if (request.TenantId == Guid.Empty || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
         {
             return new AuthResult(false, ErrorMessage: "Invalid login request.");
         }
 
         var normalizedEmail = NormalizeEmail(request.Email);
         var user = await _dbContext.UserAccounts
-            .FirstOrDefaultAsync(x => x.ClientId == request.ClientId && x.NormalizedEmail == normalizedEmail, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (user is null || !user.IsActive)
         {
@@ -136,25 +136,26 @@ public sealed class JwtAuthService : IAuthService
         return result;
     }
 
-    public async Task<AuthProfileResult?> GetProfileAsync(Guid clientId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<AuthProfileResult?> GetProfileAsync(Guid TenantId, Guid userId, CancellationToken cancellationToken = default)
     {
-        if (clientId == Guid.Empty || userId == Guid.Empty)
+        if (TenantId == Guid.Empty || userId == Guid.Empty)
         {
             return null;
         }
 
         var user = await _dbContext.UserAccounts
-            .FirstOrDefaultAsync(x => x.Id == userId && x.ClientId == clientId && x.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == TenantId && x.IsActive, cancellationToken);
 
         if (user is null)
         {
             return null;
         }
+        var tenantId = user.TenantId ?? throw new InvalidOperationException("User tenant context missing.");
 
         var roleCodes = await (
             from userRole in _dbContext.Set<UserRole>()
             join role in _dbContext.Set<Role>() on userRole.RoleId equals role.Id
-            where userRole.UserAccountId == user.Id && userRole.ClientId == user.ClientId
+            where userRole.UserAccountId == user.Id && userRole.TenantId == tenantId
             select role.Code)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -163,14 +164,14 @@ public sealed class JwtAuthService : IAuthService
             from userRole in _dbContext.Set<UserRole>()
             join rolePermission in _dbContext.Set<RolePermission>() on userRole.RoleId equals rolePermission.RoleId
             join permission in _dbContext.Set<Permission>() on rolePermission.PermissionId equals permission.Id
-            where userRole.UserAccountId == user.Id && userRole.ClientId == user.ClientId
+            where userRole.UserAccountId == user.Id && userRole.TenantId == tenantId
             select permission.Code)
             .Distinct()
             .ToListAsync(cancellationToken);
 
         return new AuthProfileResult(
             user.Id,
-            user.ClientId,
+            tenantId,
             user.Email,
             user.FirstName,
             user.LastName,
@@ -200,14 +201,14 @@ public sealed class JwtAuthService : IAuthService
 
     public async Task RequestPasswordResetAsync(RequestPasswordResetRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.ClientId == Guid.Empty || string.IsNullOrWhiteSpace(request.Email))
+        if (request.TenantId == Guid.Empty || string.IsNullOrWhiteSpace(request.Email))
         {
             return;
         }
 
         var normalizedEmail = NormalizeEmail(request.Email);
         var user = await _dbContext.UserAccounts
-            .FirstOrDefaultAsync(x => x.ClientId == request.ClientId && x.NormalizedEmail == normalizedEmail, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (user is null || !user.IsActive)
         {
@@ -216,20 +217,21 @@ public sealed class JwtAuthService : IAuthService
 
         var resetToken = GenerateSecureToken();
         var tokenHash = ComputeSha256(resetToken);
-        var resetEntity = UserPasswordResetToken.Create(user.ClientId, user.Id, tokenHash, DateTime.UtcNow.AddMinutes(_settings.PasswordResetTokenLifetimeMinutes));
+        var tenantId = user.TenantId ?? throw new InvalidOperationException("User tenant context missing.");
+        var resetEntity = UserPasswordResetToken.Create(tenantId, user.Id, tokenHash, DateTime.UtcNow.AddMinutes(_settings.PasswordResetTokenLifetimeMinutes));
         await _dbContext.UserPasswordResetTokens.AddAsync(resetEntity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.Info(
             "Password reset token issued for user {UserId} and tenant {TenantId}. Integrate email sender. Token (dev-only): {ResetToken}",
             user.Id,
-            user.ClientId,
+            tenantId,
             resetToken);
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.ClientId == Guid.Empty ||
+        if (request.TenantId == Guid.Empty ||
             string.IsNullOrWhiteSpace(request.Email) ||
             string.IsNullOrWhiteSpace(request.ResetToken) ||
             string.IsNullOrWhiteSpace(request.NewPassword))
@@ -244,7 +246,7 @@ public sealed class JwtAuthService : IAuthService
 
         var normalizedEmail = NormalizeEmail(request.Email);
         var user = await _dbContext.UserAccounts
-            .FirstOrDefaultAsync(x => x.ClientId == request.ClientId && x.NormalizedEmail == normalizedEmail, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (user is null || !user.IsActive)
         {
@@ -286,10 +288,12 @@ public sealed class JwtAuthService : IAuthService
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SigningKey));
         var creds = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
+        var tenantId = user.TenantId ?? throw new InvalidOperationException("User tenant context missing.");
+
         var roleCodes = await (
             from userRole in _dbContext.Set<UserRole>()
             join role in _dbContext.Set<Role>() on userRole.RoleId equals role.Id
-            where userRole.UserAccountId == user.Id && userRole.ClientId == user.ClientId
+            where userRole.UserAccountId == user.Id && userRole.TenantId == tenantId
             select role.Code)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -298,7 +302,7 @@ public sealed class JwtAuthService : IAuthService
             from userRole in _dbContext.Set<UserRole>()
             join rolePermission in _dbContext.Set<RolePermission>() on userRole.RoleId equals rolePermission.RoleId
             join permission in _dbContext.Set<Permission>() on rolePermission.PermissionId equals permission.Id
-            where userRole.UserAccountId == user.Id && userRole.ClientId == user.ClientId
+            where userRole.UserAccountId == user.Id && userRole.TenantId == tenantId
             select permission.Code)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -307,8 +311,7 @@ public sealed class JwtAuthService : IAuthService
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new("client_id", user.ClientId.ToString()),
-            new("tenant_id", user.ClientId.ToString())
+            new("tenant_id", tenantId.ToString())
         };
 
         claims.AddRange(roleCodes.Select(role => new Claim(ClaimTypes.Role, role)));
@@ -326,7 +329,7 @@ public sealed class JwtAuthService : IAuthService
         var refreshToken = GenerateSecureToken();
         var refreshHash = ComputeSha256(refreshToken);
 
-        var refreshEntity = UserRefreshToken.Create(user.ClientId, user.Id, refreshHash, refreshExpiresAt);
+        var refreshEntity = UserRefreshToken.Create(tenantId, user.Id, refreshHash, refreshExpiresAt);
         await _dbContext.UserRefreshTokens.AddAsync(refreshEntity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -344,9 +347,9 @@ public sealed class JwtAuthService : IAuthService
 
     private void ValidateRequest(RegisterUserRequest request)
     {
-        if (request.ClientId == Guid.Empty)
+        if (request.TenantId == Guid.Empty)
         {
-            throw new InvalidOperationException("ClientId is required.");
+            throw new InvalidOperationException("TenantId is required.");
         }
 
         if (string.IsNullOrWhiteSpace(request.Email) || !request.Email.Contains('@'))
@@ -382,3 +385,4 @@ public sealed class JwtAuthSettings
     public int RefreshTokenLifetimeDays { get; set; } = 14;
     public int PasswordResetTokenLifetimeMinutes { get; set; } = 30;
 }
+

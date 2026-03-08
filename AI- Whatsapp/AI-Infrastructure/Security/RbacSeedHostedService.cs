@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using TenantEntity = EcomAI.Platform.Business.Entities.Tenant;
 
 namespace EcomAI.Platform.Infrastructure.Security;
 
@@ -51,21 +52,21 @@ public sealed class RbacSeedHostedService : IHostedService
         var logger = scope.ServiceProvider.GetRequiredService<Business.Interfaces.IApplicationLogger>();
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<UserAccount>>();
 
-        var hostClient = await ResolveHostClientAsync(db, cancellationToken);
-        if (hostClient is null)
+        var hostTenant = await ResolveHostTenantAsync(db, cancellationToken);
+        if (hostTenant is null)
         {
-            logger.Warning("RBAC seeding skipped. No host client available.");
+            logger.Warning("RBAC seeding skipped. No host tenant available.");
             return;
         }
 
         foreach (var permission in DefaultPermissions)
         {
             var exists = await db.Set<Permission>()
-                .AnyAsync(x => x.ClientId == hostClient.Id && x.Code == permission.Code, cancellationToken);
+                .AnyAsync(x => x.TenantId == hostTenant.Id && x.Code == permission.Code, cancellationToken);
             if (!exists)
             {
                 await db.Set<Permission>().AddAsync(
-                    Permission.Create(hostClient.Id, permission.Name, permission.Code, permission.Description, isSystem: true),
+                    Permission.Create(hostTenant.Id, permission.Name, permission.Code, permission.Description, isSystem: true),
                     cancellationToken);
             }
         }
@@ -73,26 +74,26 @@ public sealed class RbacSeedHostedService : IHostedService
         await db.SaveChangesAsync(cancellationToken);
 
         var allPermissions = await db.Set<Permission>()
-            .Where(x => x.ClientId == hostClient.Id)
+            .Where(x => x.TenantId == hostTenant.Id)
             .ToListAsync(cancellationToken);
 
         var superAdminRole = await db.Set<Role>()
-            .FirstOrDefaultAsync(x => x.ClientId == hostClient.Id && x.Code == "super_admin", cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == hostTenant.Id && x.Code == "super_admin", cancellationToken);
 
         if (superAdminRole is null)
         {
-            superAdminRole = Role.Create(hostClient.Id, "Super Admin", "super_admin", "Host super user role", isSystem: true);
+            superAdminRole = Role.Create(hostTenant.Id, "Super Admin", "super_admin", "Host super user role", isSystem: true);
             await db.Set<Role>().AddAsync(superAdminRole, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
         }
 
         var existingRolePermissions = await db.Set<RolePermission>()
-            .Where(x => x.ClientId == hostClient.Id && x.RoleId == superAdminRole.Id)
+            .Where(x => x.TenantId == hostTenant.Id && x.RoleId == superAdminRole.Id)
             .ToListAsync(cancellationToken);
 
         db.Set<RolePermission>().RemoveRange(existingRolePermissions);
         await db.Set<RolePermission>().AddRangeAsync(
-            allPermissions.Select(p => RolePermission.Create(hostClient.Id, superAdminRole.Id, p.Id)),
+            allPermissions.Select(p => RolePermission.Create(hostTenant.Id, superAdminRole.Id, p.Id)),
             cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -104,12 +105,12 @@ public sealed class RbacSeedHostedService : IHostedService
 
         var normalizedEmail = _settings.SuperUserEmail.Trim().ToUpperInvariant();
         var user = await db.Set<UserAccount>()
-            .FirstOrDefaultAsync(x => x.ClientId == hostClient.Id && x.NormalizedEmail == normalizedEmail, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == hostTenant.Id && x.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (user is null)
         {
             user = UserAccount.Create(
-                hostClient.Id,
+                hostTenant.Id,
                 _settings.SuperUserEmail.Trim(),
                 "placeholder",
                 _settings.SuperUserFirstName ?? "Host",
@@ -121,60 +122,70 @@ public sealed class RbacSeedHostedService : IHostedService
         }
 
         var assigned = await db.Set<UserRole>().AnyAsync(
-            x => x.ClientId == hostClient.Id && x.UserAccountId == user.Id && x.RoleId == superAdminRole.Id,
+            x => x.TenantId == hostTenant.Id && x.UserAccountId == user.Id && x.RoleId == superAdminRole.Id,
             cancellationToken);
 
         if (!assigned)
         {
-            await db.Set<UserRole>().AddAsync(UserRole.Create(hostClient.Id, user.Id, superAdminRole.Id), cancellationToken);
+            await db.Set<UserRole>().AddAsync(UserRole.Create(hostTenant.Id, user.Id, superAdminRole.Id), cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        logger.Info("RBAC seeding completed. Host client {ClientId}, super user {Email}.", hostClient.Id, user.Email);
+        logger.Info("RBAC seeding completed. Host tenant {TenantId}, super user {Email}.", hostTenant.Id, user.Email);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private async Task<Client?> ResolveHostClientAsync(Persistence.PlatformDbContext db, CancellationToken cancellationToken)
+    private async Task<TenantEntity?> ResolveHostTenantAsync(Persistence.PlatformDbContext db, CancellationToken cancellationToken)
     {
-        if (_settings.HostClientId.HasValue && _settings.HostClientId.Value != Guid.Empty)
+        if (_settings.HostTenantId.HasValue && _settings.HostTenantId.Value != Guid.Empty)
         {
-            var configured = await db.Set<Client>().FirstOrDefaultAsync(x => x.Id == _settings.HostClientId.Value, cancellationToken);
+            var configured = await db.Set<TenantEntity>().FirstOrDefaultAsync(x => x.Id == _settings.HostTenantId.Value, cancellationToken);
             if (configured is not null)
             {
                 return configured;
             }
         }
 
-        if (_settings.CreateHostClientIfMissing)
-        {
-            var host = Client.Create(
-                name: _settings.HostClientName ?? "host-tenant",
-                businessName: _settings.HostBusinessName ?? "Host Tenant",
-                metaAccessToken: "seed-placeholder-token",
-                metaPageId: "seed-placeholder-page",
-                whatsAppBusinessAccountId: "seed-placeholder-waba");
+        var hostName = (_settings.HostTenantName ?? "host-tenant").Trim();
+        var hostBusinessName = (_settings.HostBusinessName ?? "Host Tenant").Trim();
 
-            await db.Set<Client>().AddAsync(host, cancellationToken);
+        var hostByName = await db.Set<TenantEntity>()
+            .FirstOrDefaultAsync(
+                x => x.Name.ToLower() == hostName.ToLower()
+                  || x.BusinessName.ToLower() == hostBusinessName.ToLower(),
+                cancellationToken);
+
+        if (hostByName is not null)
+        {
+            return hostByName;
+        }
+
+        var firstExisting = await db.Set<TenantEntity>().OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+        if (firstExisting is not null)
+        {
+            return firstExisting;
+        }
+
+        if (_settings.CreateHostTenantIfMissing)
+        {
+            var host = TenantEntity.Create(
+                name: hostName,
+                businessName: hostBusinessName);
+
+            await db.Set<TenantEntity>().AddAsync(host, cancellationToken);
+            await db.Set<ClientSecrets>().AddAsync(ClientSecrets.CreateForTenant(host.Id), cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             return host;
         }
 
-        var existing = await db.Set<Client>().OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
-        if (existing is not null)
-        {
-            return existing;
-        }
+        // Safety fallback for first startup when host creation flag is disabled.
+        var fallbackHost = TenantEntity.Create(
+            name: hostName,
+            businessName: hostBusinessName);
 
-        // Safety fallback for first startup: always bootstrap one host client if DB is empty.
-        var fallbackHost = Client.Create(
-            name: _settings.HostClientName ?? "host-tenant",
-            businessName: _settings.HostBusinessName ?? "Host Tenant",
-            metaAccessToken: "seed-placeholder-token",
-            metaPageId: "seed-placeholder-page",
-            whatsAppBusinessAccountId: "seed-placeholder-waba");
-
-        await db.Set<Client>().AddAsync(fallbackHost, cancellationToken);
+        await db.Set<TenantEntity>().AddAsync(fallbackHost, cancellationToken);
+        await db.Set<ClientSecrets>().AddAsync(ClientSecrets.CreateForTenant(fallbackHost.Id), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return fallbackHost;
     }
@@ -183,12 +194,13 @@ public sealed class RbacSeedHostedService : IHostedService
 public sealed class BootstrapSettings
 {
     public bool EnableBootstrapSeeding { get; set; } = true;
-    public Guid? HostClientId { get; set; }
-    public bool CreateHostClientIfMissing { get; set; } = false;
-    public string? HostClientName { get; set; }
+    public Guid? HostTenantId { get; set; }
+    public bool CreateHostTenantIfMissing { get; set; } = false;
+    public string? HostTenantName { get; set; }
     public string? HostBusinessName { get; set; }
     public string? SuperUserEmail { get; set; }
     public string? SuperUserPassword { get; set; }
     public string? SuperUserFirstName { get; set; }
     public string? SuperUserLastName { get; set; }
 }
+

@@ -19,10 +19,10 @@ public sealed class RbacService : IRbacService
         _dbContext = dbContext;
     }
 
-    public async Task<IReadOnlyList<PermissionDto>> ListPermissionsAsync(Guid clientId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PermissionDto>> ListPermissionsAsync(Guid TenantId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Set<Permission>()
-            .Where(x => x.ClientId == clientId)
+            .Where(x => x.TenantId == TenantId)
             .OrderBy(x => x.Name)
             .Select(x => new PermissionDto(x.Id, x.Name, x.Code, x.Description, x.IsSystem))
             .ToListAsync(cancellationToken);
@@ -30,19 +30,19 @@ public sealed class RbacService : IRbacService
 
     public async Task<PermissionDto> CreatePermissionAsync(CreatePermissionRequest request, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(request.ClientId);
+        ValidateClientId(request.TenantId);
         ValidateNameCode(request.Name, request.Code);
 
         var normalizedCode = request.Code.Trim().ToLowerInvariant();
         var exists = await _dbContext.Set<Permission>()
-            .AnyAsync(x => x.ClientId == request.ClientId && x.Code == normalizedCode, cancellationToken);
+            .AnyAsync(x => x.TenantId == request.TenantId && x.Code == normalizedCode, cancellationToken);
 
         if (exists)
         {
             throw new InvalidOperationException("Permission code already exists.");
         }
 
-        var entity = Permission.Create(request.ClientId, request.Name, request.Code, request.Description);
+        var entity = Permission.Create(request.TenantId, request.Name, request.Code, request.Description);
         await _dbContext.Set<Permission>().AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return new PermissionDto(entity.Id, entity.Name, entity.Code, entity.Description, entity.IsSystem);
@@ -50,11 +50,11 @@ public sealed class RbacService : IRbacService
 
     public async Task<PermissionDto?> UpdatePermissionAsync(UpdatePermissionRequest request, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(request.ClientId);
+        ValidateClientId(request.TenantId);
         ValidateNameCode(request.Name, request.Code);
 
         var entity = await _dbContext.Set<Permission>()
-            .FirstOrDefaultAsync(x => x.ClientId == request.ClientId && x.Id == request.PermissionId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.Id == request.PermissionId, cancellationToken);
 
         if (entity is null)
         {
@@ -68,7 +68,7 @@ public sealed class RbacService : IRbacService
 
         var normalizedCode = request.Code.Trim().ToLowerInvariant();
         var duplicate = await _dbContext.Set<Permission>()
-            .AnyAsync(x => x.ClientId == request.ClientId && x.Id != request.PermissionId && x.Code == normalizedCode, cancellationToken);
+            .AnyAsync(x => x.TenantId == request.TenantId && x.Id != request.PermissionId && x.Code == normalizedCode, cancellationToken);
 
         if (duplicate)
         {
@@ -81,11 +81,11 @@ public sealed class RbacService : IRbacService
         return new PermissionDto(entity.Id, entity.Name, entity.Code, entity.Description, entity.IsSystem);
     }
 
-    public async Task<bool> DeletePermissionAsync(Guid clientId, Guid permissionId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeletePermissionAsync(Guid TenantId, Guid permissionId, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(clientId);
+        ValidateClientId(TenantId);
         var entity = await _dbContext.Set<Permission>()
-            .FirstOrDefaultAsync(x => x.ClientId == clientId && x.Id == permissionId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == TenantId && x.Id == permissionId, cancellationToken);
 
         if (entity is null)
         {
@@ -102,21 +102,21 @@ public sealed class RbacService : IRbacService
         return true;
     }
 
-    public async Task<IReadOnlyList<RoleDto>> ListRolesAsync(Guid clientId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RoleDto>> ListRolesAsync(Guid TenantId, CancellationToken cancellationToken = default)
     {
         var roles = await _dbContext.Set<Role>()
-            .Where(x => x.ClientId == clientId)
+            .Where(x => x.TenantId == TenantId)
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
         var roleIds = roles.Select(x => x.Id).ToHashSet();
         var mappings = await _dbContext.Set<RolePermission>()
-            .Where(x => x.ClientId == clientId && roleIds.Contains(x.RoleId))
+            .Where(x => x.TenantId == TenantId && roleIds.Contains(x.RoleId))
             .ToListAsync(cancellationToken);
 
         var permissionIds = mappings.Select(x => x.PermissionId).ToHashSet();
         var permissions = await _dbContext.Set<Permission>()
-            .Where(x => x.ClientId == clientId && permissionIds.Contains(x.Id))
+            .Where(x => x.TenantId == TenantId && permissionIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 
         return roles.Select(role =>
@@ -133,19 +133,19 @@ public sealed class RbacService : IRbacService
 
     public async Task<RoleDto> CreateRoleAsync(CreateRoleRequest request, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(request.ClientId);
+        ValidateClientId(request.TenantId);
         ValidateNameCode(request.Name, request.Code);
 
         var normalizedCode = request.Code.Trim().ToLowerInvariant();
         var exists = await _dbContext.Set<Role>()
-            .AnyAsync(x => x.ClientId == request.ClientId && x.Code == normalizedCode, cancellationToken);
+            .AnyAsync(x => x.TenantId == request.TenantId && x.Code == normalizedCode, cancellationToken);
 
         if (exists)
         {
             throw new InvalidOperationException("Role code already exists.");
         }
 
-        var entity = Role.Create(request.ClientId, request.Name, request.Code, request.Description);
+        var entity = Role.Create(request.TenantId, request.Name, request.Code, request.Description);
         await _dbContext.Set<Role>().AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -154,11 +154,11 @@ public sealed class RbacService : IRbacService
 
     public async Task<RoleDto?> UpdateRoleAsync(UpdateRoleRequest request, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(request.ClientId);
+        ValidateClientId(request.TenantId);
         ValidateNameCode(request.Name, request.Code);
 
         var entity = await _dbContext.Set<Role>()
-            .FirstOrDefaultAsync(x => x.ClientId == request.ClientId && x.Id == request.RoleId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.Id == request.RoleId, cancellationToken);
 
         if (entity is null)
         {
@@ -172,7 +172,7 @@ public sealed class RbacService : IRbacService
 
         var normalizedCode = request.Code.Trim().ToLowerInvariant();
         var duplicate = await _dbContext.Set<Role>()
-            .AnyAsync(x => x.ClientId == request.ClientId && x.Id != request.RoleId && x.Code == normalizedCode, cancellationToken);
+            .AnyAsync(x => x.TenantId == request.TenantId && x.Id != request.RoleId && x.Code == normalizedCode, cancellationToken);
 
         if (duplicate)
         {
@@ -184,11 +184,11 @@ public sealed class RbacService : IRbacService
         return new RoleDto(entity.Id, entity.Name, entity.Code, entity.Description, entity.IsSystem, Array.Empty<PermissionDto>());
     }
 
-    public async Task<bool> DeleteRoleAsync(Guid clientId, Guid roleId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteRoleAsync(Guid TenantId, Guid roleId, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(clientId);
+        ValidateClientId(TenantId);
         var entity = await _dbContext.Set<Role>()
-            .FirstOrDefaultAsync(x => x.ClientId == clientId && x.Id == roleId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == TenantId && x.Id == roleId, cancellationToken);
 
         if (entity is null)
         {
@@ -205,12 +205,12 @@ public sealed class RbacService : IRbacService
         return true;
     }
 
-    public async Task<RoleDto?> SetRolePermissionsAsync(Guid clientId, Guid roleId, IReadOnlyCollection<Guid> permissionIds, CancellationToken cancellationToken = default)
+    public async Task<RoleDto?> SetRolePermissionsAsync(Guid TenantId, Guid roleId, IReadOnlyCollection<Guid> permissionIds, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(clientId);
+        ValidateClientId(TenantId);
 
         var role = await _dbContext.Set<Role>()
-            .FirstOrDefaultAsync(x => x.ClientId == clientId && x.Id == roleId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == TenantId && x.Id == roleId, cancellationToken);
 
         if (role is null)
         {
@@ -219,7 +219,7 @@ public sealed class RbacService : IRbacService
 
         var distinctPermissionIds = permissionIds.Distinct().ToList();
         var permissions = await _dbContext.Set<Permission>()
-            .Where(x => x.ClientId == clientId && distinctPermissionIds.Contains(x.Id))
+            .Where(x => x.TenantId == TenantId && distinctPermissionIds.Contains(x.Id))
             .ToListAsync(cancellationToken);
 
         if (permissions.Count != distinctPermissionIds.Count)
@@ -228,12 +228,12 @@ public sealed class RbacService : IRbacService
         }
 
         var existingMappings = await _dbContext.Set<RolePermission>()
-            .Where(x => x.ClientId == clientId && x.RoleId == roleId)
+            .Where(x => x.TenantId == TenantId && x.RoleId == roleId)
             .ToListAsync(cancellationToken);
 
         _dbContext.Set<RolePermission>().RemoveRange(existingMappings);
         var newMappings = distinctPermissionIds
-            .Select(permissionId => RolePermission.Create(clientId, roleId, permissionId))
+            .Select(permissionId => RolePermission.Create(TenantId, roleId, permissionId))
             .ToList();
 
         await _dbContext.Set<RolePermission>().AddRangeAsync(newMappings, cancellationToken);
@@ -248,14 +248,14 @@ public sealed class RbacService : IRbacService
             permissions.Select(p => new PermissionDto(p.Id, p.Name, p.Code, p.Description, p.IsSystem)).ToList());
     }
 
-    public async Task<bool> AssignRoleToUserAsync(Guid clientId, Guid userId, Guid roleId, CancellationToken cancellationToken = default)
+    public async Task<bool> AssignRoleToUserAsync(Guid TenantId, Guid userId, Guid roleId, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(clientId);
+        ValidateClientId(TenantId);
 
         var userExists = await _dbContext.Set<UserAccount>()
-            .AnyAsync(x => x.ClientId == clientId && x.Id == userId, cancellationToken);
+            .AnyAsync(x => x.TenantId == TenantId && x.Id == userId, cancellationToken);
         var roleExists = await _dbContext.Set<Role>()
-            .AnyAsync(x => x.ClientId == clientId && x.Id == roleId, cancellationToken);
+            .AnyAsync(x => x.TenantId == TenantId && x.Id == roleId, cancellationToken);
 
         if (!userExists || !roleExists)
         {
@@ -263,23 +263,23 @@ public sealed class RbacService : IRbacService
         }
 
         var alreadyAssigned = await _dbContext.Set<UserRole>()
-            .AnyAsync(x => x.ClientId == clientId && x.UserAccountId == userId && x.RoleId == roleId, cancellationToken);
+            .AnyAsync(x => x.TenantId == TenantId && x.UserAccountId == userId && x.RoleId == roleId, cancellationToken);
 
         if (alreadyAssigned)
         {
             return true;
         }
 
-        await _dbContext.Set<UserRole>().AddAsync(UserRole.Create(clientId, userId, roleId), cancellationToken);
+        await _dbContext.Set<UserRole>().AddAsync(UserRole.Create(TenantId, userId, roleId), cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
 
-    public async Task<bool> RemoveRoleFromUserAsync(Guid clientId, Guid userId, Guid roleId, CancellationToken cancellationToken = default)
+    public async Task<bool> RemoveRoleFromUserAsync(Guid TenantId, Guid userId, Guid roleId, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(clientId);
+        ValidateClientId(TenantId);
         var mapping = await _dbContext.Set<UserRole>()
-            .FirstOrDefaultAsync(x => x.ClientId == clientId && x.UserAccountId == userId && x.RoleId == roleId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == TenantId && x.UserAccountId == userId && x.RoleId == roleId, cancellationToken);
 
         if (mapping is null)
         {
@@ -291,11 +291,11 @@ public sealed class RbacService : IRbacService
         return true;
     }
 
-    private static void ValidateClientId(Guid clientId)
+    private static void ValidateClientId(Guid TenantId)
     {
-        if (clientId == Guid.Empty)
+        if (TenantId == Guid.Empty)
         {
-            throw new InvalidOperationException("ClientId is required.");
+            throw new InvalidOperationException("TenantId is required.");
         }
     }
 
@@ -307,3 +307,4 @@ public sealed class RbacService : IRbacService
         }
     }
 }
+

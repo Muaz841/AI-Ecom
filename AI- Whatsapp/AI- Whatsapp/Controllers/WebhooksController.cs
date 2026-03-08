@@ -23,20 +23,20 @@ namespace EcomAI.Platform.Api.Controllers;
 public class WebhooksController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly ClientRepository _clientRepository;
+    private readonly ClientSecretsRepository _clientSecretsRepository;
     private readonly ICurrentTenantAccessor _tenantAccessor;
     private readonly IApplicationLogger _appLogger;
     private readonly MetaSecrets _metaSecrets;
 
     public WebhooksController(
         IMediator mediator,
-        ClientRepository clientRepository,
+        ClientSecretsRepository clientSecretsRepository,
         ICurrentTenantAccessor tenantAccessor,
         IApplicationLogger appLogger,
         IOptions<MetaSecrets> metaSecretsOptions)
     {
         _mediator = mediator;
-        _clientRepository = clientRepository;
+        _clientSecretsRepository = clientSecretsRepository;
         _tenantAccessor = tenantAccessor;
         _appLogger = appLogger;
         _metaSecrets = metaSecretsOptions.Value;
@@ -102,13 +102,13 @@ public class WebhooksController : ControllerBase
         var firstEntry = payload.Entry[0];
         var value = firstEntry.Changes?.FirstOrDefault()?.Value;
 
-        var client = await _clientRepository.GetByMetaIdentifiersAsync(
+        var clientSecrets = await _clientSecretsRepository.GetByMetaIdentifiersAsync(
             metaPageId: value?.PageId,
             whatsAppBusinessAccountId: value?.From?.BusinessAccountId ?? firstEntry.Id);
 
-        if (client is null)
+        if (clientSecrets is null)
         {
-            _appLogger.Warning("No matching Client for webhook identifiers");
+            _appLogger.Warning("No matching tenant client secret for webhook identifiers");
             await TryWriteWebhookLogAsync(
                 tenantId: null,
                 requestPayload: rawBody,
@@ -120,7 +120,7 @@ public class WebhooksController : ControllerBase
             return NotFound("No matching tenant");
         }
 
-        _tenantAccessor.SetCurrentTenantId(client.Id);
+        _tenantAccessor.SetCurrentTenantId(clientSecrets.TenantRefId);
 
         foreach (var change in firstEntry.Changes ?? new List<MetaChange>())
         {
@@ -139,7 +139,7 @@ public class WebhooksController : ControllerBase
                 }
 
                 var command = new ProcessIncomingMessageCommand(
-                    ClientId: client.Id,
+                    TenantId: clientSecrets.TenantRefId,
                     Platform: msgValue.MessagingProduct ?? "unknown",
                     From: msg.From ?? string.Empty,
                     To: msgValue.Metadata?.PhoneNumberId ?? string.Empty,
@@ -152,7 +152,7 @@ public class WebhooksController : ControllerBase
         }
 
         await TryWriteWebhookLogAsync(
-            tenantId: client.Id,
+            tenantId: clientSecrets.TenantRefId,
             requestPayload: rawBody,
             isSuccess: true,
             statusCode: 200,
@@ -266,3 +266,4 @@ public class MetaFrom
 {
     public string? BusinessAccountId { get; set; }
 }
+

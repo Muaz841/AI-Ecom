@@ -6,8 +6,8 @@ public class ProcessIncomingMessageCommandValidator : AbstractValidator<ProcessI
 {
     public ProcessIncomingMessageCommandValidator()
     {
-        RuleFor(x => x.ClientId)
-            .NotEmpty().WithMessage("ClientId is required.");
+        RuleFor(x => x.TenantId)
+            .NotEmpty().WithMessage("TenantId is required.");
 
         RuleFor(x => x.Platform)
             .NotEmpty().WithMessage("Platform is required.")
@@ -38,3 +38,4 @@ public class ProcessIncomingMessageCommandValidator : AbstractValidator<ProcessI
         return value is "whatsapp" or "instagram";
     }
 }
+

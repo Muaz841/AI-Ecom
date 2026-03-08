@@ -49,14 +49,14 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         var aiCallsUsed = 0;
         var provider = _aiService.GetCurrentProviderInfo();
         _logger.Info(
-            "Processing incoming message with AI provider {Provider}/{Model} for client {ClientId} on {Platform}",
+            "Processing incoming message with AI provider {Provider}/{Model} for tenant {TenantId} on {Platform}",
             provider.ProviderName,
             provider.ModelVersion,
-            request.ClientId,
+            request.TenantId,
             request.Platform);
 
         var thread = await _conversationThreadRepository.GetOrCreateAsync(
-            request.ClientId,
+            request.TenantId,
             request.Platform,
             request.From,
             request.To,
@@ -70,7 +70,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             externalMessageId: request.ExternalMessageId);
 
         var availableProducts = await _productRepository.GetAvailableInventoryAsync(
-            request.ClientId,
+            request.TenantId,
             maxItems: 15,
             cancellationToken: cancellationToken);
 
@@ -147,7 +147,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         }
 
         var sendResult = await _metaService.SendTextMessageAsync(
-            request.ClientId,
+            request.TenantId,
             request.Platform,
             request.From,
             generatedReply,
@@ -205,3 +205,4 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         }
     }
 }
+

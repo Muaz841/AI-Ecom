@@ -4,7 +4,7 @@ using MediatR;
 namespace EcomAI.Platform.Business.Commands;
 
 public record ProcessIncomingMessageCommand(
-    Guid ClientId,
+    Guid TenantId,
     string Platform,
     string From,
     string To,
@@ -20,3 +20,4 @@ public record ProcessIncomingMessageResult(
     Guid? CreatedMessageId,
     string? ErrorMessage = null
 );
+

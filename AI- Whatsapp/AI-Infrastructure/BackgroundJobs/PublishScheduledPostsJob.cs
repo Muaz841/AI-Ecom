@@ -45,9 +45,10 @@ public class PublishScheduledPostsJob
             {
                 await retryPolicy.ExecuteAsync(async () =>
                 {
+                    var tenantId = post.TenantId ?? throw new InvalidOperationException("Scheduled post is missing tenant context.");
                     // TODO: replace placeholder recipient with platform-appropriate publish endpoint/input.
                     var sendResult = await _metaMessagingService.SendTextMessageAsync(
-                        post.ClientId,
+                        tenantId,
                         post.Platform,
                         recipient: "scheduled-post-publisher",
                         messageText: post.Content,
@@ -63,14 +64,14 @@ public class PublishScheduledPostsJob
                     await _scheduledPostRepository.SaveChangesAsync();
                 });
 
-                _logger.Info("Scheduled post {PostId} published for client {ClientId}", post.Id, post.ClientId);
+                _logger.Info("Scheduled post {PostId} published for tenant {TenantId}", post.Id, post.TenantId);
             }
             catch (Exception ex)
             {
                 post.MarkFailed();
                 await _scheduledPostRepository.UpdateAsync(post);
                 await _scheduledPostRepository.SaveChangesAsync();
-                _logger.Error(ex, "Failed to publish scheduled post {PostId} for client {ClientId}", post.Id, post.ClientId);
+                _logger.Error(ex, "Failed to publish scheduled post {PostId} for tenant {TenantId}", post.Id, post.TenantId);
             }
         }
     }
@@ -92,3 +93,4 @@ public class PublishScheduledPostsJob
                 });
     }
 }
+

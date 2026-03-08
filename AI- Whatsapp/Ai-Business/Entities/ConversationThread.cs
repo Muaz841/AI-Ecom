@@ -4,7 +4,6 @@ namespace EcomAI.Platform.Business.Entities;
 
 public class ConversationThread : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public string Platform { get; private set; } = null!;
     public string CustomerIdentifier { get; private set; } = null!;
     public string BusinessIdentifier { get; private set; } = null!;
@@ -23,15 +22,15 @@ public class ConversationThread : Entity<Guid>, ITenantEntity
     }
 
     public static ConversationThread Create(
-        Guid clientId,
+        Guid tenantId,
         string platform,
         string customerIdentifier,
         string businessIdentifier,
         string? customerDisplayName = null)
     {
-        if (clientId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId is required.", nameof(clientId));
+            throw new ArgumentException("TenantId is required.", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(platform))
@@ -52,8 +51,7 @@ public class ConversationThread : Entity<Guid>, ITenantEntity
         return new ConversationThread
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             Platform = platform.Trim().ToLowerInvariant(),
             CustomerIdentifier = customerIdentifier.Trim(),
             BusinessIdentifier = businessIdentifier.Trim(),
@@ -90,7 +88,7 @@ public class ConversationThread : Entity<Guid>, ITenantEntity
         string messageType = "text")
     {
         var message = Message.CreateIncoming(
-            clientId: ClientId,
+            tenantId: TenantId!.Value,
             platform: Platform,
             from: from,
             to: to,
@@ -113,7 +111,7 @@ public class ConversationThread : Entity<Guid>, ITenantEntity
         string? rawPayloadJson = null)
     {
         var message = Message.CreateOutgoing(
-            clientId: ClientId,
+            tenantId: TenantId!.Value,
             platform: Platform,
             from: from,
             to: to,
@@ -127,3 +125,5 @@ public class ConversationThread : Entity<Guid>, ITenantEntity
         return message;
     }
 }
+
+

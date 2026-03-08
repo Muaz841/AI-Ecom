@@ -9,7 +9,7 @@ namespace EcomAI.Platform.Business.Interfaces;
 public interface IConversationThreadRepository
 {
     Task<ConversationThread> GetOrCreateAsync(
-        Guid clientId,
+        Guid TenantId,
         string platform,
         string customerIdentifier,
         string businessIdentifier,
@@ -17,12 +17,12 @@ public interface IConversationThreadRepository
         CancellationToken cancellationToken = default);
 
     Task<ConversationThread?> GetByIdAsync(
-        Guid clientId,
+        Guid TenantId,
         Guid conversationThreadId,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ConversationThread>> ListRecentAsync(
-        Guid clientId,
+        Guid TenantId,
         int pageIndex = 0,
         int pageSize = 50,
         CancellationToken cancellationToken = default);
@@ -34,3 +34,4 @@ public interface IConversationThreadRepository
         IReadOnlyCollection<Message> messages,
         CancellationToken cancellationToken = default);
 }
+

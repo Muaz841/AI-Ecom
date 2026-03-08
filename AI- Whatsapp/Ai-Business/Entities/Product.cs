@@ -6,7 +6,6 @@ namespace EcomAI.Platform.Business.Entities;
 
 public class Product : Entity<Guid>, ITenantEntity
 {
-    public Guid ClientId { get; private set; }
     public string Name { get; private set; } = null!;
     public string? Description { get; private set; }
     public decimal BasePrice { get; private set; }
@@ -24,7 +23,7 @@ public class Product : Entity<Guid>, ITenantEntity
     }
 
     public static Product Create(
-        Guid clientId,
+        Guid tenantId,
         string name,
         decimal basePrice,
         string? description = null,
@@ -32,9 +31,9 @@ public class Product : Entity<Guid>, ITenantEntity
         string? sku = null,
         string? externalId = null)
     {
-        if (clientId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("ClientId is required", nameof(clientId));
+            throw new ArgumentException("TenantId is required", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(name))
@@ -55,8 +54,7 @@ public class Product : Entity<Guid>, ITenantEntity
         return new Product
         {
             Id = Guid.NewGuid(),
-            TenantId = clientId,
-            ClientId = clientId,
+            TenantId = tenantId,
             Name = name.Trim(),
             Description = description?.Trim(),
             BasePrice = basePrice,
@@ -76,7 +74,7 @@ public class Product : Entity<Guid>, ITenantEntity
             throw new ArgumentException("Size is required for variant");
         }
 
-        var variant = ProductVariant.Create(Id, TenantId ?? ClientId, size.Trim(), color?.Trim(), stock, priceOverride);
+        var variant = ProductVariant.Create(Id, TenantId!.Value, size.Trim(), color?.Trim(), stock, priceOverride);
         Variants.Add(variant);
         UpdateTotalStock();
     }
@@ -99,7 +97,7 @@ public class Product : Entity<Guid>, ITenantEntity
             throw new ArgumentException("Image URL is required");
         }
 
-        var image = ProductImage.Create(Id, TenantId ?? ClientId, url.Trim(), altText?.Trim(), isPrimary);
+        var image = ProductImage.Create(Id, TenantId!.Value, url.Trim(), altText?.Trim(), isPrimary);
         Images.Add(image);
 
         if (isPrimary)
@@ -201,3 +199,5 @@ public class ProductImage : Entity<Guid>, ITenantEntity
         IsPrimary = false;
     }
 }
+
+

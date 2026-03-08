@@ -19,7 +19,7 @@ public class ConversationThreadRepository : IConversationThreadRepository
     }
 
     public async Task<ConversationThread> GetOrCreateAsync(
-        Guid clientId,
+        Guid TenantId,
         string platform,
         string customerIdentifier,
         string businessIdentifier,
@@ -32,7 +32,7 @@ public class ConversationThreadRepository : IConversationThreadRepository
 
         var existing = await _context.Set<ConversationThread>()
             .FirstOrDefaultAsync(
-                x => x.ClientId == clientId &&
+                x => x.TenantId == TenantId &&
                      x.Platform == normalizedPlatform &&
                      x.CustomerIdentifier == normalizedCustomer &&
                      x.BusinessIdentifier == normalizedBusiness,
@@ -44,7 +44,7 @@ public class ConversationThreadRepository : IConversationThreadRepository
         }
 
         var thread = ConversationThread.Create(
-            clientId,
+            TenantId,
             normalizedPlatform,
             normalizedCustomer,
             normalizedBusiness,
@@ -55,20 +55,20 @@ public class ConversationThreadRepository : IConversationThreadRepository
         return thread;
     }
 
-    public async Task<ConversationThread?> GetByIdAsync(Guid clientId, Guid conversationThreadId, CancellationToken cancellationToken = default)
+    public async Task<ConversationThread?> GetByIdAsync(Guid TenantId, Guid conversationThreadId, CancellationToken cancellationToken = default)
     {
         return await _context.Set<ConversationThread>()
-            .FirstOrDefaultAsync(x => x.ClientId == clientId && x.Id == conversationThreadId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.TenantId == TenantId && x.Id == conversationThreadId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ConversationThread>> ListRecentAsync(
-        Guid clientId,
+        Guid TenantId,
         int pageIndex = 0,
         int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
         var data = await _context.Set<ConversationThread>()
-            .Where(x => x.ClientId == clientId).AsNoTracking()
+            .Where(x => x.TenantId == TenantId).AsNoTracking()
             .OrderByDescending(x => x.LastMessageAt ?? x.CreatedAt)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
@@ -98,3 +98,4 @@ public class ConversationThreadRepository : IConversationThreadRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 }
+

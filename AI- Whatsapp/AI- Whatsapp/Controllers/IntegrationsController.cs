@@ -103,7 +103,7 @@ public class IntegrationsController : ControllerBase
 
     private Guid? ResolveTenantId()
     {
-        var raw = User.FindFirstValue("client_id") ?? User.FindFirstValue("tenant_id");
+        var raw = User.FindFirstValue("tenant_id") ?? User.FindFirstValue("tenant_id");
         return Guid.TryParse(raw, out var tenantId) ? tenantId : null;
     }
 
@@ -130,3 +130,4 @@ public class IntegrationsController : ControllerBase
 }
 
 public sealed record MetaStartConnectionRequest(string? ReturnUrl);
+
