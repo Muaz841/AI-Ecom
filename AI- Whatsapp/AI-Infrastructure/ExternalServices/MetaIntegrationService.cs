@@ -356,7 +356,7 @@ public sealed class MetaOAuthSettings
     public string AppId { get; set; } = string.Empty;
     public string AppSecret { get; set; } = string.Empty;
     public string CallbackBaseUrl { get; set; } = string.Empty;
-    public string GraphVersion { get; set; } = "20.0";
+    public string GraphVersion { get; set; } = "25.0";
     public int StateLifetimeMinutes { get; set; } = 10;
 
     public bool IsConfigured()

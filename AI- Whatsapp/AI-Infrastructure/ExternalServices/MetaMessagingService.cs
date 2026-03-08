@@ -3,6 +3,7 @@ using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Infrastructure.Persistence;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Registry;
 using System;
@@ -24,6 +25,7 @@ public class MetaMessagingService : IMetaMessagingService
     private readonly ITokenProtector _tokenProtector;
     private readonly IApplicationLogger _appLogger;
     private readonly ResiliencePipeline _sendPipeline;
+    private readonly string _graphVersion;
 
     public const string MetaHttpClientName = "MetaGraphApi";
     public const string SendPipelineKey = "meta-send";    
@@ -36,13 +38,16 @@ public class MetaMessagingService : IMetaMessagingService
         ClientRepository clientRepository,
         ITokenProtector tokenProtector,
         IApplicationLogger appLogger,
-        ResiliencePipelineRegistry<string> pipelineRegistry)
+        ResiliencePipelineRegistry<string> pipelineRegistry,
+        IOptions<MetaOAuthSettings> metaOAuthSettings)
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _clientRepository = clientRepository ?? throw new ArgumentNullException(nameof(clientRepository));
         _tokenProtector = tokenProtector ?? throw new ArgumentNullException(nameof(tokenProtector));
         _appLogger = appLogger ?? throw new ArgumentNullException(nameof(appLogger));
+        var configuredVersion = metaOAuthSettings.Value.GraphVersion?.Trim();
+        _graphVersion = string.IsNullOrWhiteSpace(configuredVersion) ? "25.0" : configuredVersion;
 
         _sendPipeline = pipelineRegistry.GetPipeline(SendPipelineKey)
             ?? throw new InvalidOperationException($"Resilience pipeline '{SendPipelineKey}' not found in registry.");
@@ -77,8 +82,8 @@ public class MetaMessagingService : IMetaMessagingService
 
         string endpoint = platform.ToLowerInvariant() switch
         {
-            "whatsapp" => $"v20.0/{recipient}/messages",
-            "instagram" => "v20.0/me/messages",
+            "whatsapp" => $"v{_graphVersion}/{recipient}/messages",
+            "instagram" => $"v{_graphVersion}/me/messages",
             _ => throw new ArgumentException($"Unsupported platform: {platform}", nameof(platform))
         };
 
