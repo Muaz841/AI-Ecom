@@ -1,24 +1,28 @@
-<p-card styleClass="h-100">
-  <ng-template pTemplate="header">
-    <div class="d-flex align-items-center justify-content-between p-3 pb-0">
-      <div class="d-flex align-items-center gap-2">
-        <span class="icon-shell">
-          <i [class]="icon"></i>
-        </span>
-        <strong>{{ title }}</strong>
-      </div>
-      <p-tag [value]="statusLabel" [severity]="statusSeverity"></p-tag>
+<div class="integration-card" [class]="'platform-' + platform">
+  <div class="card-glow"></div>
+
+  <div class="card-top">
+    <div class="platform-icon-wrap">
+      <i [class]="icon"></i>
     </div>
-  </ng-template>
+    <p-tag [value]="statusLabel" [severity]="statusSeverity"></p-tag>
+  </div>
 
-  <p class="mb-3 text-muted">{{ description }}</p>
+  <div class="card-body">
+    <h3 class="platform-name">{{ title }}</h3>
+    <p class="platform-desc">{{ description }}</p>
+  </div>
 
-  <button
-    pButton
-    type="button"
-    [label]="actionLabel"
-    [loading]="isBusy"
-    [outlined]="status === 'connected'"
-    (click)="onPrimaryAction()"
-  ></button>
-</p-card>
+  <div class="card-footer">
+    <button
+      pButton
+      type="button"
+      [label]="actionLabel"
+      [loading]="isBusy"
+      [outlined]="status === 'connected'"
+      [severity]="status === 'connected' ? 'danger' : 'success'"
+      class="w-100 action-btn"
+      (click)="onPrimaryAction()"
+    ></button>
+  </div>
+</div>

@@ -1,14 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
 import { MetaChannel } from '../../../../core/integrations/meta-integration.models';
 
 @Component({
   selector: 'app-integration-card',
   standalone: true,
-  imports: [CommonModule, CardModule, ButtonModule, TagModule],
+  imports: [CommonModule, ButtonModule, TagModule],
   templateUrl: './integration-card.component.html',
   styleUrl: './integration-card.component.scss',
 })
