@@ -106,12 +106,7 @@ public sealed class JwtAuthService : IAuthService
         user.MarkLogin(DateTime.UtcNow);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        var tenant = await _dbContext.Tenants
-        .Where(t => t.Id == request.TenantId)
-        .Select(t => t.BusinessName)
-        .FirstOrDefaultAsync(cancellationToken);
-
-        return await IssueTokensAsync(user, cancellationToken , tenant);
+        return await IssueTokensAsync(user, cancellationToken);
     }
 
     public async Task<AuthResult> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)
@@ -284,7 +279,7 @@ public sealed class JwtAuthService : IAuthService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task<AuthResult> IssueTokensAsync(UserAccount user, CancellationToken cancellationToken, string? tenantBusinessName = null)
+    private async Task<AuthResult> IssueTokensAsync(UserAccount user, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
         var accessExpiresAt = now.AddMinutes(_settings.AccessTokenLifetimeMinutes);
@@ -294,6 +289,11 @@ public sealed class JwtAuthService : IAuthService
         var creds = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
         var tenantId = user.TenantId ?? throw new InvalidOperationException("User tenant context missing.");
+
+        var tenantBusinessName = await _dbContext.Tenants
+            .Where(t => t.Id == tenantId)
+            .Select(t => t.BusinessName)
+            .FirstOrDefaultAsync(cancellationToken);
 
         var roleCodes = await (
             from userRole in _dbContext.Set<UserRole>()
@@ -315,8 +315,9 @@ public sealed class JwtAuthService : IAuthService
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email),            
-            new("tenant_id", tenantId.ToString())
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new("tenant_id", tenantId.ToString()),
+            new("tenant_name", tenantBusinessName ?? string.Empty),
         };
 
         claims.AddRange(roleCodes.Select(role => new Claim(ClaimTypes.Role, role)));

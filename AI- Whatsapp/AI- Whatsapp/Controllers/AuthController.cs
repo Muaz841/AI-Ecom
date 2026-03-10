@@ -56,7 +56,7 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginApiRequest request, CancellationToken cancellationToken)
     {
-        var tenantId = request.TenantId;
+        var tenantId = request.TenantId;        
         if (tenantId == Guid.Empty && !string.IsNullOrWhiteSpace(request.TenantName))
         {
             var tenantName = request.TenantName.Trim();
@@ -68,7 +68,7 @@ public class AuthController : ControllerBase
                 return Unauthorized("Tenant not found.");
             }
 
-            tenantId = tenant.Id;
+            tenantId = tenant.Id;            
         }
 
         if (tenantId == Guid.Empty)
@@ -79,12 +79,12 @@ public class AuthController : ControllerBase
         var result = await _authService.LoginAsync(
             new LoginRequest(tenantId, request.Email, request.Password),
             cancellationToken);
-
+        
         if (!result.Success)
         {
             return Unauthorized(result.ErrorMessage);
         }
-
+      
         return Ok(result);
     }
 

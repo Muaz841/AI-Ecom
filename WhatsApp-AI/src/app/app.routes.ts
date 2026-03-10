@@ -5,9 +5,9 @@ import { LoginComponent } from './features/auth/login.component';
 import { DashboardPlaceholderComponent } from './features/system/dashboard-placeholder.component';
 import { UnauthorizedComponent } from './features/system/unauthorized.component';
 import { AppShellComponent } from './features/layout/app-shell.component';
-import { MetaIntegrationsComponent } from './features/integrations/meta-integrations.component';
-import { MetaOauthCallbackComponent } from './features/integrations/meta-oauth-callback.component';
+import { MetaOauthCallbackComponent } from './features/metaConnectionComponent/meta-oauth-callback.component';
 import { SIDEBAR_PIPELINE } from './core/navigation/nav-pipeline';
+import { MetaIntegrationsComponent } from './features/metaConnectionComponent/meta-integrations.component';
 
 const dashboardModule = SIDEBAR_PIPELINE.find((module) => module.id === 'dashboard');
 const messagingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'messaging');

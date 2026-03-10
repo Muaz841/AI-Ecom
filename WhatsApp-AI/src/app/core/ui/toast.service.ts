@@ -15,6 +15,10 @@ export class ToastService {
     this.messageService.add({ severity: 'error', summary, detail, life: ToastService.defaultLifeMs });
   }
 
+  exception(summary: string, detail: string): void {
+    this.messageService.add({ key: 'exception', severity: 'error', summary, detail, life: 8000 });
+  }
+
   warn(summary: string, detail: string): void {
     this.messageService.add({ severity: 'warn', summary, detail, life: ToastService.defaultLifeMs });
   }

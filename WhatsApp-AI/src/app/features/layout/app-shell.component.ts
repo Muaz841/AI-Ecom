@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -17,6 +17,7 @@ export class AppShellComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly themeService = inject(ThemeService);
+  private readonly elementRef = inject(ElementRef);
 
   readonly notifications = [
     { title: 'New inbound message', detail: 'WhatsApp thread is waiting for a reply.' },
@@ -71,4 +72,13 @@ export class AppShellComponent {
     this.authService.logout();
     void this.router.navigateByUrl('/auth/login');
   }
+
+@HostListener('document:click', ['$event.target'])
+onClickOutside(target: EventTarget | null): void {
+  if (!target) return;
+  const clickedInside = this.elementRef.nativeElement.contains(target as HTMLElement);
+  if (!clickedInside) {
+    this.isNotificationPanelOpen = false;
+  }
+}
 }

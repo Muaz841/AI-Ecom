@@ -5,7 +5,6 @@ import { APP_CONFIG } from '../config/app-config';
 import { AuthResponse, AuthSession, LoginRequest, UserProfile } from './auth.models';
 import { decodeJwtPayload, getTokenExpiryUtcMs } from './jwt.utils';
 import { TokenStore } from './token.store';
-import { response } from 'express';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -162,7 +161,7 @@ export class AuthService {
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       accessTokenExpiresAtUtc: response.accessTokenExpiresAtUtc,
-      profile,
+      profile: { ...profile, tenantname: profile.tenantname || response.tenantname },
     };
   }
 

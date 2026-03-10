@@ -7,7 +7,7 @@ export class GlobalErrorHandler implements ErrorHandler {
 
   handleError(error: unknown): void {
     const message = this.resolveMessage(error);
-    this.toastService.error('Unexpected error', message); 
+    this.toastService.exception('Unexpected Error', message);
     console.error(error);
   }
 

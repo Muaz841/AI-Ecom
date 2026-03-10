@@ -126,3 +126,45 @@ html[data-theme='dark'] {
 .p-toast .p-toast-message-error {
   border-left: 4px solid #ef4444;
 }
+
+// Exception toast — centered modal-style popup
+.p-toast-center {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(30rem, calc(100vw - 2rem)) !important;
+  z-index: 1400 !important;
+
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg);
+    backdrop-filter: blur(3px);
+    z-index: -1;
+  }
+
+  .p-toast-message {
+    border-radius: 1rem;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: linear-gradient(145deg, var(--surface), var(--surface-2));
+    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.7), 0 0 0 1px rgba(239, 68, 68, 0.15);
+  }
+
+  .p-toast-message-content {
+    padding: 1.25rem 1.4rem;
+  }
+
+  .p-toast-summary {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .p-toast-detail {
+    font-size: 0.875rem;
+    margin-top: 0.35rem;
+    line-height: 1.5;
+  }
+}
