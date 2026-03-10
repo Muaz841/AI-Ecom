@@ -30,7 +30,7 @@ import { ToastService } from '../../core/ui/toast.service';
 
       p {
         margin: 0;
-        color: #94a3b8;
+        color: var(--text-secondary);
       }
     `,
   ],

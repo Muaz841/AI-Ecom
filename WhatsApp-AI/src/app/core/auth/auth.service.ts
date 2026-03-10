@@ -5,6 +5,7 @@ import { APP_CONFIG } from '../config/app-config';
 import { AuthResponse, AuthSession, LoginRequest, UserProfile } from './auth.models';
 import { decodeJwtPayload, getTokenExpiryUtcMs } from './jwt.utils';
 import { TokenStore } from './token.store';
+import { response } from 'express';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -15,7 +16,7 @@ export class AuthService {
   readonly session$ = this.sessionSubject.asObservable();
   readonly isAuthenticated$ = this.session$.pipe(map((s) => !!s));
   readonly tenantId$ = this.session$.pipe(map((s) => s?.profile.tenantId ?? null));
-  readonly tenantName$ = this.session$.pipe(map((s) => s?.profile.tenantName ?? null));
+  readonly tenantName$ = this.session$.pipe(map((s) => s?.profile.tenantname ?? null));
   readonly userProfile$ = this.session$.pipe(map((s) => s?.profile ?? null));
 
   constructor(
@@ -24,7 +25,7 @@ export class AuthService {
   ) {}
 
   login(request: LoginRequest): Observable<AuthSession> {
-    return this.apiClient.post<AuthResponse>(APP_CONFIG.auth.login, request).pipe(
+    return this.apiClient.post<AuthResponse>(APP_CONFIG.auth.login, request).pipe(      
       map((response) => this.mapAuthResponse(response)),
       tap((session) => this.setSession(session)),
     );
@@ -147,6 +148,7 @@ export class AuthService {
   }
 
   private mapAuthResponse(response: AuthResponse): AuthSession {
+
     if (!response.success || !response.accessToken || !response.refreshToken) {
       throw new Error(response.errorMessage || 'Authentication failed.');
     }
@@ -154,9 +156,9 @@ export class AuthService {
     const profile = this.createProfileFromToken(response.accessToken);
     if (!profile) {
       throw new Error('Invalid access token payload.');
-    }
-
-    return {
+    }     
+    
+        return {
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       accessTokenExpiresAtUtc: response.accessTokenExpiresAtUtc,
@@ -169,23 +171,24 @@ export class AuthService {
     const userId = getClaimValue(payload, ['sub']);
     const email = getClaimValue(payload, ['email', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress']);
     const tenantId = getClaimValue(payload, ['tenant_id']);
-    const tenantName = getClaimValue(payload, ['tenant_name', 'tenant']);
+    const tenantname = getClaimValue(payload, ['tenant_name', 'tenant']);    
     if (!userId || !email || !tenantId) {
       return null;
-    }
+    }    
+  
 
     const roleClaims = normalizeClaimValues(
       getClaimValues(payload, ['role', 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role']),
     );
     const permissionClaims = normalizeClaimValues(getClaimValues(payload, ['permission']));
 
-    return {
+    return {      
       userId,
       email,
       tenantId,
-      tenantName,
+      tenantname,
       roles: roleClaims,
-      permissions: permissionClaims,
+      permissions: permissionClaims,      
     };
   }
 

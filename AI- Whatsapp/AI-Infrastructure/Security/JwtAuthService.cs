@@ -78,7 +78,7 @@ public sealed class JwtAuthService : IAuthService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return await IssueTokensAsync(temporary, cancellationToken);
+        return await IssueTokensAsync(temporary,  cancellationToken);
     }
 
     public async Task<AuthResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -106,7 +106,12 @@ public sealed class JwtAuthService : IAuthService
         user.MarkLogin(DateTime.UtcNow);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return await IssueTokensAsync(user, cancellationToken);
+        var tenant = await _dbContext.Tenants
+        .Where(t => t.Id == request.TenantId)
+        .Select(t => t.BusinessName)
+        .FirstOrDefaultAsync(cancellationToken);
+
+        return await IssueTokensAsync(user, cancellationToken , tenant);
     }
 
     public async Task<AuthResult> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)
@@ -279,7 +284,7 @@ public sealed class JwtAuthService : IAuthService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task<AuthResult> IssueTokensAsync(UserAccount user, CancellationToken cancellationToken)
+    private async Task<AuthResult> IssueTokensAsync(UserAccount user, CancellationToken cancellationToken, string? tenantBusinessName = null)
     {
         var now = DateTime.UtcNow;
         var accessExpiresAt = now.AddMinutes(_settings.AccessTokenLifetimeMinutes);
@@ -310,7 +315,7 @@ public sealed class JwtAuthService : IAuthService
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(JwtRegisteredClaimNames.Email, user.Email),            
             new("tenant_id", tenantId.ToString())
         };
 
@@ -340,6 +345,7 @@ public sealed class JwtAuthService : IAuthService
             AccessTokenExpiresAtUtc: accessExpiresAt,
             UserId: user.Id,
             Email: user.Email,
+            Tenantname: tenantBusinessName,
             Role: roleCodes.FirstOrDefault() ?? user.Role);
     }
 

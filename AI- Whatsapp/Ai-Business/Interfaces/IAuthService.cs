@@ -24,7 +24,7 @@ public sealed record RegisterUserRequest(
     string LastName,
     string Role = "user");
 
-public sealed record LoginRequest(
+public sealed record LoginRequest(    
     Guid TenantId,
     string Email,
     string Password);
@@ -50,6 +50,7 @@ public sealed record AuthResult(
     Guid? UserId = null,
     string? Email = null,
     string? Role = null,
+    string? Tenantname = null,
     string? ErrorMessage = null);
 
 public sealed record AuthProfileResult(

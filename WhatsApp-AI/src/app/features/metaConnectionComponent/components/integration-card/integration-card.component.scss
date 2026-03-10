@@ -6,7 +6,7 @@
   border: 1px solid var(--line);
   border-radius: 1rem;
   overflow: hidden;
-  background: linear-gradient(155deg, rgba(15, 23, 42, 0.86), rgba(30, 41, 59, 0.72));
+  background: linear-gradient(155deg, var(--surface-glass-1), var(--surface-glass-2));
   box-shadow: 0 18px 34px rgba(2, 6, 23, 0.22);
   transition: transform 220ms ease, box-shadow 220ms ease;
 }
@@ -26,13 +26,13 @@
   border-radius: 0.6rem;
   display: inline-grid;
   place-items: center;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(30, 64, 175, 0.2));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent-2) 24%, transparent));
   border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .icon-shell i {
   font-size: 1.1rem;
-  color: #dbeafe;
+  color: var(--text-primary);
 }
 
 .text-muted {

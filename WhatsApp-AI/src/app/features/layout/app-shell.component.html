@@ -44,9 +44,12 @@
       </div>
 
       <div class="right">
+        <button type="button" class="icon-btn" (click)="toggleTheme()">
+          <i class="pi" [class.pi-sun]="currentTheme() === 'dark'" [class.pi-moon]="currentTheme() === 'light'"></i>
+        </button>
         @if (profile$ | async; as profile) {
           <div class="identity">
-            <strong>{{ profile.tenantName || profile.tenantId }}</strong>
+            <strong>{{ profile.tenantname}}</strong>
             <span>{{ profile.email }}</span>
           </div>
         }

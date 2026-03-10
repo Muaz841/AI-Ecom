@@ -7,9 +7,7 @@ export class GlobalErrorHandler implements ErrorHandler {
 
   handleError(error: unknown): void {
     const message = this.resolveMessage(error);
-    this.toastService.error('Unexpected error', message);
-    // Keep console output for debugging and observability.
-    // eslint-disable-next-line no-console
+    this.toastService.error('Unexpected error', message); 
     console.error(error);
   }
 

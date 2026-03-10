@@ -2,13 +2,13 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: linear-gradient(145deg, #f4f8ff 0%, #eef6f0 55%, #ffffff 100%);
+  background: linear-gradient(145deg, var(--bg) 0%, var(--surface-2) 55%, var(--surface) 100%);
 }
 
 .brand-panel {
   padding: 4rem 3.5rem;
-  background: radial-gradient(circle at 20% 20%, #d8ebff 0%, transparent 48%),
-    radial-gradient(circle at 85% 75%, #d9f5df 0%, transparent 44%);
+  background: radial-gradient(circle at 20% 20%, var(--app-glow-b) 0%, transparent 48%),
+    radial-gradient(circle at 85% 75%, var(--app-glow-a) 0%, transparent 44%);
 }
 
 .eyebrow {
@@ -16,24 +16,24 @@
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #2a668f;
+  color: var(--accent);
 }
 
 h1 {
   margin: 0 0 1rem;
   font-size: 2rem;
   line-height: 1.2;
-  color: #11213b;
+  color: var(--text-primary);
 }
 
 .intro {
   margin: 0 0 1.5rem;
-  color: #3c4f66;
+  color: var(--text-secondary);
 }
 
 ul {
   padding-left: 1rem;
-  color: #2a425f;
+  color: var(--text-secondary);
 }
 
 li + li {
@@ -53,12 +53,12 @@ li + li {
 h2 {
   margin: 0;
   font-size: 1.6rem;
-  color: #0d1e33;
+  color: var(--text-primary);
 }
 
 .subtext {
   margin: 0.5rem 0 1.5rem;
-  color: #4d5f75;
+  color: var(--text-secondary);
 }
 
 form {
@@ -69,31 +69,33 @@ form {
 
 label {
   font-size: 0.85rem;
-  color: #253c57;
+  color: var(--text-secondary);
 }
 
 input {
-  border: 1px solid #c7d7ea;
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0.8rem 0.9rem;
   font-size: 0.95rem;
   transition: border-color 0.15s ease;
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 input:focus {
   outline: none;
-  border-color: #2173ba;
+  border-color: var(--accent);
 }
 
 .error {
-  color: #b3261e;
+  color: var(--danger);
   font-size: 0.78rem;
   margin-bottom: 0.35rem;
 }
 
 .server-error {
   margin: 0.35rem 0;
-  color: #b3261e;
+  color: var(--danger);
   font-size: 0.86rem;
 }
 
@@ -103,9 +105,10 @@ button[type='submit'] {
   border-radius: 10px;
   padding: 0.85rem 1rem;
   font-size: 0.95rem;
-  background: #186bb6;
-  color: #fff;
+  background: var(--accent);
+  color: var(--brand-ink);
   cursor: pointer;
+  font-weight: 700;
 }
 
 button:disabled {
@@ -116,7 +119,7 @@ button:disabled {
 .divider {
   margin: 1.25rem 0 1rem;
   text-align: center;
-  color: #66798f;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
@@ -132,7 +135,7 @@ button:disabled {
   top: 50%;
   width: 2.2rem;
   height: 1px;
-  background: #d3deea;
+  background: var(--line);
 }
 
 .divider span::before {
@@ -149,11 +152,11 @@ button:disabled {
 }
 
 .oauth-actions button {
-  border: 1px solid #c7d7ea;
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0.7rem 0.8rem;
-  background: #fff;
-  color: #20344d;
+  background: var(--surface);
+  color: var(--text-primary);
   cursor: pointer;
 }
 
@@ -162,7 +165,7 @@ button:disabled {
 }
 
 .links a {
-  color: #155fa3;
+  color: var(--accent);
   text-decoration: none;
   font-size: 0.85rem;
 }

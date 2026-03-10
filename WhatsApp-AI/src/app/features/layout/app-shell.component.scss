@@ -7,8 +7,8 @@
   display: grid;
   grid-template-columns: auto 1fr;
   background:
-    radial-gradient(circle at 8% 0%, rgba(12, 148, 118, 0.2) 0%, transparent 28%),
-    radial-gradient(circle at 95% 100%, rgba(31, 64, 130, 0.28) 0%, transparent 34%),
+    radial-gradient(circle at 8% 0%, var(--app-glow-a) 0%, transparent 28%),
+    radial-gradient(circle at 95% 100%, var(--app-glow-b) 0%, transparent 34%),
     var(--bg);
   color: var(--text-primary);
 }
@@ -16,7 +16,7 @@
 .sidebar {
   width: 280px;
   border-right: 1px solid var(--line);
-  background: linear-gradient(175deg, rgba(15, 23, 42, 0.95), rgba(9, 11, 23, 0.95));
+  background: var(--sidebar-gradient);
   backdrop-filter: blur(12px);
   padding: 1rem 0.75rem;
   transition: width 200ms ease, transform 200ms ease;
@@ -41,8 +41,8 @@
   display: grid;
   place-items: center;
   font-weight: 700;
-  color: #05271f;
-  background: linear-gradient(135deg, #30f2c4, #0fa184);
+  color: var(--brand-ink);
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
 }
 
 .brand-text strong {
@@ -78,13 +78,13 @@
 
 .nav-item.active {
   color: var(--text-primary);
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.28), rgba(16, 185, 129, 0.05));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .nav-item:hover {
   color: var(--text-primary);
-  background: rgba(65, 88, 146, 0.2);
+  background: var(--hover-soft);
 }
 
 .main {
@@ -94,7 +94,7 @@
 .topbar {
   height: 64px;
   border-bottom: 1px solid var(--line);
-  background: rgba(10, 13, 24, 0.85);
+  background: var(--topbar-bg);
   backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
@@ -136,7 +136,7 @@
   gap: 0.55rem;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(30, 41, 59, 0.7);
+  background: var(--surface-soft);
   padding: 0.45rem 0.8rem;
 }
 
@@ -159,14 +159,14 @@
   height: 2.25rem;
   border-radius: 0.75rem;
   color: var(--text-secondary);
-  background: rgba(30, 41, 59, 0.8);
+  background: var(--surface-soft);
   cursor: pointer;
   position: relative;
 }
 
 .icon-btn:hover {
   color: var(--text-primary);
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .badge {
@@ -176,7 +176,7 @@
   width: 1rem;
   height: 1rem;
   border-radius: 999px;
-  background: #ef4444;
+  background: var(--danger);
   color: #fff;
   font-size: 0.62rem;
   display: grid;
@@ -194,7 +194,7 @@
   width: 18rem;
   border: 1px solid var(--line);
   border-radius: 1rem;
-  background: #0f172a;
+  background: var(--surface);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
   padding: 0.75rem;
 }
@@ -215,7 +215,7 @@
 }
 
 .notification-panel article:hover {
-  background: rgba(51, 65, 85, 0.5);
+  background: var(--hover-soft);
 }
 
 .notification-panel strong {
@@ -230,9 +230,9 @@
 }
 
 .logout-btn {
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fecaca;
-  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  color: color-mix(in srgb, var(--danger) 82%, var(--text-primary));
+  background: var(--danger-soft);
   border-radius: 0.75rem;
   padding: 0.5rem 0.8rem;
   font-size: 0.85rem;
@@ -243,7 +243,7 @@
 }
 
 .logout-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: color-mix(in srgb, var(--danger-soft) 70%, var(--danger) 18%);
 }
 
 .content {
@@ -258,7 +258,7 @@
   position: fixed;
   inset: 0;
   border: none;
-  background: rgba(2, 6, 23, 0.6);
+  background: var(--overlay-bg);
   z-index: 10;
 }
 

@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { resolveVisibleSidebarModules, SIDEBAR_PIPELINE, SidebarModule } from '../../core/navigation/nav-pipeline';
+import { ThemeService } from '../../core/theme/theme.service';
 
 @Component({
   selector: 'app-shell',
@@ -15,6 +16,7 @@ import { resolveVisibleSidebarModules, SIDEBAR_PIPELINE, SidebarModule } from '.
 export class AppShellComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly themeService = inject(ThemeService);
 
   readonly notifications = [
     { title: 'New inbound message', detail: 'WhatsApp thread is waiting for a reply.' },
@@ -37,7 +39,10 @@ export class AppShellComponent {
   );
 
   readonly profile$ = this.authService.userProfile$;
+  readonly currentTheme = this.themeService.currentTheme;
 
+
+  
   isSidebarCollapsed = false;
   isMobileSidebarOpen = false;
   isNotificationPanelOpen = false;
@@ -56,6 +61,10 @@ export class AppShellComponent {
 
   toggleNotifications(): void {
     this.isNotificationPanelOpen = !this.isNotificationPanelOpen;
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 
   logout(): void {
