@@ -103,7 +103,7 @@ public class IntegrationsController : ControllerBase
 
     private Guid? ResolveTenantId()
     {
-        var raw = User.FindFirstValue("tenant_id") ?? User.FindFirstValue("tenant_id");
+        var raw = User.FindFirstValue("tenant_id") ?? User.FindFirstValue("client_id");
         return Guid.TryParse(raw, out var tenantId) ? tenantId : null;
     }
 
