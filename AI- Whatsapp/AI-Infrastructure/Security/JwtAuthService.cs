@@ -78,23 +78,32 @@ public sealed class JwtAuthService : IAuthService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return await IssueTokensAsync(temporary,  cancellationToken);
+        return await IssueTokensAsync(temporary, cancellationToken);
     }
 
     public async Task<AuthResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.TenantId == Guid.Empty || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
         {
             return new AuthResult(false, ErrorMessage: "Invalid login request.");
         }
 
         var normalizedEmail = NormalizeEmail(request.Email);
+
+        // TenantId = null → host login. Only users with TenantId = null are host users.
         var user = await _dbContext.UserAccounts
             .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (user is null || !user.IsActive)
         {
             return new AuthResult(false, ErrorMessage: "Invalid credentials.");
+        }
+
+        // Security: if this is a host-mode login (TenantId = null), the matched user MUST be a host user.
+        // This is guaranteed by the query above, but explicitly block tenant users trying the host endpoint.
+        if (request.TenantId is null && user.TenantId is not null)
+        {
+            return new AuthResult(false, ErrorMessage: "Host access is restricted to platform administrators.");
         }
 
         var verifyResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
@@ -136,21 +145,20 @@ public sealed class JwtAuthService : IAuthService
         return result;
     }
 
-    public async Task<AuthProfileResult?> GetProfileAsync(Guid TenantId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<AuthProfileResult?> GetProfileAsync(Guid? tenantId, Guid userId, CancellationToken cancellationToken = default)
     {
-        if (TenantId == Guid.Empty || userId == Guid.Empty)
+        if (userId == Guid.Empty)
         {
             return null;
         }
 
         var user = await _dbContext.UserAccounts
-            .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == TenantId && x.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId && x.IsActive, cancellationToken);
 
         if (user is null)
         {
             return null;
         }
-        var tenantId = user.TenantId ?? throw new InvalidOperationException("User tenant context missing.");
 
         var roleCodes = await (
             from userRole in _dbContext.Set<UserRole>()
@@ -176,7 +184,8 @@ public sealed class JwtAuthService : IAuthService
             user.FirstName,
             user.LastName,
             roleCodes,
-            permissionCodes);
+            permissionCodes,
+            IsHost: tenantId is null);
     }
 
     public async Task LogoutAsync(LogoutRequest request, CancellationToken cancellationToken = default)
@@ -217,15 +226,14 @@ public sealed class JwtAuthService : IAuthService
 
         var resetToken = GenerateSecureToken();
         var tokenHash = ComputeSha256(resetToken);
-        var tenantId = user.TenantId ?? throw new InvalidOperationException("User tenant context missing.");
-        var resetEntity = UserPasswordResetToken.Create(tenantId, user.Id, tokenHash, DateTime.UtcNow.AddMinutes(_settings.PasswordResetTokenLifetimeMinutes));
+        var resetEntity = UserPasswordResetToken.Create(user.TenantId, user.Id, tokenHash, DateTime.UtcNow.AddMinutes(_settings.PasswordResetTokenLifetimeMinutes));
         await _dbContext.UserPasswordResetTokens.AddAsync(resetEntity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.Info(
-            "Password reset token issued for user {UserId} and tenant {TenantId}. Integrate email sender. Token (dev-only): {ResetToken}",
+            "Password reset token issued for user {UserId} and tenant {TenantId}. Token (dev-only): {ResetToken}",
             user.Id,
-            tenantId,
+            user.TenantId,
             resetToken);
     }
 
@@ -288,12 +296,16 @@ public sealed class JwtAuthService : IAuthService
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SigningKey));
         var creds = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
-        var tenantId = user.TenantId ?? throw new InvalidOperationException("User tenant context missing.");
+        var tenantId = user.TenantId; // null for host users
 
-        var tenantBusinessName = await _dbContext.Tenants
-            .Where(t => t.Id == tenantId)
-            .Select(t => t.BusinessName)
-            .FirstOrDefaultAsync(cancellationToken);
+        string? tenantBusinessName = null;
+        if (tenantId.HasValue)
+        {
+            tenantBusinessName = await _dbContext.Tenants
+                .Where(t => t.Id == tenantId.Value)
+                .Select(t => t.BusinessName)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
 
         var roleCodes = await (
             from userRole in _dbContext.Set<UserRole>()
@@ -316,8 +328,9 @@ public sealed class JwtAuthService : IAuthService
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new("tenant_id", tenantId.ToString()),
+            new("tenant_id", tenantId?.ToString() ?? string.Empty),
             new("tenant_name", tenantBusinessName ?? string.Empty),
+            new("is_host", tenantId is null ? "true" : "false"),
         };
 
         claims.AddRange(roleCodes.Select(role => new Claim(ClaimTypes.Role, role)));
@@ -347,6 +360,7 @@ public sealed class JwtAuthService : IAuthService
             UserId: user.Id,
             Email: user.Email,
             Tenantname: tenantBusinessName,
+            IsHost: tenantId is null,
             Role: roleCodes.FirstOrDefault() ?? user.Role);
     }
 
@@ -392,4 +406,3 @@ public sealed class JwtAuthSettings
     public int RefreshTokenLifetimeDays { get; set; } = 14;
     public int PasswordResetTokenLifetimeMinutes { get; set; } = 30;
 }
-

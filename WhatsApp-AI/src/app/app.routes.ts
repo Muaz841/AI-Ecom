@@ -8,14 +8,16 @@ import { AppShellComponent } from './features/layout/app-shell.component';
 import { MetaOauthCallbackComponent } from './features/metaConnectionComponent/meta-oauth-callback.component';
 import { SIDEBAR_PIPELINE } from './core/navigation/nav-pipeline';
 import { MetaIntegrationsComponent } from './features/metaConnectionComponent/meta-integrations.component';
+import { TenantManagementComponent } from './features/tenants/tenant-management.component';
+import { InboxComponent } from './features/messaging/inbox.component';
 
-const dashboardModule = SIDEBAR_PIPELINE.find((module) => module.id === 'dashboard');
 const messagingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'messaging');
 const contentModule = SIDEBAR_PIPELINE.find((module) => module.id === 'content');
 const productsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'products');
 const schedulingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'scheduling');
 const settingsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'settings');
 const rbacModule = SIDEBAR_PIPELINE.find((module) => module.id === 'rbac');
+const tenantsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'tenants');
 
 export const routes: Routes = [
   {
@@ -46,7 +48,7 @@ export const routes: Routes = [
         path: 'messaging',
         canActivate: [permissionGuard],
         data: { permissions: messagingModule?.requiredPermissions ?? [], title: messagingModule?.label ?? 'Messaging', subtitle: messagingModule?.subtitle ?? '' },
-        component: DashboardPlaceholderComponent,
+        component: InboxComponent,
       },
       {
         path: 'content',
@@ -83,6 +85,16 @@ export const routes: Routes = [
           subtitle: rbacModule?.subtitle ?? 'Tenant role, permission, and assignment management.',
         },
         component: DashboardPlaceholderComponent,
+      },
+      {
+        path: 'host/tenants',
+        canActivate: [permissionGuard],
+        data: {
+          permissions: tenantsModule?.requiredPermissions ?? ['tenants.manage'],
+          title: tenantsModule?.label ?? 'Tenant Management',
+          subtitle: tenantsModule?.subtitle ?? '',
+        },
+        component: TenantManagementComponent,
       },
     ],
   },

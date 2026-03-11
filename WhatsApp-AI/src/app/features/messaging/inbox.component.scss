@@ -1,0 +1,1008 @@
+/* ── Host: fill the content area, cancel app-shell padding ── */
+:host {
+  display: block;
+  margin: -1.15rem;
+  height: calc(100vh - 64px); /* 64px = topbar height */
+  overflow: hidden;
+}
+
+/* ── Root layout: two-column flex ─────────────────────────── */
+.inbox {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+
+/* ════════════════════════════════════════════════════════════
+   LEFT PANEL — Thread List
+════════════════════════════════════════════════════════════ */
+
+.thread-panel {
+  width: 380px;
+  min-width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+
+/* Panel header: search + filters */
+.panel-head {
+  flex-shrink: 0;
+  padding: 1rem 1rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-title {
+  margin: 0 0 0.85rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* Search box — icon and input are siblings in a flex row */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  transition: border-color 150ms ease;
+
+  &:focus-within {
+    border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+}
+
+/* Icon sits as a flex item — never overlaps the input */
+.search-icon {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0; /* required for text truncation in flex child */
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+/* Filter pills row */
+.filter-row {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 0.6rem;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.filter-pill {
+  flex-shrink: 0;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 180ms ease;
+  font-family: inherit;
+
+  &.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  &:not(.active):hover {
+    background: var(--hover-soft);
+    color: var(--text-primary);
+    border-color: var(--line);
+  }
+}
+
+/* Platform chip row */
+.platform-row {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 0.4rem;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Platform chip: dot and label are separate elements in a flex row */
+.platform-chip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 180ms ease;
+  font-family: inherit;
+
+  &.active {
+    background: var(--surface-2);
+    border-color: var(--accent);
+    color: var(--text-primary);
+  }
+
+  &:not(.active):hover {
+    background: var(--hover-soft);
+    color: var(--text-primary);
+  }
+}
+
+/* Colored dot inside chip — flex-shrink:0 prevents it from squishing */
+.p-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* p-label: just text, no special styles needed */
+
+/* Thread count label */
+.thread-count {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.45rem 1rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Scrollable thread list */
+.thread-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.3rem 0;
+
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 999px;
+  }
+}
+
+
+/* ── Thread Row ──────────────────────────────────────────── */
+
+.thread-row {
+  /* Reset button defaults */
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+
+  /* Layout */
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  height: 72px;
+  position: relative;
+
+  /* Left accent bar */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10%;
+    bottom: 10%;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: transparent;
+    transition: background 150ms ease;
+  }
+
+  transition: background 150ms ease;
+
+  &:hover {
+    background: var(--hover-soft);
+  }
+
+  &.selected {
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+
+    &::before {
+      background: var(--accent);
+    }
+  }
+}
+
+/* Avatar wrapper: position:relative so the dot can be absolute */
+.t-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+}
+
+.t-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.03em;
+}
+
+/* Platform dot overlaid on avatar bottom-right — absolute, no overlap with body */
+.t-pdot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  pointer-events: none;
+}
+
+/* Thread body: min-width:0 is CRITICAL — allows flex child to truncate text */
+.t-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+/* Row 1: name + timestamp side by side */
+.t-row1 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.t-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.t-time {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Row 2: preview text + unread badge */
+.t-row2 {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.t-preview {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  /* Single-line clamp for compact rows */
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
+}
+
+/* Unread badge: flex-shrink:0 keeps it from being pushed off by long preview */
+.t-badge {
+  flex-shrink: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+/* Row 3: status chip */
+.t-row3 {
+  margin-top: 0.05rem;
+}
+
+.t-status {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  &.status-ai {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+  }
+
+  &.status-pending {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+  }
+
+  &.status-human {
+    background: rgba(99, 102, 241, 0.12);
+    color: #818cf8;
+  }
+
+  &.status-resolved {
+    background: rgba(100, 116, 139, 0.1);
+    color: var(--text-muted);
+  }
+}
+
+/* Empty state inside list */
+.no-threads {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+
+  i {
+    font-size: 2rem;
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+
+/* ════════════════════════════════════════════════════════════
+   RIGHT PANEL — Chat
+════════════════════════════════════════════════════════════ */
+
+.chat-panel {
+  flex: 1;
+  min-width: 0; /* allow flex child to shrink below content size */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+
+/* ── Chat Header ─────────────────────────────────────────── */
+
+.chat-header {
+  flex-shrink: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Back button: only visible on mobile via media query */
+.back-btn {
+  display: none;
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 0.6rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  place-items: center;
+  font-size: 0.9rem;
+  transition: color 150ms ease;
+  font-family: inherit;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--hover-soft);
+  }
+}
+
+.ch-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+}
+
+.ch-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ch-pdot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+}
+
+/* Header info: flex-grow with min-width:0 for name truncation */
+.ch-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ch-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Status line: flex row so online dot and text sit side by side */
+.ch-status {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.online-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+/* Actions group — flex-shrink:0 so it never collapses */
+.ch-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Platform badge: flex row keeps dot and label together */
+.ch-platform-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ch-pdot-inline {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* Action buttons: icon and label in a flex row, label hidden on mobile */
+.ch-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 0.6rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 150ms ease;
+  font-family: inherit;
+
+  i {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+  }
+
+  &:hover {
+    background: var(--hover-soft);
+    color: var(--text-primary);
+    border-color: var(--line);
+  }
+
+  &.ch-resolve-btn:hover {
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.35);
+    background: rgba(16, 185, 129, 0.06);
+  }
+}
+
+
+/* ── Messages Area ───────────────────────────────────────── */
+
+.messages-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 999px;
+  }
+}
+
+/* ── Message Row ─────────────────────────────────────────── */
+
+.msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+
+  /* Customer messages are right-aligned — reverse the flex direction */
+  &.msg-customer {
+    flex-direction: row-reverse;
+  }
+}
+
+/* Small circular avatar beside each bubble */
+.msg-av {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+
+  &.msg-av-agent {
+    background: color-mix(in srgb, var(--accent) 28%, var(--surface-2));
+    color: var(--accent);
+  }
+}
+
+/* Customer avatar gets its background from the thread avatarColor (via inline style) */
+.msg-av-customer {
+  color: #fff;
+  font-size: 0.6rem;
+}
+
+/* ── Bubble ──────────────────────────────────────────────── */
+
+.bubble {
+  max-width: 68%;
+  min-width: 80px;
+  padding: 0.65rem 0.95rem 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+
+  /* Customer: right-aligned, emerald background */
+  &.bubble-customer {
+    background: color-mix(in srgb, var(--accent) 82%, #000);
+    border-radius: 1.2rem 1.2rem 0.25rem 1.2rem;
+    align-self: flex-end;
+  }
+
+  /* Bot: left-aligned, surface-2 background */
+  &.bubble-bot {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 1.2rem 1.2rem 1.2rem 0.25rem;
+  }
+
+  /* Agent: right-aligned, slightly different from customer */
+  &.bubble-agent {
+    background: color-mix(in srgb, var(--accent) 55%, var(--surface-2));
+    border-radius: 1.2rem 1.2rem 0.25rem 1.2rem;
+    align-self: flex-end;
+  }
+}
+
+.bubble-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.bubble-ts {
+  display: block;
+  font-size: 0.67rem;
+  color: rgba(148, 163, 184, 0.65);
+  text-align: right;
+  line-height: 1;
+}
+
+
+/* ── AI Suggestions Panel ────────────────────────────────── */
+
+.suggestions-panel {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, var(--accent) 6%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Label row: icon and text in flex — icon is flex-shrink:0 */
+.suggestions-label {
+  margin: 0 0 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  i {
+    flex-shrink: 0;
+    font-size: 0.82rem;
+  }
+}
+
+.suggestion-item {
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.83rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 150ms ease;
+  line-height: 1.45;
+  font-family: inherit;
+
+  &:hover {
+    background: color-mix(in srgb, var(--surface-2) 75%, var(--accent) 18%);
+    border-color: rgba(16, 185, 129, 0.4);
+  }
+}
+
+
+/* ── Input Bar ───────────────────────────────────────────── */
+
+.input-bar {
+  flex-shrink: 0;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 1rem;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+
+/* Icon buttons: flex-shrink:0 keeps them from squishing */
+.inp-icon-btn {
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  display: grid;
+  place-items: center;
+  transition: color 150ms ease;
+  font-family: inherit;
+
+  &:hover {
+    color: var(--text-secondary);
+    background: var(--hover-soft);
+  }
+}
+
+/* Input wrapper: flex-1 with min-width:0 fills remaining space */
+.inp-wrap {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  transition: border-color 150ms ease;
+
+  &:focus-within {
+    border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+}
+
+/* Textarea: flex-1 inside inp-wrap, no border/background of its own */
+.inp-textarea {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  line-height: 1.5;
+  max-height: 3.5rem;
+  overflow-y: auto;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+/* AI Suggest button: icon and label in flex row — flex-shrink:0 */
+.ai-suggest-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.9rem;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: transparent;
+  color: var(--accent);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 150ms ease;
+  font-family: inherit;
+
+  i {
+    flex-shrink: 0;
+    font-size: 0.82rem;
+  }
+
+  .btn-label {
+    /* label text — separate element, no overlap with icon */
+  }
+
+  &:hover,
+  &.active {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.6);
+  }
+}
+
+/* Send button: circular emerald — flex-shrink:0 */
+.send-btn {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 0.9rem;
+  transition: background 150ms ease, transform 100ms ease;
+  font-family: inherit;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 82%, #000);
+    transform: scale(1.06);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+
+/* ── Empty State (no thread selected) ───────────────────── */
+
+.empty-chat {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+
+.empty-inner {
+  text-align: center;
+  max-width: 280px;
+
+  h3 {
+    margin: 1rem 0 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+}
+
+.empty-icon-wrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+
+  i {
+    font-size: 1.8rem;
+    color: var(--text-muted);
+  }
+}
+
+
+/* ════════════════════════════════════════════════════════════
+   RESPONSIVE — Mobile
+════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  :host {
+    /* Reset margins if needed on mobile */
+  }
+
+  .inbox {
+    position: relative; /* parent for absolute children */
+  }
+
+  /* Thread panel takes full screen on mobile */
+  .thread-panel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: 100%;
+    z-index: 2;
+    transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Slide panel out when a thread is selected */
+  .thread-panel.mobile-hidden {
+    transform: translateX(-100%);
+    pointer-events: none;
+  }
+
+  /* Chat panel takes full screen on mobile */
+  .chat-panel {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+  }
+
+  /* Show back button on mobile */
+  .back-btn {
+    display: grid;
+  }
+
+  /* Hide text labels on small screens to save space */
+  .btn-label {
+    display: none;
+  }
+
+  .ch-action-btn .btn-label {
+    display: none;
+  }
+
+  .ch-action-btn {
+    padding: 0.35rem 0.55rem;
+  }
+
+  .bubble {
+    max-width: 82%;
+  }
+}
+
+@media (max-width: 480px) {
+  .ch-platform-badge {
+    display: none;
+  }
+
+  .ch-resolve-btn {
+    display: none;
+  }
+}

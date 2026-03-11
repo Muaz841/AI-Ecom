@@ -19,10 +19,10 @@ public sealed class RbacService : IRbacService
         _dbContext = dbContext;
     }
 
+    // Permissions are global (TenantId = null) — always return all, ignoring tenant parameter.
     public async Task<IReadOnlyList<PermissionDto>> ListPermissionsAsync(Guid TenantId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Set<Permission>()
-            .Where(x => x.TenantId == TenantId)
             .OrderBy(x => x.Name)
             .Select(x => new PermissionDto(x.Id, x.Name, x.Code, x.Description, x.IsSystem))
             .ToListAsync(cancellationToken);
@@ -30,19 +30,18 @@ public sealed class RbacService : IRbacService
 
     public async Task<PermissionDto> CreatePermissionAsync(CreatePermissionRequest request, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(request.TenantId);
         ValidateNameCode(request.Name, request.Code);
 
         var normalizedCode = request.Code.Trim().ToLowerInvariant();
         var exists = await _dbContext.Set<Permission>()
-            .AnyAsync(x => x.TenantId == request.TenantId && x.Code == normalizedCode, cancellationToken);
+            .AnyAsync(x => x.Code == normalizedCode, cancellationToken);
 
         if (exists)
         {
             throw new InvalidOperationException("Permission code already exists.");
         }
 
-        var entity = Permission.Create(request.TenantId, request.Name, request.Code, request.Description);
+        var entity = Permission.Create(request.Name, request.Code, request.Description);
         await _dbContext.Set<Permission>().AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return new PermissionDto(entity.Id, entity.Name, entity.Code, entity.Description, entity.IsSystem);
@@ -50,11 +49,10 @@ public sealed class RbacService : IRbacService
 
     public async Task<PermissionDto?> UpdatePermissionAsync(UpdatePermissionRequest request, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(request.TenantId);
         ValidateNameCode(request.Name, request.Code);
 
         var entity = await _dbContext.Set<Permission>()
-            .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.Id == request.PermissionId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == request.PermissionId, cancellationToken);
 
         if (entity is null)
         {
@@ -68,7 +66,7 @@ public sealed class RbacService : IRbacService
 
         var normalizedCode = request.Code.Trim().ToLowerInvariant();
         var duplicate = await _dbContext.Set<Permission>()
-            .AnyAsync(x => x.TenantId == request.TenantId && x.Id != request.PermissionId && x.Code == normalizedCode, cancellationToken);
+            .AnyAsync(x => x.Id != request.PermissionId && x.Code == normalizedCode, cancellationToken);
 
         if (duplicate)
         {
@@ -83,9 +81,8 @@ public sealed class RbacService : IRbacService
 
     public async Task<bool> DeletePermissionAsync(Guid TenantId, Guid permissionId, CancellationToken cancellationToken = default)
     {
-        ValidateClientId(TenantId);
         var entity = await _dbContext.Set<Permission>()
-            .FirstOrDefaultAsync(x => x.TenantId == TenantId && x.Id == permissionId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == permissionId, cancellationToken);
 
         if (entity is null)
         {
@@ -116,7 +113,7 @@ public sealed class RbacService : IRbacService
 
         var permissionIds = mappings.Select(x => x.PermissionId).ToHashSet();
         var permissions = await _dbContext.Set<Permission>()
-            .Where(x => x.TenantId == TenantId && permissionIds.Contains(x.Id))
+            .Where(x => permissionIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 
         return roles.Select(role =>
@@ -218,13 +215,14 @@ public sealed class RbacService : IRbacService
         }
 
         var distinctPermissionIds = permissionIds.Distinct().ToList();
+        // Permissions are global — look them up without tenant filter
         var permissions = await _dbContext.Set<Permission>()
-            .Where(x => x.TenantId == TenantId && distinctPermissionIds.Contains(x.Id))
+            .Where(x => distinctPermissionIds.Contains(x.Id))
             .ToListAsync(cancellationToken);
 
         if (permissions.Count != distinctPermissionIds.Count)
         {
-            throw new InvalidOperationException("One or more permissions are invalid for this tenant.");
+            throw new InvalidOperationException("One or more permission IDs are invalid.");
         }
 
         var existingMappings = await _dbContext.Set<RolePermission>()
@@ -307,4 +305,3 @@ public sealed class RbacService : IRbacService
         }
     }
 }
-

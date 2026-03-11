@@ -56,35 +56,44 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginApiRequest request, CancellationToken cancellationToken)
     {
-        var tenantId = request.TenantId;        
-        if (tenantId == Guid.Empty && !string.IsNullOrWhiteSpace(request.TenantName))
-        {
-            var tenantName = request.TenantName.Trim();
-            var tenant = await _tenantRepository.FirstOrDefaultAsync(
-                x => x.Name.ToLower() == tenantName.ToLower() || x.BusinessName.ToLower() == tenantName.ToLower());
+        Guid? resolvedTenantId = null;
+        
+        var isHostLogin = string.Equals(request.TenantName?.Trim(), "host", StringComparison.OrdinalIgnoreCase);
 
-            if (tenant is null)
+        if (!isHostLogin)
+        {
+            if (request.TenantId != Guid.Empty)
             {
-                return Unauthorized("Tenant not found.");
+                resolvedTenantId = request.TenantId;
             }
+            else if (!string.IsNullOrWhiteSpace(request.TenantName))
+            {
+                var tenantName = request.TenantName.Trim();
+                var tenant = await _tenantRepository.FirstOrDefaultAsync(
+                    x => x.Name.ToLower() == tenantName.ToLower() || x.BusinessName.ToLower() == tenantName.ToLower());
 
-            tenantId = tenant.Id;            
-        }
+                if (tenant is null)
+                {
+                    return Unauthorized("Tenant not found.");
+                }
 
-        if (tenantId == Guid.Empty)
-        {
-            return BadRequest("TenantId or tenantName is required.");
-        }
+                resolvedTenantId = tenant.Id;
+            }
+            else
+            {
+                return BadRequest("TenantId or tenantName is required.");
+            }
+        }        
 
         var result = await _authService.LoginAsync(
-            new LoginRequest(tenantId, request.Email, request.Password),
+            new LoginRequest(resolvedTenantId, request.Email, request.Password),
             cancellationToken);
-        
+
         if (!result.Success)
         {
             return Unauthorized(result.ErrorMessage);
         }
-      
+
         return Ok(result);
     }
 
@@ -105,13 +114,14 @@ public class AuthController : ControllerBase
     [HttpGet("me")]
     public async Task<IActionResult> Me(CancellationToken cancellationToken)
     {
-        var tenantClaim = User.FindFirstValue("tenant_id");
         var userClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
-
-        if (!Guid.TryParse(tenantClaim, out var tenantId) || !Guid.TryParse(userClaim, out var userId))
+        if (!Guid.TryParse(userClaim, out var userId))
         {
             return Unauthorized("Invalid auth claims.");
         }
+
+        var tenantClaim = User.FindFirstValue("tenant_id");
+        Guid? tenantId = Guid.TryParse(tenantClaim, out var parsedTenant) ? parsedTenant : null;
 
         var profile = await _authService.GetProfileAsync(tenantId, userId, cancellationToken);
         if (profile is null)
@@ -185,4 +195,3 @@ public sealed record ResetPasswordApiRequest(
     string Email,
     string ResetToken,
     string NewPassword);
-

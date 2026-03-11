@@ -95,4 +95,13 @@ export const SIDEBAR_PIPELINE: SidebarModule[] = [
     roleMatchMode: 'any',
     subtitle: 'Tenant role, permission, and assignment management.',
   },
+  {
+    id: 'tenants',
+    label: 'Tenant Management',
+    route: '/host/tenants',
+    icon: 'pi pi-building',
+    order: 80,
+    requiredPermissions: ['tenants.manage'],
+    subtitle: 'Create and manage platform tenants.',
+  },
 ];

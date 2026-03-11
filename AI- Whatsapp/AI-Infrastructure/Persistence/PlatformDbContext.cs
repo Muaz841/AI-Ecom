@@ -50,6 +50,7 @@ public class PlatformDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // Apply tenant filter to all ITenantEntity types EXCEPT Permission (which is global).
         foreach (var entityType in modelBuilder.Model.GetEntityTypes()
                      .Where(e => typeof(ITenantEntity).IsAssignableFrom(e.ClrType)))
         {
@@ -62,6 +63,8 @@ public class PlatformDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.BusinessName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.IsHost).HasDefaultValue(false);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.HasIndex(e => e.Name).IsUnique();
             entity.HasIndex(e => e.TenantId);
             entity.ToTable("Tenants");
@@ -170,14 +173,17 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Role).IsRequired().HasMaxLength(50);
+            // Unique per tenant (NULL = host user, GUID = tenant user)
             entity.HasIndex(e => new { e.TenantId, e.NormalizedEmail }).IsUnique();
             entity.HasIndex(e => e.TenantId);
             entity.HasMany(e => e.RefreshTokens).WithOne().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.PasswordResetTokens).WithOne().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.UserRoles).WithOne().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
+            // FK to Tenant is optional — host users have TenantId = null
             entity.HasOne<TenantEntity>()
                 .WithMany()
                 .HasForeignKey("TenantId")
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -204,16 +210,21 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
             entity.Property(e => e.Code).IsRequired().HasMaxLength(150);
             entity.Property(e => e.Description).HasMaxLength(1000);
+            // TenantId=null for host roles; uniqueness is (TenantId, Code)
             entity.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
         });
 
+        // Permission is GLOBAL — TenantId always null, no tenant filter applied.
         modelBuilder.Entity<Permission>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
             entity.Property(e => e.Code).IsRequired().HasMaxLength(150);
             entity.Property(e => e.Description).HasMaxLength(1000);
-            entity.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+            entity.Property(e => e.TenantId).IsRequired(false);
+            // Globally unique by code — TenantId is always null
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.ToTable("Permissions");
         });
 
         modelBuilder.Entity<RolePermission>(entity =>
@@ -301,4 +312,3 @@ public class PlatformDbContext : DbContext
         return await base.SaveChangesAsync(cancellationToken);
     }
 }
-

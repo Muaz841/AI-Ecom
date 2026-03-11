@@ -2,7 +2,9 @@ using System;
 
 namespace EcomAI.Platform.Business.Entities;
 
-public class Permission : Entity<Guid>, ITenantEntity
+// Permissions are GLOBAL (TenantId = null) — system-defined, shared across all tenants.
+// They do NOT implement ITenantEntity so the EF tenant query filter is NOT applied to them.
+public class Permission : Entity<Guid>
 {
     public string Name { get; private set; } = null!;
     public string Code { get; private set; } = null!;
@@ -14,13 +16,8 @@ public class Permission : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static Permission Create(Guid tenantId, string name, string code, string? description = null, bool isSystem = false)
+    public static Permission Create(string name, string code, string? description = null, bool isSystem = false)
     {
-        if (tenantId == Guid.Empty)
-        {
-            throw new ArgumentException("TenantId is required.", nameof(tenantId));
-        }
-
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new ArgumentException("Permission name is required.", nameof(name));
@@ -34,7 +31,7 @@ public class Permission : Entity<Guid>, ITenantEntity
         return new Permission
         {
             Id = Guid.NewGuid(),
-            TenantId = tenantId,
+            TenantId = null,
             Name = name.Trim(),
             Code = code.Trim().ToLowerInvariant(),
             Description = description?.Trim(),
@@ -56,6 +53,7 @@ public class Permission : Entity<Guid>, ITenantEntity
     }
 }
 
+// Roles are TENANT-SPECIFIC (TenantId = tenantGuid) or HOST-SCOPED (TenantId = null).
 public class Role : Entity<Guid>, ITenantEntity
 {
     public string Name { get; private set; } = null!;
@@ -68,11 +66,11 @@ public class Role : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static Role Create(Guid tenantId, string name, string code, string? description = null, bool isSystem = false)
+    public static Role Create(Guid? tenantId, string name, string code, string? description = null, bool isSystem = false)
     {
         if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("TenantId is required.", nameof(tenantId));
+            throw new ArgumentException("TenantId cannot be empty Guid. Use null for host roles.", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code))
@@ -115,11 +113,16 @@ public class RolePermission : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static RolePermission Create(Guid tenantId, Guid roleId, Guid permissionId)
+    public static RolePermission Create(Guid? tenantId, Guid roleId, Guid permissionId)
     {
-        if (tenantId == Guid.Empty || roleId == Guid.Empty || permissionId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("TenantId, RoleId and PermissionId are required.");
+            throw new ArgumentException("TenantId cannot be empty Guid. Use null for host role-permissions.", nameof(tenantId));
+        }
+
+        if (roleId == Guid.Empty || permissionId == Guid.Empty)
+        {
+            throw new ArgumentException("RoleId and PermissionId are required.");
         }
 
         return new RolePermission
@@ -143,11 +146,16 @@ public class UserRole : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static UserRole Create(Guid tenantId, Guid userAccountId, Guid roleId)
+    public static UserRole Create(Guid? tenantId, Guid userAccountId, Guid roleId)
     {
-        if (tenantId == Guid.Empty || userAccountId == Guid.Empty || roleId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("TenantId, UserAccountId and RoleId are required.");
+            throw new ArgumentException("TenantId cannot be empty Guid. Use null for host user-roles.", nameof(tenantId));
+        }
+
+        if (userAccountId == Guid.Empty || roleId == Guid.Empty)
+        {
+            throw new ArgumentException("UserAccountId and RoleId are required.");
         }
 
         return new UserRole
@@ -160,5 +168,3 @@ public class UserRole : Entity<Guid>, ITenantEntity
         };
     }
 }
-
-

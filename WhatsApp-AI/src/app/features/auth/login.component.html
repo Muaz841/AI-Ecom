@@ -13,43 +13,79 @@
   </section>
 
   <section class="auth-panel">
-    <h2>Sign in</h2>
-    <p class="subtext">Use your tenant credentials to access the dashboard.</p>
+
+    <!-- Mode toggle -->
+    <div class="mode-toggle" role="group" aria-label="Login mode">
+      <button
+        type="button"
+        class="mode-btn"
+        [class.active]="mode === 'tenant'"
+        (click)="setMode('tenant')"
+      >
+        <i class="mode-icon tenant-icon"></i>
+        Tenant
+      </button>
+      <button
+        type="button"
+        class="mode-btn host-btn"
+        [class.active]="mode === 'host'"
+        (click)="setMode('host')"
+      >
+        <i class="mode-icon host-icon"></i>
+        Host
+      </button>
+      <span class="mode-slider" [class.on-host]="mode === 'host'"></span>
+    </div>
+
+    <h2>{{ mode === 'host' ? 'Platform Admin Login' : 'Sign in' }}</h2>
+    <p class="subtext">
+      @if (mode === 'host') {
+        Access the host control panel. Restricted to platform administrators only.
+      } @else {
+        Use your tenant credentials to access the dashboard.
+      }
+    </p>
+
+    @if (mode === 'host') {
+      <div class="host-notice">
+        <i class="notice-icon">&#9888;</i>
+        Host login is audited. Unauthorized access attempts are logged.
+      </div>
+    }
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <label for="tenantName">Tenant Name</label>
-      <input id="tenantName" type="text" formControlName="tenantName" placeholder="e.g. acme-store" />
-      @if (form.controls.tenantName.touched && form.controls.tenantName.invalid) {
-        <small class="error">Tenant name is required.</small>
+
+      @if (mode === 'tenant') {
+        <label for="tenantName">Tenant Name</label>
+        <input id="tenantName" type="text" formControlName="tenantName" placeholder="e.g. acme-store" autocomplete="organization" />
+        @if (form.controls.tenantName.touched && form.controls.tenantName.invalid) {
+          <small class="error">Tenant name is required.</small>
+        }
       }
 
       <label for="email">Email</label>
-      <input id="email" type="email" formControlName="email" placeholder="name@company.com" />
+      <input id="email" type="email" formControlName="email" placeholder="name@company.com" autocomplete="email" />
       @if (form.controls.email.touched && form.controls.email.invalid) {
         <small class="error">Provide a valid email address.</small>
       }
 
       <label for="password">Password</label>
-      <input id="password" type="password" formControlName="password" placeholder="At least 8 characters" />
+      <input id="password" type="password" formControlName="password" placeholder="At least 8 characters" autocomplete="current-password" />
       @if (form.controls.password.touched && form.controls.password.invalid) {
         <small class="error">Password must be at least 8 characters.</small>
       }
 
-      <button type="submit" [disabled]="isSubmitting">
-        {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
+      <button type="submit" [disabled]="isSubmitting" [class.host-submit]="mode === 'host'">
+        {{ isSubmitting ? 'Signing in...' : (mode === 'host' ? 'Access Host Panel' : 'Sign in') }}
       </button>
     </form>
 
-    <div class="divider"><span>or continue with</span></div>
+    @if (mode === 'tenant') {
+      <div class="divider"><span>or continue with</span></div>
+      <div class="links">
+        <a routerLink="/auth/login">Forgot password (coming next)</a>
+      </div>
+    }
 
-    <!-- <div class="oauth-actions">
-      <button type="button" (click)="continueWithGoogle()">Google</button>
-      <button type="button" (click)="connectInstagram()">Connect Instagram Business</button>
-      <button type="button" (click)="connectWhatsApp()">Connect WhatsApp Business</button>
-    </div> -->
-
-    <div class="links">
-      <a routerLink="/auth/login">Forgot password (coming next)</a>
-    </div>
   </section>
 </main>

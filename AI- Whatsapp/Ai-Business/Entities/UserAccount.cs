@@ -23,8 +23,11 @@ public class UserAccount : Entity<Guid>, ITenantEntity
     {
     }
 
+    /// <summary>
+    /// Creates a user. Pass null for tenantId for host-level (super admin) users.
+    /// </summary>
     public static UserAccount Create(
-        Guid tenantId,
+        Guid? tenantId,
         string email,
         string passwordHash,
         string firstName,
@@ -33,7 +36,7 @@ public class UserAccount : Entity<Guid>, ITenantEntity
     {
         if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("TenantId is required.", nameof(tenantId));
+            throw new ArgumentException("TenantId cannot be empty Guid. Use null for host users.", nameof(tenantId));
         }
 
         if (string.IsNullOrWhiteSpace(email))
@@ -110,11 +113,16 @@ public class UserRefreshToken : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static UserRefreshToken Create(Guid tenantId, Guid userAccountId, string tokenHash, DateTime expiresAtUtc)
+    public static UserRefreshToken Create(Guid? tenantId, Guid userAccountId, string tokenHash, DateTime expiresAtUtc)
     {
-        if (tenantId == Guid.Empty || userAccountId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("TenantId and UserAccountId are required.");
+            throw new ArgumentException("TenantId cannot be empty Guid. Use null for host users.", nameof(tenantId));
+        }
+
+        if (userAccountId == Guid.Empty)
+        {
+            throw new ArgumentException("UserAccountId is required.");
         }
 
         if (string.IsNullOrWhiteSpace(tokenHash))
@@ -159,11 +167,16 @@ public class UserPasswordResetToken : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static UserPasswordResetToken Create(Guid tenantId, Guid userAccountId, string tokenHash, DateTime expiresAtUtc)
+    public static UserPasswordResetToken Create(Guid? tenantId, Guid userAccountId, string tokenHash, DateTime expiresAtUtc)
     {
-        if (tenantId == Guid.Empty || userAccountId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            throw new ArgumentException("TenantId and UserAccountId are required.");
+            throw new ArgumentException("TenantId cannot be empty Guid. Use null for host users.", nameof(tenantId));
+        }
+
+        if (userAccountId == Guid.Empty)
+        {
+            throw new ArgumentException("UserAccountId is required.");
         }
 
         if (string.IsNullOrWhiteSpace(tokenHash))
@@ -194,5 +207,3 @@ public class UserPasswordResetToken : Entity<Guid>, ITenantEntity
         UsedAt = DateTime.UtcNow;
     }
 }
-
-

@@ -15,7 +15,38 @@ public static class PermissionCodes
     public const string IntegrationsRead = "integrations.read";
     public const string IntegrationsManage = "integrations.manage";
 
+   
+    public const string TenantsManage = "tenants.manage";
+    public const string SubscriptionsManage = "subscriptions.manage";
+    public const string PlatformSettings = "platform.settings";
+
     public static readonly string[] All =
+    {
+        UsersManage,
+        RolesManage,
+        PermissionsManage,
+        ClientsManage,
+        ProductsManage,
+        ConversationsRead,
+        ConversationsManage,
+        LogsRead,
+        AiManage,
+        WebhooksManage,
+        IntegrationsRead,
+        IntegrationsManage,
+        TenantsManage,
+        SubscriptionsManage,
+        PlatformSettings
+    };
+
+    public static readonly string[] HostOnly =
+    {
+        TenantsManage,
+        SubscriptionsManage,
+        PlatformSettings
+    };
+
+    public static readonly string[] TenantScoped =
     {
         UsersManage,
         RolesManage,

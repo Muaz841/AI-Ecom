@@ -6,6 +6,8 @@ public sealed class Tenant : Entity<Guid>, ITenantEntity
 {
     public string Name { get; private set; } = null!;
     public string BusinessName { get; private set; } = null!;
+    public bool IsHost { get; private set; }
+    public bool IsActive { get; private set; } = true;
     public DateTime CreatedAt { get; private set; }
     public DateTime? LastSyncedAt { get; private set; }
 
@@ -13,7 +15,7 @@ public sealed class Tenant : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static Tenant Create(string name, string businessName)
+    public static Tenant Create(string name, string businessName, bool isHost = false)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -32,6 +34,8 @@ public sealed class Tenant : Entity<Guid>, ITenantEntity
             TenantId = id,
             Name = name.Trim(),
             BusinessName = businessName.Trim(),
+            IsHost = isHost,
+            IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
     }
@@ -51,6 +55,17 @@ public sealed class Tenant : Entity<Guid>, ITenantEntity
         Name = name.Trim();
         BusinessName = businessName.Trim();
     }
+
+    public void Suspend()
+    {
+        if (IsHost)
+        {
+            throw new InvalidOperationException("Host tenant cannot be suspended.");
+        }
+        IsActive = false;
+    }
+
+    public void Activate() => IsActive = true;
 
     public void UpdateSyncTimestamp()
     {

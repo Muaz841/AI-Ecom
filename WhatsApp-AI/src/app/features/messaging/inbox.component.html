@@ -1,0 +1,279 @@
+<div class="inbox">
+
+  <!-- ═══════════════════════════════════════════════
+       LEFT PANEL — Thread List
+  ═══════════════════════════════════════════════ -->
+  <aside class="thread-panel" [class.mobile-hidden]="selectedThread()">
+
+    <!-- Header: title + search -->
+    <div class="panel-head">
+      <h2 class="panel-title">Inbox</h2>
+
+      <div class="search-box">
+        <i class="pi pi-search search-icon"></i>
+        <input
+          class="search-input"
+          type="text"
+          placeholder="Search name, phone or message…"
+          [value]="searchQuery()"
+          (input)="setSearch($event)"
+        />
+      </div>
+
+      <!-- Status filter pills -->
+      <div class="filter-row">
+        @for (f of filters; track f.id) {
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeFilter() === f.id"
+            (click)="setFilter(f.id)"
+          >{{ f.label }}</button>
+        }
+      </div>
+
+      <!-- Platform chips -->
+      <div class="platform-row">
+        @for (p of platformList; track p.id) {
+          <button
+            type="button"
+            class="platform-chip"
+            [class.active]="activePlatforms().includes(p.id)"
+            (click)="togglePlatform(p.id)"
+          >
+            <span class="p-dot" [style.background]="p.color"></span>
+            <span class="p-label">{{ p.label }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Thread count -->
+    <p class="thread-count">
+      {{ filteredThreads().length }} conversation{{ filteredThreads().length !== 1 ? 's' : '' }}
+    </p>
+
+    <!-- Thread list -->
+    <div class="thread-list" role="listbox" aria-label="Conversations">
+
+      @for (thread of filteredThreads(); track thread.id) {
+        <button
+          type="button"
+          role="option"
+          class="thread-row"
+          [class.selected]="selectedThread()?.id === thread.id"
+          [attr.aria-selected]="selectedThread()?.id === thread.id"
+          (click)="selectThread(thread)"
+        >
+          <!-- Avatar + platform dot -->
+          <div class="t-avatar-wrap" aria-hidden="true">
+            <div class="t-avatar" [style.background]="thread.avatarColor">{{ thread.initials }}</div>
+            <span
+              class="t-pdot"
+              [style.background]="thread.platformColor"
+              [title]="thread.platform"
+            ></span>
+          </div>
+
+          <!-- Body: name / preview / status -->
+          <div class="t-body">
+            <div class="t-row1">
+              <span class="t-name">{{ thread.name }}</span>
+              <span class="t-time">{{ thread.relativeTime }}</span>
+            </div>
+            <div class="t-row2">
+              <span class="t-preview">{{ thread.lastMessage }}</span>
+              @if (thread.unreadCount > 0) {
+                <span class="t-badge" aria-label="{{ thread.unreadCount }} unread">{{ thread.unreadCount }}</span>
+              }
+            </div>
+            <div class="t-row3">
+              <span class="t-status" [ngClass]="statusClass(thread.status)">{{ statusLabel(thread.status) }}</span>
+            </div>
+          </div>
+        </button>
+      }
+
+      @if (filteredThreads().length === 0) {
+        <div class="no-threads">
+          <i class="pi pi-inbox"></i>
+          <p>No conversations found</p>
+        </div>
+      }
+
+    </div>
+  </aside>
+
+
+  <!-- ═══════════════════════════════════════════════
+       RIGHT PANEL — Chat
+  ═══════════════════════════════════════════════ -->
+  @if (selectedThread(); as thread) {
+    <section class="chat-panel">
+
+      <!-- ── Chat Header ─────────────────────────── -->
+      <header class="chat-header">
+
+        <button type="button" class="back-btn" (click)="selectThread(null)" title="Back to inbox" aria-label="Back">
+          <i class="pi pi-arrow-left"></i>
+        </button>
+
+        <div class="ch-avatar-wrap" aria-hidden="true">
+          <div class="ch-avatar" [style.background]="thread.avatarColor">{{ thread.initials }}</div>
+          <span class="ch-pdot" [style.background]="thread.platformColor"></span>
+        </div>
+
+        <div class="ch-info">
+          <span class="ch-name">{{ thread.name }}</span>
+          <span class="ch-status">
+            @if (thread.isOnline) {
+              <span class="online-dot" aria-hidden="true"></span>Online
+            } @else {
+              Last seen {{ thread.lastSeen }}
+            }
+          </span>
+        </div>
+
+        <div class="ch-actions">
+          <span
+            class="ch-platform-badge"
+            [style.background]="thread.platformColor + '22'"
+            [style.color]="thread.platformColor"
+          >
+            <span class="ch-pdot-inline" [style.background]="thread.platformColor" aria-hidden="true"></span>
+            {{ thread.platform }}
+          </span>
+
+          <button type="button" class="ch-action-btn" title="View linked order">
+            <i class="pi pi-shopping-bag" aria-hidden="true"></i>
+            <span class="btn-label">Order</span>
+          </button>
+
+          <button type="button" class="ch-action-btn ch-resolve-btn" title="Mark as resolved">
+            <i class="pi pi-check-circle" aria-hidden="true"></i>
+            <span class="btn-label">Resolve</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ── Messages Area ───────────────────────── -->
+      <div class="messages-area" #messagesArea role="log" aria-label="Messages" aria-live="polite">
+
+        @for (msg of currentMessages(); track msg.id) {
+          <div
+            class="msg-row"
+            [class.msg-customer]="msg.sender === 'customer'"
+            [class.msg-bot]="msg.sender === 'bot'"
+            [class.msg-agent]="msg.sender === 'agent'"
+          >
+            <!-- Left avatar (bot / agent) -->
+            @if (msg.sender !== 'customer') {
+              <div
+                class="msg-av"
+                [class.msg-av-agent]="msg.sender === 'agent'"
+                aria-hidden="true"
+              >{{ msg.sender === 'bot' ? 'AI' : 'Me' }}</div>
+            }
+
+            <!-- Message bubble -->
+            <div
+              class="bubble"
+              [class.bubble-customer]="msg.sender === 'customer'"
+              [class.bubble-bot]="msg.sender === 'bot'"
+              [class.bubble-agent]="msg.sender === 'agent'"
+            >
+              <p class="bubble-text">{{ msg.content }}</p>
+              <span class="bubble-ts" aria-label="Sent at {{ msg.time }}">{{ msg.time }}</span>
+            </div>
+
+            <!-- Right avatar (customer) -->
+            @if (msg.sender === 'customer') {
+              <div
+                class="msg-av msg-av-customer"
+                [style.background]="thread.avatarColor"
+                aria-hidden="true"
+              >{{ thread.initials }}</div>
+            }
+          </div>
+        }
+
+      </div>
+
+      <!-- ── AI Suggestions Panel ────────────────── -->
+      @if (showSuggestions()) {
+        <div class="suggestions-panel" role="listbox" aria-label="AI suggested replies">
+          <p class="suggestions-label">
+            <i class="pi pi-bolt" aria-hidden="true"></i>
+            AI Suggested Replies
+          </p>
+          @for (suggestion of aiSuggestions; track suggestion) {
+            <button
+              type="button"
+              class="suggestion-item"
+              role="option"
+              (click)="applySuggestion(suggestion)"
+            >{{ suggestion }}</button>
+          }
+        </div>
+      }
+
+      <!-- ── Input Bar ───────────────────────────── -->
+      <div class="input-bar">
+
+        <button type="button" class="inp-icon-btn" title="Attachment">
+          <i class="pi pi-paperclip" aria-hidden="true"></i>
+        </button>
+
+        <div class="inp-wrap">
+          <textarea
+            class="inp-textarea"
+            placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+            [value]="messageInput()"
+            (input)="setMessageInput($event)"
+            (keydown.enter)="sendMessage($event)"
+            rows="1"
+            aria-label="Message input"
+          ></textarea>
+        </div>
+
+        <button
+          type="button"
+          class="ai-suggest-btn"
+          [class.active]="showSuggestions()"
+          (click)="toggleSuggestions()"
+          title="AI Suggested Replies"
+        >
+          <i class="pi pi-bolt" aria-hidden="true"></i>
+          <span class="btn-label">AI Suggest</span>
+        </button>
+
+        <button
+          type="button"
+          class="send-btn"
+          (click)="sendMessage()"
+          [disabled]="!messageInput().trim()"
+          title="Send message"
+          aria-label="Send"
+        >
+          <i class="pi pi-send" aria-hidden="true"></i>
+        </button>
+
+      </div>
+    </section>
+
+  } @else {
+
+    <!-- ── Empty State ─────────────────────────── -->
+    <section class="empty-chat" aria-label="No conversation selected">
+      <div class="empty-inner">
+        <div class="empty-icon-wrap" aria-hidden="true">
+          <i class="pi pi-comments"></i>
+        </div>
+        <h3>Select a conversation</h3>
+        <p>Choose a thread from the left to start viewing and responding to messages.</p>
+      </div>
+    </section>
+
+  }
+
+</div>

@@ -6,6 +6,8 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/ui/toast.service';
 
+type LoginMode = 'tenant' | 'host';
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -17,7 +19,7 @@ export class LoginComponent implements OnDestroy {
   private readonly subscription = new Subscription();
 
   readonly form;
-
+  mode: LoginMode = 'tenant';
   isSubmitting = false;
 
   constructor(
@@ -45,16 +47,37 @@ export class LoginComponent implements OnDestroy {
     this.subscription.unsubscribe();
   }
 
+  setMode(mode: LoginMode): void {
+    if (this.mode === mode) return;
+    this.mode = mode;
+    const tenantControl = this.form.controls.tenantName;
+
+    if (mode === 'host') {
+      tenantControl.clearValidators();
+      tenantControl.setValue('');
+    } else {
+      tenantControl.setValidators([Validators.required]);
+    }
+
+    tenantControl.updateValueAndValidity();
+    this.form.markAsUntouched();
+  }
+
   submit(): void {
     if (this.form.invalid || this.isSubmitting) {
       this.form.markAllAsTouched();
-      this.toastService.warn('Validation', 'Please fill all required login fields.');
+      this.toastService.warn('Validation', 'Please fill all required fields.');
       return;
     }
 
     this.isSubmitting = true;
+    const { tenantName, email, password } = this.form.getRawValue();
 
-    const request = this.form.getRawValue();
+    const request =
+      this.mode === 'host'
+        ? { tenantName: 'host', email, password }
+        : { tenantName, email, password };
+
     this.subscription.add(
       this.authService.login(request).subscribe({
         next: () => {
@@ -70,27 +93,11 @@ export class LoginComponent implements OnDestroy {
     );
   }
 
-  continueWithGoogle(): void {
-    this.toastService.info('Coming soon', 'Google SSO will be enabled in onboarding.');
-  }
-
-  connectInstagram(): void {
-    this.toastService.info('Coming soon', 'Instagram OAuth will be enabled after Meta onboarding setup.');
-  }
-
-  connectWhatsApp(): void {
-    this.toastService.info('Coming soon', 'WhatsApp OAuth will be enabled after Meta onboarding setup.');
-  }
-
   private resolveErrorMessage(error: unknown): string {
-    if (typeof error === 'string') {
-      return error;
-    }
-
+    if (typeof error === 'string') return error;
     if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
       return error.message;
     }
-
-    return 'Login failed. Please verify credentials and tenant name.';
+    return 'Login failed. Please verify credentials.';
   }
 }

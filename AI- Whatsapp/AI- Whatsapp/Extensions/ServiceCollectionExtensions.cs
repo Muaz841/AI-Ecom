@@ -143,6 +143,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMetaMessagingService, MetaMessagingService>();
         services.AddScoped<IAuthService, JwtAuthService>();
         services.AddScoped<IRbacService, RbacService>();
+        services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         services.AddScoped<IMetaIntegrationService, MetaIntegrationService>();
         services.AddSingleton<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
