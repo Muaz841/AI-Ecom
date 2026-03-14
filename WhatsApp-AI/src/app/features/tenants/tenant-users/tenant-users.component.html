@@ -1,0 +1,127 @@
+<div class="tu-page">
+
+  <!-- ── Header ──────────────────────────────────────────── -->
+  <div class="tu-header">
+    <div class="tu-breadcrumb">
+      <button class="back-btn" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+        Tenants
+      </button>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">{{ tenant()?.businessName ?? '...' }}</span>
+    </div>
+    <div class="tu-header-main">
+      <div class="tu-title-group">
+        @if (tenant()) {
+          <div class="tenant-avatar">{{ tenant()!.businessName[0].toUpperCase() }}</div>
+        }
+        <div>
+          <h1 class="tu-title">{{ tenant()?.businessName ?? 'Loading...' }}</h1>
+          <p class="tu-subtitle">
+            @if (tenant()) {
+              {{ tenant()!.name }}.autobaat.com &nbsp;·&nbsp; {{ tenant()!.users.length }} {{ tenant()!.users.length === 1 ? 'user' : 'users' }}
+            }
+          </p>
+        </div>
+      </div>
+      <p-tag
+        *ngIf="tenant()"
+        [value]="tenant()!.isActive ? 'Active' : 'Suspended'"
+        [severity]="tenant()!.isActive ? 'success' : 'danger'">
+      </p-tag>
+    </div>
+  </div>
+
+  <!-- ── Loading ─────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="tu-loading">
+      <p-progressSpinner strokeWidth="3" styleClass="tu-spinner"></p-progressSpinner>
+      <span>Loading users...</span>
+    </div>
+  }
+
+  <!-- ── Empty state ─────────────────────────────────────── -->
+  @if (!loading() && tenant() && tenant()!.users.length === 0) {
+    <div class="tu-empty">
+      <div class="empty-icon-wrap"><i class="pi pi-users"></i></div>
+      <h3>No users yet</h3>
+      <p>This workspace has no users. Create the first admin account to get started.</p>
+    </div>
+  }
+
+  <!-- ── User grid ───────────────────────────────────────── -->
+  @if (!loading() && tenant() && tenant()!.users.length > 0) {
+    <div class="tu-grid">
+      @for (user of tenant()!.users; track user.id) {
+        <div class="user-card" [class.inactive]="!user.isActive" (click)="openUserDetail(user)">
+          <div class="uc-avatar-wrap">
+            <div class="uc-avatar">{{ getInitials(user) }}</div>
+            <div class="uc-status-dot" [class.active]="user.isActive" [class.inactive]="!user.isActive"></div>
+          </div>
+          <div class="uc-info">
+            <h3 class="uc-name">{{ user.firstName }} {{ user.lastName }}</h3>
+            <span class="uc-email">{{ user.email }}</span>
+          </div>
+          <div class="uc-role">
+            <span class="role-badge">{{ user.role }}</span>
+          </div>
+          <div class="uc-meta">
+            <span class="uc-joined"><i class="pi pi-calendar"></i> {{ user.createdAt | date:'MMM d, y' }}</span>
+            <i class="pi pi-chevron-right uc-chevron"></i>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>
+
+<!-- ── User detail dialog ──────────────────────────────── -->
+<p-dialog
+  [(visible)]="showUserDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="user-detail-dialog"
+  header="User Details"
+>
+  @if (selectedUser()) {
+    <div class="ud-content">
+
+      <div class="ud-profile">
+        <div class="ud-avatar">{{ getInitials(selectedUser()!) }}</div>
+        <div class="ud-profile-info">
+          <h2 class="ud-name">{{ selectedUser()!.firstName }} {{ selectedUser()!.lastName }}</h2>
+          <span class="ud-email">{{ selectedUser()!.email }}</span>
+        </div>
+        <p-tag
+          [value]="selectedUser()!.isActive ? 'Active' : 'Inactive'"
+          [severity]="selectedUser()!.isActive ? 'success' : 'danger'">
+        </p-tag>
+      </div>
+
+      <div class="ud-divider"></div>
+
+      <div class="ud-fields">
+        <div class="ud-field">
+          <span class="udf-label"><i class="pi pi-id-card"></i> User ID</span>
+          <span class="udf-value udf-mono">{{ selectedUser()!.id }}</span>
+        </div>
+        <div class="ud-field">
+          <span class="udf-label"><i class="pi pi-envelope"></i> Email</span>
+          <span class="udf-value">{{ selectedUser()!.email }}</span>
+        </div>
+        <div class="ud-field">
+          <span class="udf-label"><i class="pi pi-shield"></i> Role</span>
+          <span class="udf-value"><span class="role-badge">{{ selectedUser()!.role }}</span></span>
+        </div>
+        <div class="ud-field">
+          <span class="udf-label"><i class="pi pi-calendar"></i> Joined</span>
+          <span class="udf-value">{{ selectedUser()!.createdAt | date:'MMMM d, y, h:mm a' }}</span>
+        </div>
+      </div>
+
+    </div>
+  }
+</p-dialog>

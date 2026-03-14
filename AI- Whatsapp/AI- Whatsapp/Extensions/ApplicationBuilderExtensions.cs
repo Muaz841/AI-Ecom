@@ -4,6 +4,7 @@ using EcomAI.Platform.Infrastructure.BackgroundJobs;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using EcomAI.Platform.Api.Middleware;
+using EcomAI.Platform.Infrastructure.Realtime;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -44,6 +45,7 @@ public static class ApplicationBuilderExtensions
     public static WebApplication MapCoreEndpoints(this WebApplication app)
     {
         app.MapControllers();
+        app.MapHub<RealtimeHub>("/hubs/realtime");
         app.MapHealthChecks("/health");
         app.MapGet("/", (IWebHostEnvironment env) =>
             env.IsDevelopment() ? Results.Redirect("/swagger") : Results.Ok("API is running"));

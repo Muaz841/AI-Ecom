@@ -23,9 +23,9 @@ public class RbacController : ControllerBase
 
     [HttpGet("permissions")]
     [Authorize(Policy = PermissionCodes.PermissionsManage)]
-    public async Task<ActionResult<IReadOnlyList<PermissionDto>>> ListPermissions([FromQuery] TenantScopedQuery request, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<PermissionDto>>> ListPermissions(CancellationToken cancellationToken)
     {
-        var result = await _rbacService.ListPermissionsAsync(request.TenantId, cancellationToken);
+        var result = await _rbacService.ListPermissionsAsync(Guid.Empty, cancellationToken);
         return Ok(result);
     }
 
@@ -111,6 +111,14 @@ public class RbacController : ControllerBase
     {
         var removed = await _rbacService.RemoveRoleFromUserAsync(request.TenantId, userId, roleId, cancellationToken);
         return removed ? NoContent() : NotFound();
+    }
+
+    [HttpGet("users")]
+    [Authorize(Policy = PermissionCodes.UsersManage)]
+    public async Task<ActionResult<IReadOnlyList<RbacUserDto>>> ListUsers([FromQuery] TenantScopedQuery request, CancellationToken cancellationToken)
+    {
+        var result = await _rbacService.ListUsersAsync(request.TenantId, cancellationToken);
+        return Ok(result);
     }
 }
 

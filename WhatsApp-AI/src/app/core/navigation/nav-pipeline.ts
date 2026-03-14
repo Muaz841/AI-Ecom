@@ -86,14 +86,12 @@ export const SIDEBAR_PIPELINE: SidebarModule[] = [
   },
   {
     id: 'rbac',
-    label: 'RBAC',
+    label: 'Access Control',
     route: '/admin/rbac',
     icon: 'pi pi-shield',
     order: 70,
     requiredPermissions: ['roles.manage'],
-    requiredRoles: ['super_admin'],
-    roleMatchMode: 'any',
-    subtitle: 'Tenant role, permission, and assignment management.',
+    subtitle: 'Manage roles, permissions, and user access.',
   },
   {
     id: 'tenants',

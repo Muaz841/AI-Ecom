@@ -1,0 +1,352 @@
+/* ── Page ──────────────────────────────────────────────── */
+.tu-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.tu-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover { color: var(--text-primary); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  i { font-size: 0.75rem; }
+}
+
+.breadcrumb-sep { color: var(--text-muted); font-size: 0.8rem; }
+.breadcrumb-current { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
+
+.tu-header-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tu-title-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tenant-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.tu-title {
+  margin: 0 0 0.2rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.tu-subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-family: monospace;
+}
+
+/* ── Loading ───────────────────────────────────────────── */
+.tu-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+::ng-deep .tu-spinner {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+}
+
+/* ── Empty state ───────────────────────────────────────── */
+.tu-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 4rem 2rem;
+  background: linear-gradient(145deg, var(--surface-glass-1), var(--surface-glass-2));
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+}
+
+.empty-icon-wrap {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  i { font-size: 2rem; color: var(--text-secondary); }
+}
+
+.tu-empty h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+.tu-empty p  { margin: 0; font-size: 0.875rem; color: var(--text-secondary); max-width: 400px; line-height: 1.55; }
+
+/* ── User grid ─────────────────────────────────────────── */
+.tu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.user-card {
+  background: linear-gradient(145deg, var(--surface-glass-1), var(--surface-glass-2));
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  cursor: pointer;
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 150ms ease;
+
+  &:hover {
+    border-color: var(--accent);
+    box-shadow: 0 6px 20px rgba(2, 6, 23, 0.18);
+    transform: translateY(-2px);
+  }
+
+  &.inactive { opacity: 0.6; }
+}
+
+.uc-avatar-wrap {
+  position: relative;
+  align-self: flex-start;
+}
+
+.uc-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.uc-status-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+
+  &.active { background: #10b981; }
+  &.inactive { background: #94a3b8; }
+}
+
+.uc-info {
+  flex: 1;
+}
+
+.uc-name {
+  margin: 0 0 0.2rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.uc-email {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.uc-role {
+  display: flex;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.uc-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.uc-joined {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  i { font-size: 0.72rem; }
+}
+
+.uc-chevron {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: color 150ms ease;
+}
+
+.user-card:hover .uc-chevron { color: var(--accent); }
+
+/* ── User detail dialog ────────────────────────────────── */
+::ng-deep .user-detail-dialog {
+  width: min(480px, 96vw) !important;
+
+  .p-dialog-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 1.25rem 1.75rem;
+    font-weight: 700;
+  }
+
+  .p-dialog-content {
+    background: var(--surface);
+    padding: 0;
+  }
+}
+
+.ud-content {
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ud-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ud-avatar {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ud-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ud-name {
+  margin: 0 0 0.2rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ud-email {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ud-divider {
+  height: 1px;
+  background: var(--line);
+}
+
+.ud-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ud-field {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.udf-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 6rem;
+  i { font-size: 0.75rem; }
+}
+
+.udf-value {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.udf-mono {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}

@@ -30,11 +30,19 @@ export interface AppConfig {
   platformSettings: {
     meta: string;
   };
+  rbac: {
+    permissions: string;
+    roles: string;
+    roleById: (roleId: string) => string;
+    rolePermissions: (roleId: string) => string;
+    users: string;
+    userRole: (userId: string, roleId: string) => string;
+  };
 }
 
 export const APP_CONFIG: AppConfig = {
-  //apiBaseUrl: 'https://localhost:44372',
-  apiBaseUrl: 'https://impurely-overforged-atlas.ngrok-free.dev',
+  apiBaseUrl: 'https://localhost:44372',
+  //apiBaseUrl: 'https://impurely-overforged-atlas.ngrok-free.dev',
   auth: {
     register: '/api/auth/register',
     login: '/api/auth/login',
@@ -62,5 +70,13 @@ export const APP_CONFIG: AppConfig = {
   },
   platformSettings: {
     meta: '/api/host/platform/meta',
+  },
+  rbac: {
+    permissions: '/api/rbac/permissions',
+    roles: '/api/rbac/roles',
+    roleById: (roleId: string) => `/api/rbac/roles/${roleId}`,
+    rolePermissions: (roleId: string) => `/api/rbac/roles/${roleId}/permissions`,
+    users: '/api/rbac/users',
+    userRole: (userId: string, roleId: string) => `/api/rbac/users/${userId}/roles/${roleId}`,
   },
 };

@@ -1,0 +1,274 @@
+<div class="tm-page">
+
+  <!-- ── Header ──────────────────────────────────────────── -->
+  <div class="tm-header">
+    <div class="tm-header-info">
+      <h1 class="tm-title">Tenant Management</h1>
+      <p class="tm-subtitle">Provision and manage platform tenants. Each tenant is an isolated workspace with its own users and data.</p>
+    </div>
+    <button pButton label="New Workspace" icon="pi pi-plus" class="tm-create-btn" (click)="openCreateDialog()"></button>
+  </div>
+
+  <!-- ── Stats ───────────────────────────────────────────── -->
+  <div class="tm-stats">
+    <div class="stat-card">
+      <span class="stat-value">{{ tenants().length }}</span>
+      <span class="stat-label">Total Tenants</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ activeCount() }}</span>
+      <span class="stat-label">Active</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ suspendedCount() }}</span>
+      <span class="stat-label">Suspended</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ totalUsers() }}</span>
+      <span class="stat-label">Total Users</span>
+    </div>
+  </div>
+
+  <!-- ── Loading ─────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="tm-loading">
+      <p-progressSpinner strokeWidth="3" styleClass="tm-spinner"></p-progressSpinner>
+      <span>Loading tenants...</span>
+    </div>
+  }
+
+  <!-- ── Empty state ─────────────────────────────────────── -->
+  @if (!loading() && tenants().length === 0) {
+    <div class="tm-empty">
+      <div class="empty-icon-wrap"><i class="pi pi-building"></i></div>
+      <h3>No workspaces yet</h3>
+      <p>Create your first tenant workspace to get started. Each workspace is fully isolated with its own users, roles, and data.</p>
+      <button pButton label="Create First Workspace" icon="pi pi-plus" (click)="openCreateDialog()"></button>
+    </div>
+  }
+
+  <!-- ── Tenant grid ─────────────────────────────────────── -->
+  @if (!loading() && tenants().length > 0) {
+    <div class="tm-grid">
+      @for (tenant of tenants(); track tenant.id) {
+        <div class="tenant-card" [class.suspended]="!tenant.isActive" (click)="openTenantUsers(tenant)">
+          <div class="tc-header">
+            <div class="tc-identity">
+              <div class="tc-avatar">{{ tenant.businessName[0].toUpperCase() }}</div>
+              <div class="tc-names">
+                <h3 class="tc-business">{{ tenant.businessName }}</h3>
+                <span class="tc-slug">{{ tenant.name }}.autobaat.com</span>
+              </div>
+            </div>
+            <p-tag [value]="tenant.isActive ? 'Active' : 'Suspended'" [severity]="tenant.isActive ? 'success' : 'danger'"></p-tag>
+          </div>
+          <div class="tc-meta">
+            <div class="meta-item"><i class="pi pi-users"></i><span>{{ tenant.userCount }} {{ tenant.userCount === 1 ? 'user' : 'users' }}</span></div>
+            <div class="meta-item"><i class="pi pi-calendar"></i><span>{{ tenant.createdAt | date:'MMM d, y' }}</span></div>
+          </div>
+          <div class="tc-actions" (click)="$event.stopPropagation()">
+            @if (tenant.isActive) {
+              <button pButton label="Suspend" icon="pi pi-pause" severity="warn" outlined size="small"
+                [loading]="actionBusy() === tenant.id" (click)="suspendTenant(tenant)"
+                pTooltip="Prevent tenant users from logging in" tooltipPosition="top"></button>
+            } @else {
+              <button pButton label="Activate" icon="pi pi-play" severity="success" outlined size="small"
+                [loading]="actionBusy() === tenant.id" (click)="activateTenant(tenant)"></button>
+            }
+            <button pButton label="Users" icon="pi pi-users" severity="secondary" outlined size="small"
+              (click)="openTenantUsers(tenant)" pTooltip="View users" tooltipPosition="top"></button>
+            <button pButton icon="pi pi-shield" severity="info" outlined size="small"
+              (click)="openRbac(tenant)" pTooltip="Manage roles & permissions" tooltipPosition="top"></button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     CREATE WORKSPACE — 3-STEP WIZARD DIALOG
+════════════════════════════════════════════════════════ -->
+<p-dialog
+  [(visible)]="showCreateDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="wiz-dialog"
+  header="New Workspace"
+  (onHide)="onDialogHide()"
+>
+
+  <div class="wizard-wrap" [formGroup]="createForm">
+
+    <!-- ── Step indicator ──────────────────────────────── -->
+    <div class="step-indicator">
+      <div class="step-track">
+        <div class="step-node" [class.done]="wizardStep() > 1" [class.current]="wizardStep() === 1">
+          @if (wizardStep() > 1) { <i class="pi pi-check"></i> } @else { <span>1</span> }
+        </div>
+        <div class="step-line" [class.filled]="wizardStep() > 1"></div>
+        <div class="step-node" [class.done]="wizardStep() > 2" [class.current]="wizardStep() === 2">
+          @if (wizardStep() > 2) { <i class="pi pi-check"></i> } @else { <span>2</span> }
+        </div>
+        <div class="step-line" [class.filled]="wizardStep() > 2"></div>
+        <div class="step-node" [class.current]="wizardStep() === 3"><span>3</span></div>
+      </div>
+      <div class="step-labels">
+        <span [class.active-label]="wizardStep() === 1">Workspace</span>
+        <span [class.active-label]="wizardStep() === 2">Admin</span>
+        <span [class.active-label]="wizardStep() === 3">Review</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" [style.width.%]="progressPct()"></div>
+      </div>
+    </div>
+
+    <!-- ── Step 1: Workspace ───────────────────────────── -->
+    @if (wizardStep() === 1) {
+      <div class="step-content">
+        <div class="step-heading">
+          <h2 class="wiz-step-title">Workspace Information</h2>
+          <p class="wiz-step-sub">Set up your organization's workspace identity</p>
+        </div>
+
+        <div class="form-field">
+          <label class="field-label">Business Name <span class="required">*</span></label>
+          <input pInputText formControlName="businessName" placeholder="e.g. Acme Corporation" class="wiz-input" autocomplete="organization" />
+          @if (createForm.get('businessName')?.touched && createForm.get('businessName')?.invalid) {
+            <span class="field-error"><i class="pi pi-exclamation-circle"></i> Business name is required</span>
+          }
+        </div>
+
+        <div class="form-field">
+          <label class="field-label">Workspace URL <span class="required">*</span></label>
+          <div class="slug-wrap">
+            <input pInputText formControlName="name" placeholder="acme-corp" class="wiz-input slug-input" (input)="onSlugInput()" autocomplete="off" />
+            <span class="slug-suffix">.autobaat.com</span>
+          </div>
+          @if (createForm.get('name')?.touched && createForm.get('name')?.invalid) {
+            <span class="field-error"><i class="pi pi-exclamation-circle"></i> URL must use lowercase letters, numbers, and hyphens only</span>
+          }
+          @if (createForm.get('name')?.valid && createForm.get('name')?.value) {
+            <span class="field-hint"><i class="pi pi-link"></i> {{ createForm.get('name')?.value }}.autobaat.com</span>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ── Step 2: Admin Account ───────────────────────── -->
+    @if (wizardStep() === 2) {
+      <div class="step-content">
+        <div class="step-heading">
+          <h2 class="wiz-step-title">Admin Account</h2>
+          <p class="wiz-step-sub">This user will be the first admin for <strong>{{ createForm.get('businessName')?.value }}</strong></p>
+        </div>
+
+        <div class="form-row two-col">
+          <div class="form-field">
+            <label class="field-label">First Name <span class="required">*</span></label>
+            <input pInputText formControlName="adminFirstName" placeholder="John" class="wiz-input" autocomplete="given-name" />
+            @if (createForm.get('adminFirstName')?.touched && createForm.get('adminFirstName')?.invalid) {
+              <span class="field-error"><i class="pi pi-exclamation-circle"></i> Required</span>
+            }
+          </div>
+          <div class="form-field">
+            <label class="field-label">Last Name <span class="required">*</span></label>
+            <input pInputText formControlName="adminLastName" placeholder="Smith" class="wiz-input" autocomplete="family-name" />
+            @if (createForm.get('adminLastName')?.touched && createForm.get('adminLastName')?.invalid) {
+              <span class="field-error"><i class="pi pi-exclamation-circle"></i> Required</span>
+            }
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="field-label">Email <span class="required">*</span></label>
+          <input pInputText formControlName="adminEmail" placeholder="admin@acmecorp.com" class="wiz-input" type="email" autocomplete="email" />
+          @if (createForm.get('adminEmail')?.touched && createForm.get('adminEmail')?.invalid) {
+            <span class="field-error"><i class="pi pi-exclamation-circle"></i> Valid email address is required</span>
+          }
+        </div>
+
+        <div class="form-field">
+          <label class="field-label">Password <span class="required">*</span></label>
+          <p-password formControlName="adminPassword" placeholder="Min. 8 characters" [feedback]="true" [toggleMask]="true" class="w-full" inputStyleClass="wiz-input w-full"></p-password>
+          @if (createForm.get('adminPassword')?.touched && createForm.get('adminPassword')?.invalid) {
+            <span class="field-error"><i class="pi pi-exclamation-circle"></i> Password must be at least 8 characters</span>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ── Step 3: Review & Confirm ───────────────────── -->
+    @if (wizardStep() === 3) {
+      <div class="step-content">
+        <div class="step-heading">
+          <h2 class="wiz-step-title">Review & Create</h2>
+          <p class="wiz-step-sub">Double-check your workspace setup before creating</p>
+        </div>
+
+        <div class="review-card">
+          <div class="review-section">
+            <div class="review-section-label"><i class="pi pi-building"></i> Workspace</div>
+            <div class="review-row">
+              <span class="rk">Business Name</span>
+              <span class="rv">{{ createForm.get('businessName')?.value }}</span>
+            </div>
+            <div class="review-row">
+              <span class="rk">Workspace URL</span>
+              <span class="rv rv-url"><i class="pi pi-link"></i>{{ createForm.get('name')?.value }}.autobaat.com</span>
+            </div>
+          </div>
+
+          <div class="review-divider"></div>
+
+          <div class="review-section">
+            <div class="review-section-label"><i class="pi pi-user"></i> Admin Account</div>
+            <div class="review-row">
+              <span class="rk">Name</span>
+              <span class="rv">{{ createForm.get('adminFirstName')?.value }} {{ createForm.get('adminLastName')?.value }}</span>
+            </div>
+            <div class="review-row">
+              <span class="rk">Email</span>
+              <span class="rv">{{ createForm.get('adminEmail')?.value }}</span>
+            </div>
+            <div class="review-row">
+              <span class="rk">Password</span>
+              <span class="rv rv-password">••••••••</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="review-note">
+          <i class="pi pi-info-circle"></i>
+          3 default roles (tenant_admin, manager, agent) will be seeded automatically.
+        </p>
+      </div>
+    }
+
+  </div>
+
+  <!-- ── Wizard Footer ──────────────────────────────────── -->
+  <ng-template pTemplate="footer">
+    <div class="wiz-footer">
+      <span class="step-counter">Step {{ wizardStep() }} of 3</span>
+      <div class="wiz-footer-actions">
+        @if (wizardStep() === 1) {
+          <button pButton label="Cancel" severity="secondary" outlined (click)="closeDialog()"></button>
+          <button pButton label="Continue" icon="pi pi-arrow-right" iconPos="right" (click)="nextStep()"></button>
+        }
+        @if (wizardStep() === 2) {
+          <button pButton label="Back" icon="pi pi-arrow-left" severity="secondary" outlined (click)="prevStep()"></button>
+          <button pButton label="Continue" icon="pi pi-arrow-right" iconPos="right" (click)="nextStep()"></button>
+        }
+        @if (wizardStep() === 3) {
+          <button pButton label="Back" icon="pi pi-arrow-left" severity="secondary" outlined (click)="prevStep()" [disabled]="creating()"></button>
+          <button pButton label="Create Workspace" icon="pi pi-check" [loading]="creating()" (click)="submitCreate()"></button>
+        }
+      </div>
+    </div>
+  </ng-template>
+
+</p-dialog>

@@ -1,0 +1,162 @@
+<div class="ps-page">
+
+  <!-- ── Header ──────────────────────────────────────────── -->
+  <div class="ps-header">
+    <div>
+      <h1 class="ps-title">Platform Settings</h1>
+      <p class="ps-subtitle">Host-level configuration applied across all tenants. Changes take effect immediately for new OAuth flows.</p>
+    </div>
+  </div>
+
+  <!-- ── Loading ─────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="ps-loading">
+      <p-progressSpinner strokeWidth="3" styleClass="ps-spinner"></p-progressSpinner>
+      <span>Loading configuration…</span>
+    </div>
+  }
+
+  @if (!loading()) {
+    <!-- ── Status banner ─────────────────────────────────── -->
+    <div class="status-banner" [class.configured]="config()?.isConfigured" [class.unconfigured]="!config()?.isConfigured">
+      <div class="status-icon">
+        <i [class]="config()?.isConfigured ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'"></i>
+      </div>
+      <div class="status-body">
+        <strong>{{ config()?.isConfigured ? 'Meta App Configured' : 'Meta App Not Configured' }}</strong>
+        <span>
+          @if (config()?.isConfigured) {
+            App credentials are active. Tenant OAuth flows will use these settings.
+            @if (config()?.updatedAt) {
+              Last updated {{ formatDate(config()!.updatedAt!) }}.
+            }
+          } @else {
+            No credentials stored. OAuth flows will fall back to appsettings.json values.
+          }
+        </span>
+      </div>
+    </div>
+
+    <!-- ── Meta App Config card ──────────────────────────── -->
+    <div class="ps-card">
+      <div class="card-header">
+        <div class="card-title-row">
+          <div class="card-icon"><i class="pi pi-meta"></i></div>
+          <div>
+            <h2 class="card-title">Meta App Credentials</h2>
+            <p class="card-sub">Used for WhatsApp, Instagram, and Facebook OAuth token exchange and API calls.</p>
+          </div>
+        </div>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="ps-form">
+
+        <!-- App ID -->
+        <div class="form-field">
+          <label class="field-label">
+            App ID <span class="required">*</span>
+            <span class="field-badge">Public</span>
+          </label>
+          <input pInputText formControlName="appId" placeholder="e.g. 1304702521713674" class="ps-input" autocomplete="off" />
+          <span class="field-hint">Your Meta App ID from the Meta Developer Portal.</span>
+          @if (form.get('appId')?.touched && form.get('appId')?.invalid) {
+            <span class="field-error"><i class="pi pi-exclamation-circle"></i> App ID is required</span>
+          }
+        </div>
+
+        <!-- Login Configuration ID -->
+        <div class="form-field">
+          <label class="field-label">
+            Login Configuration ID
+            <span class="field-badge">Optional</span>
+          </label>
+          <input pInputText formControlName="loginConfigurationId" placeholder="e.g. 123456789012345" class="ps-input" autocomplete="off" />
+          <span class="field-hint">
+            Use this only if your app uses Facebook Login for Business. Found in Meta → Login for Business → Configurations.
+          </span>
+        </div>
+
+        <!-- App Secret -->
+        <div class="form-field">
+          <label class="field-label">
+            App Secret <span class="required">*</span>
+            <span class="field-badge field-badge-secret">Encrypted at rest</span>
+          </label>
+          <div class="secret-wrap">
+            <input
+              [type]="showSecret() ? 'text' : 'password'"
+              pInputText
+              formControlName="appSecret"
+              [placeholder]="config()?.isConfigured ? 'Leave empty to keep existing secret' : 'Enter your Meta App Secret'"
+              class="ps-input secret-input"
+              autocomplete="new-password"
+            />
+            <button type="button" class="secret-toggle" (click)="showSecret.set(!showSecret())"
+              [pTooltip]="showSecret() ? 'Hide' : 'Show'" tooltipPosition="top">
+              <i [class]="showSecret() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            </button>
+          </div>
+          <span class="field-hint">
+            @if (config()?.isConfigured) {
+              <i class="pi pi-lock"></i> Currently set. Leave blank to keep unchanged. Enter a new value to rotate the secret.
+            } @else {
+              Find this in Meta Developer Portal → Your App → App Settings → Basic.
+            }
+          </span>
+          @if (form.get('appSecret')?.touched && form.get('appSecret')?.invalid) {
+            <span class="field-error"><i class="pi pi-exclamation-circle"></i> App Secret is required for initial setup</span>
+          }
+        </div>
+
+        <!-- Graph API Version + Callback URL -->
+        <div class="form-row two-col">
+          <div class="form-field">
+            <label class="field-label">Graph API Version <span class="required">*</span></label>
+            <div class="version-wrap">
+              <span class="version-prefix">v</span>
+              <select formControlName="graphVersion" class="ps-select">
+                @for (v of graphVersions; track v) {
+                  <option [value]="v">{{ v }}</option>
+                }
+              </select>
+            </div>
+            <span class="field-hint">Use the latest stable version supported by your app.</span>
+          </div>
+
+          <div class="form-field">
+            <label class="field-label">Callback Base URL <span class="required">*</span></label>
+            <input pInputText formControlName="callbackBaseUrl" placeholder="https://api.yourapp.com" class="ps-input" autocomplete="off" />
+            @if (callbackPreview()) {
+              <span class="field-hint"><i class="pi pi-link"></i> {{ callbackPreview() }}</span>
+            }
+            @if (form.get('callbackBaseUrl')?.touched && form.get('callbackBaseUrl')?.invalid) {
+              <span class="field-error"><i class="pi pi-exclamation-circle"></i> Callback URL is required</span>
+            }
+          </div>
+        </div>
+
+        <!-- Save -->
+        <div class="form-actions">
+          <button type="submit" pButton label="Save Configuration" icon="pi pi-check"
+            [loading]="saving()" [disabled]="form.invalid && !isPartialUpdateValid()"></button>
+          <button type="button" pButton label="Reset" severity="secondary" outlined (click)="resetForm()"></button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── Info card ─────────────────────────────────────── -->
+    <div class="info-card">
+      <div class="info-row"><i class="pi pi-info-circle"></i>
+        <span>The App Secret is <strong>never returned to the UI</strong> after saving. Only a masked placeholder is shown. A new value must be entered to rotate it.</span>
+      </div>
+      <div class="info-row"><i class="pi pi-info-circle"></i>
+        <span>If no DB config exists, the system falls back to <code>MetaOAuth</code> values in <code>appsettings.json</code> automatically.</span>
+      </div>
+      <div class="info-row"><i class="pi pi-info-circle"></i>
+        <span>The <strong>Callback Base URL</strong> must match the redirect URI registered in your Meta App Dashboard exactly.</span>
+      </div>
+    </div>
+  }
+
+</div>

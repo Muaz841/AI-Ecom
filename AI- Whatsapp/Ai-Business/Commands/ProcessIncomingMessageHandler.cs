@@ -29,19 +29,22 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
     private readonly IAIService _aiService;
     private readonly IMetaMessagingService _metaService;
     private readonly IApplicationLogger _logger;
+    private readonly IRealtimeNotifier _realtimeNotifier;
 
     public ProcessIncomingMessageHandler(
         IConversationThreadRepository conversationThreadRepository,
         IProductRepository productRepository,
         IAIService aiService,
         IMetaMessagingService metaService,
-        IApplicationLogger logger)
+        IApplicationLogger logger,
+        IRealtimeNotifier realtimeNotifier)
     {
         _conversationThreadRepository = conversationThreadRepository;
         _productRepository = productRepository;
         _aiService = aiService;
         _metaService = metaService;
         _logger = logger;
+        _realtimeNotifier = realtimeNotifier;
     }
 
     public async Task<ProcessIncomingMessageResult> Handle(ProcessIncomingMessageCommand request, CancellationToken cancellationToken)
@@ -69,6 +72,41 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             rawPayloadJson: request.RawPayloadJson,
             externalMessageId: request.ExternalMessageId,
             messageType: request.MessageType);
+
+        if (string.Equals(request.MessageType, "comment", StringComparison.OrdinalIgnoreCase))
+        {
+            await _realtimeNotifier.PublishAsync(
+                request.TenantId,
+                "comment.received",
+                new
+                {
+                    message.Id,
+                    request.Platform,
+                    request.From,
+                    request.To,
+                    request.Content,
+                    ThreadId = thread.Id,
+                    ReceivedAtUtc = message.ReceivedAt
+                },
+                cancellationToken);
+        }
+        else
+        {
+            await _realtimeNotifier.PublishAsync(
+                request.TenantId,
+                "message.received",
+                new
+                {
+                    message.Id,
+                    request.Platform,
+                    request.From,
+                    request.To,
+                    request.Content,
+                    ThreadId = thread.Id,
+                    ReceivedAtUtc = message.ReceivedAt
+                },
+                cancellationToken);
+        }
 
         if (!request.AllowAutoReply)
         {

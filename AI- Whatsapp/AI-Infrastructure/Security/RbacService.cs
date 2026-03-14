@@ -289,6 +289,46 @@ public sealed class RbacService : IRbacService
         return true;
     }
 
+    public async Task<IReadOnlyList<RbacUserDto>> ListUsersAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        var users = await _dbContext.Set<UserAccount>()
+            .AsNoTracking()
+            .Where(u => u.TenantId == tenantId)
+            .OrderBy(u => u.FirstName).ThenBy(u => u.LastName)
+            .ToListAsync(cancellationToken);
+
+        var userIds = users.Select(u => u.Id).ToHashSet();
+        var userRoles = await _dbContext.Set<UserRole>()
+            .AsNoTracking()
+            .Where(ur => ur.TenantId == tenantId && userIds.Contains(ur.UserAccountId))
+            .ToListAsync(cancellationToken);
+
+        var roleIds = userRoles.Select(ur => ur.RoleId).ToHashSet();
+        var roleNames = await _dbContext.Set<Role>()
+            .AsNoTracking()
+            .Where(r => roleIds.Contains(r.Id))
+            .ToDictionaryAsync(r => r.Id, r => r.Name, cancellationToken);
+
+        var rolesByUser = userRoles
+            .GroupBy(ur => ur.UserAccountId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<string>)g
+                    .Select(ur => roleNames.GetValueOrDefault(ur.RoleId, string.Empty))
+                    .Where(n => n.Length > 0)
+                    .ToList());
+
+        return users.Select(u => new RbacUserDto(
+            u.Id,
+            u.Email,
+            u.FirstName,
+            u.LastName,
+            u.IsActive,
+            u.CreatedAt,
+            rolesByUser.GetValueOrDefault(u.Id, Array.Empty<string>())
+        )).ToList();
+    }
+
     private static void ValidateClientId(Guid TenantId)
     {
         if (TenantId == Guid.Empty)

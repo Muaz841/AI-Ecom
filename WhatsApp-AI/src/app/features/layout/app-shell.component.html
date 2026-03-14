@@ -56,16 +56,25 @@
         <div class="notification-wrap">
           <button type="button" class="icon-btn" (click)="toggleNotifications()">
             <i class="pi pi-bell"></i>
-            <span class="badge">{{ notifications.length }}</span>
+            @if (notifications.length > 0) {
+              <span class="badge">{{ notifications.length }}</span>
+            }
           </button>
           @if (isNotificationPanelOpen) {
             <section class="notification-panel">
               <h4>Notifications</h4>
-              @for (item of notifications; track item.title) {
+              @if (notifications.length === 0) {
                 <article>
-                  <strong>{{ item.title }}</strong>
-                  <p>{{ item.detail }}</p>
+                  <strong>No notifications</strong>
+                  <p>New comments and messages will appear here.</p>
                 </article>
+              } @else {
+                @for (item of notifications; track item.id) {
+                  <article>
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.detail }}</p>
+                  </article>
+                }
               }
             </section>
           }

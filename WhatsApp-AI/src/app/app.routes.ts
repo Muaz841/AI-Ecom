@@ -9,8 +9,10 @@ import { MetaOauthCallbackComponent } from './features/metaConnectionComponent/m
 import { SIDEBAR_PIPELINE } from './core/navigation/nav-pipeline';
 import { MetaIntegrationsComponent } from './features/metaConnectionComponent/meta-integrations.component';
 import { TenantManagementComponent } from './features/tenants/tenant-management.component';
+import { TenantUsersComponent } from './features/tenants/tenant-users/tenant-users.component';
 import { InboxComponent } from './features/messaging/inbox.component';
 import { PlatformSettingsComponent } from './features/platform-settings/platform-settings.component';
+import { RbacComponent } from './features/rbac/rbac.component';
 
 const messagingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'messaging');
 const contentModule = SIDEBAR_PIPELINE.find((module) => module.id === 'content');
@@ -81,12 +83,10 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         data: {
           permissions: rbacModule?.requiredPermissions ?? ['roles.manage'],
-          roles: rbacModule?.requiredRoles ?? ['super_admin'],
-          roleMatchMode: rbacModule?.roleMatchMode ?? 'any',
-          title: rbacModule?.label ?? 'RBAC',
-          subtitle: rbacModule?.subtitle ?? 'Tenant role, permission, and assignment management.',
+          title: rbacModule?.label ?? 'Access Control',
+          subtitle: rbacModule?.subtitle ?? 'Manage roles, permissions, and user access.',
         },
-        component: DashboardPlaceholderComponent,
+        component: RbacComponent,
       },
       {
         path: 'host/tenants',
@@ -97,6 +97,16 @@ export const routes: Routes = [
           subtitle: tenantsModule?.subtitle ?? '',
         },
         component: TenantManagementComponent,
+      },
+      {
+        path: 'host/tenants/:id/users',
+        canActivate: [permissionGuard],
+        data: {
+          permissions: tenantsModule?.requiredPermissions ?? ['tenants.manage'],
+          title: 'Tenant Users',
+          subtitle: 'View and manage users in this workspace.',
+        },
+        component: TenantUsersComponent,
       },
       {
         path: 'host/platform',

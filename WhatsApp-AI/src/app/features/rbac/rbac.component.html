@@ -1,0 +1,343 @@
+<div class="rbac-page">
+
+  <!-- ── Header ──────────────────────────────────────────── -->
+  <div class="rbac-header">
+    <div>
+      <h1 class="rbac-title">Access Control</h1>
+      <p class="rbac-subtitle">Manage roles, permissions, and user assignments for this workspace.</p>
+    </div>
+  </div>
+
+  <!-- ── Tabs ────────────────────────────────────────────── -->
+  <div class="rbac-tabs">
+    <button class="tab-btn" [class.active]="activeTab() === 'roles'" (click)="setTab('roles')">
+      <i class="pi pi-shield"></i> Roles
+      <span class="tab-count">{{ roles().length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'permissions'" (click)="setTab('permissions')">
+      <i class="pi pi-key"></i> Permissions
+      <span class="tab-count">{{ permissions().length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="setTab('users')">
+      <i class="pi pi-users"></i> Users
+      <span class="tab-count">{{ users().length }}</span>
+    </button>
+  </div>
+
+  <!-- ── No tenant selected (host without context) ──────── -->
+  @if (noTenantSelected()) {
+    <div class="rbac-empty" style="margin-top: 2rem;">
+      <i class="pi pi-building"></i>
+      <span>Select a tenant workspace to manage its roles and users.</span>
+      <small>Navigate here from the <strong>Tenant Management</strong> screen using the "Manage RBAC" button on a tenant card.</small>
+    </div>
+  }
+
+  <!-- ── Loading ─────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="rbac-loading">
+      <p-progressSpinner strokeWidth="3" styleClass="rbac-spinner"></p-progressSpinner>
+      <span>Loading...</span>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════
+       ROLES TAB
+  ══════════════════════════════════════════════════════ -->
+  @if (!loading() && activeTab() === 'roles') {
+    <div class="tab-panel" @fadeSlide>
+
+      <div class="panel-toolbar">
+        <span class="panel-desc">Define roles and assign permissions to control what users can do.</span>
+        <button pButton label="New Role" icon="pi pi-plus" size="small" (click)="openRoleDialog()"></button>
+      </div>
+
+      @if (roles().length === 0) {
+        <div class="rbac-empty">
+          <i class="pi pi-shield"></i>
+          <span>No roles defined yet.</span>
+        </div>
+      }
+
+      <div class="roles-grid">
+        @for (role of roles(); track role.id) {
+          <div class="role-card" [class.system]="role.isSystem">
+            <div class="rc-header">
+              <div class="rc-identity">
+                <div class="rc-icon" [class.system]="role.isSystem">
+                  <i [class]="role.isSystem ? 'pi pi-lock' : 'pi pi-shield'"></i>
+                </div>
+                <div>
+                  <h3 class="rc-name">{{ role.name }}</h3>
+                  <span class="rc-code">{{ role.code }}</span>
+                </div>
+              </div>
+              <div class="rc-actions">
+                @if (!role.isSystem) {
+                  <button pButton icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" size="small"
+                    pTooltip="Edit role" tooltipPosition="top" (click)="openRoleDialog(role)"></button>
+                  <button pButton icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small"
+                    pTooltip="Delete role" tooltipPosition="top" (click)="confirmDeleteRole(role)"
+                    [loading]="deletingRoleId() === role.id"></button>
+                }
+                <button pButton icon="pi pi-key" [rounded]="true" [text]="true" severity="info" size="small"
+                  pTooltip="Manage permissions" tooltipPosition="top" (click)="openPermissionsDialog(role)"></button>
+              </div>
+            </div>
+
+            @if (role.description) {
+              <p class="rc-desc">{{ role.description }}</p>
+            }
+
+            <div class="rc-permissions">
+              @if (role.permissions.length === 0) {
+                <span class="perm-empty">No permissions assigned</span>
+              }
+              @for (perm of role.permissions.slice(0, 6); track perm.id) {
+                <span class="perm-chip">{{ perm.code }}</span>
+              }
+              @if (role.permissions.length > 6) {
+                <span class="perm-chip perm-more">+{{ role.permissions.length - 6 }} more</span>
+              }
+            </div>
+
+            @if (role.isSystem) {
+              <div class="rc-system-note"><i class="pi pi-lock"></i> System role — read only</div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════
+       PERMISSIONS TAB
+  ══════════════════════════════════════════════════════ -->
+  @if (!loading() && activeTab() === 'permissions') {
+    <div class="tab-panel" @fadeSlide>
+
+      <div class="panel-toolbar">
+        <span class="panel-desc">All available permissions in the system. System permissions cannot be modified.</span>
+      </div>
+
+      <div class="perms-grid">
+        @for (perm of permissions(); track perm.id) {
+          <div class="perm-card" [class.system]="perm.isSystem">
+            <div class="pc-header">
+              <div class="pc-icon"><i class="pi pi-key"></i></div>
+              <div>
+                <h4 class="pc-name">{{ perm.name }}</h4>
+                <span class="pc-code">{{ perm.code }}</span>
+              </div>
+              @if (perm.isSystem) {
+                <span class="system-badge">System</span>
+              }
+            </div>
+            @if (perm.description) {
+              <p class="pc-desc">{{ perm.description }}</p>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════
+       USERS TAB
+  ══════════════════════════════════════════════════════ -->
+  @if (!loading() && activeTab() === 'users') {
+    <div class="tab-panel" @fadeSlide>
+
+      <div class="panel-toolbar">
+        <span class="panel-desc">Users in this workspace and their assigned roles.</span>
+      </div>
+
+      @if (users().length === 0) {
+        <div class="rbac-empty">
+          <i class="pi pi-users"></i>
+          <span>No users in this workspace.</span>
+        </div>
+      }
+
+      <div class="users-grid">
+        @for (user of users(); track user.id) {
+          <div class="user-card" [class.inactive]="!user.isActive">
+            <div class="uc-avatar-wrap">
+              <div class="uc-avatar">{{ getInitials(user) }}</div>
+              <div class="status-dot" [class.active]="user.isActive" [class.inactive]="!user.isActive"></div>
+            </div>
+            <div class="uc-info">
+              <h3 class="uc-name">{{ user.firstName }} {{ user.lastName }}</h3>
+              <span class="uc-email">{{ user.email }}</span>
+              <div class="uc-roles">
+                @if (user.roles.length === 0) {
+                  <span class="no-role">No roles assigned</span>
+                }
+                @for (role of user.roles; track role) {
+                  <span class="role-chip">{{ role }}</span>
+                }
+              </div>
+            </div>
+            <button pButton icon="pi pi-user-edit" [rounded]="true" [text]="true" severity="secondary"
+              size="small" pTooltip="Manage roles" tooltipPosition="top"
+              (click)="openUserRolesDialog(user)"></button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     CREATE / EDIT ROLE DIALOG
+════════════════════════════════════════════════════════ -->
+<p-dialog
+  [(visible)]="showRoleDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="rbac-dialog"
+  [header]="editingRole() ? 'Edit Role' : 'New Role'"
+  (onHide)="resetRoleForm()"
+>
+  <div class="dlg-content" [formGroup]="roleForm">
+
+    <div class="form-field">
+      <label class="field-label">Role Name <span class="req">*</span></label>
+      <input pInputText formControlName="name" placeholder="e.g. Support Agent" class="dlg-input"
+        (input)="onRoleNameInput()" />
+      @if (roleForm.get('name')?.touched && roleForm.get('name')?.invalid) {
+        <span class="field-error"><i class="pi pi-exclamation-circle"></i> Name is required</span>
+      }
+    </div>
+
+    <div class="form-field">
+      <label class="field-label">Role Code <span class="req">*</span></label>
+      <input pInputText formControlName="code" placeholder="e.g. support_agent" class="dlg-input dlg-mono" />
+      @if (roleForm.get('code')?.touched && roleForm.get('code')?.invalid) {
+        <span class="field-error"><i class="pi pi-exclamation-circle"></i> Code must use lowercase letters, numbers and underscores</span>
+      }
+    </div>
+
+    <div class="form-field">
+      <label class="field-label">Description</label>
+      <textarea pInputTextarea formControlName="description" placeholder="What can this role do?" rows="2"
+        class="dlg-input"></textarea>
+    </div>
+
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="dlg-footer">
+      <button pButton label="Cancel" severity="secondary" outlined (click)="showRoleDialog = false"></button>
+      <button pButton [label]="editingRole() ? 'Save Changes' : 'Create Role'" icon="pi pi-check"
+        [loading]="savingRole()" (click)="submitRole()"></button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- ════════════════════════════════════════════════════════
+     MANAGE PERMISSIONS FOR ROLE DIALOG
+════════════════════════════════════════════════════════ -->
+<p-dialog
+  [(visible)]="showPermissionsDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="rbac-dialog rbac-dialog-wide"
+  [header]="'Permissions — ' + (permDialogRole()?.name ?? '')"
+>
+  <div class="perm-dlg-content">
+    <p class="perm-dlg-hint">Select the permissions to assign to this role. Changes are saved immediately.</p>
+
+    <div class="perm-checklist">
+      @for (perm of permissions(); track perm.id) {
+        <label class="perm-check-row" [class.checked]="isPermSelected(perm.id)">
+          <div class="perm-check-info">
+            <span class="perm-check-code">{{ perm.code }}</span>
+            <span class="perm-check-name">{{ perm.name }}</span>
+          </div>
+          <p-toggleSwitch
+            [ngModel]="isPermSelected(perm.id)"
+            (ngModelChange)="togglePerm(perm.id, $event)"
+          ></p-toggleSwitch>
+        </label>
+      }
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="dlg-footer">
+      <button pButton label="Cancel" severity="secondary" outlined (click)="showPermissionsDialog = false"></button>
+      <button pButton label="Save Permissions" icon="pi pi-check" [loading]="savingPerms()"
+        (click)="savePermissions()"></button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- ════════════════════════════════════════════════════════
+     MANAGE USER ROLES DIALOG
+════════════════════════════════════════════════════════ -->
+<p-dialog
+  [(visible)]="showUserRolesDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="rbac-dialog"
+  [header]="'Roles — ' + (selectedUser() ? selectedUser()!.firstName + ' ' + selectedUser()!.lastName : '')"
+>
+  @if (selectedUser()) {
+    <div class="user-roles-content">
+      <p class="perm-dlg-hint">Toggle roles on or off for this user.</p>
+
+      <div class="role-checklist">
+        @for (role of roles(); track role.id) {
+          <label class="perm-check-row" [class.checked]="userHasRole(selectedUser()!, role.name)">
+            <div class="perm-check-info">
+              <span class="perm-check-code">{{ role.code }}</span>
+              <span class="perm-check-name">{{ role.name }}</span>
+            </div>
+            <p-toggleSwitch
+              [ngModel]="userHasRole(selectedUser()!, role.name)"
+              (ngModelChange)="toggleUserRole(selectedUser()!, role, $event)"
+              [disabled]="togglingRole() === role.id"
+            ></p-toggleSwitch>
+          </label>
+        }
+      </div>
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <div class="dlg-footer">
+      <button pButton label="Done" (click)="showUserRolesDialog = false"></button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Confirm delete -->
+<p-dialog
+  [(visible)]="showDeleteConfirm"
+  [modal]="true"
+  [closable]="false"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="rbac-dialog rbac-dialog-sm"
+  header="Delete Role"
+>
+  <div class="confirm-content">
+    <div class="confirm-icon"><i class="pi pi-exclamation-triangle"></i></div>
+    <p>Are you sure you want to delete <strong>{{ roleToDelete()?.name }}</strong>? This cannot be undone.</p>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="dlg-footer">
+      <button pButton label="Cancel" severity="secondary" outlined (click)="showDeleteConfirm = false"></button>
+      <button pButton label="Delete" severity="danger" icon="pi pi-trash" [loading]="deletingRoleId() !== null"
+        (click)="deleteRole()"></button>
+    </div>
+  </ng-template>
+</p-dialog>

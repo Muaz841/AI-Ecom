@@ -1,0 +1,33 @@
+<div class="callback-page">
+  <div class="callback-card">
+
+    @if (state === 'loading') {
+      <div class="icon-wrap loading">
+        <p-progressSpinner strokeWidth="3" styleClass="callback-spinner"></p-progressSpinner>
+      </div>
+      <h2>Finalizing connection...</h2>
+      <p>Please wait while we complete the Meta authorization.</p>
+    }
+
+    @if (state === 'success') {
+      <div class="icon-wrap success">
+        <i class="pi pi-check-circle"></i>
+      </div>
+      <h2>Channel Connected</h2>
+      <p>Your Meta channel was connected successfully. Redirecting you back...</p>
+    }
+
+    @if (state === 'error') {
+      <div class="icon-wrap error">
+        <i class="pi pi-times-circle"></i>
+      </div>
+      <h2>Connection Failed</h2>
+      <p class="error-reason">{{ reason }}</p>
+      <button class="retry-btn" (click)="goToIntegrations()">
+        <i class="pi pi-arrow-left"></i>
+        Back to Integrations
+      </button>
+    }
+
+  </div>
+</div>

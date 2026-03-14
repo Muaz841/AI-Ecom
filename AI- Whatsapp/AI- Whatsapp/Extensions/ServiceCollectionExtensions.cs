@@ -27,6 +27,7 @@ using EcomAI.Platform.Api.Controllers;
 using EcomAI.Platform.Api.Security;
 using EcomAI.Platform.Api.Validation;
 using EcomAI.Platform.Business.Security;
+using EcomAI.Platform.Infrastructure.Realtime;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 
@@ -151,6 +152,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
         services.AddScoped<IApplicationLogger, ApplicationLogger>();
+        services.AddScoped<IRealtimeNotifier, SignalRNotifier>();
+        services.AddSignalR();
         services.Configure<AISettings>(configuration.GetSection("AI"));
         services.AddSingleton<TenantEnricher>();
         services.AddScoped<MockAIService>();

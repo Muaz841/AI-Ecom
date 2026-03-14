@@ -20,10 +20,13 @@ public interface IRbacService
 
     Task<bool> AssignRoleToUserAsync(Guid TenantId, Guid userId, Guid roleId, CancellationToken cancellationToken = default);
     Task<bool> RemoveRoleFromUserAsync(Guid TenantId, Guid userId, Guid roleId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RbacUserDto>> ListUsersAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }
 
 public sealed record PermissionDto(Guid Id, string Name, string Code, string? Description, bool IsSystem);
 public sealed record RoleDto(Guid Id, string Name, string Code, string? Description, bool IsSystem, IReadOnlyList<PermissionDto> Permissions);
+public sealed record RbacUserDto(Guid Id, string Email, string FirstName, string LastName, bool IsActive, DateTime CreatedAt, IReadOnlyList<string> Roles);
 
 public sealed record CreatePermissionRequest(Guid TenantId, string Name, string Code, string? Description);
 public sealed record UpdatePermissionRequest(Guid TenantId, Guid PermissionId, string Name, string Code, string? Description);
