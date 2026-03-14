@@ -17,6 +17,7 @@ export class AuthService {
   readonly tenantId$ = this.session$.pipe(map((s) => s?.profile.tenantId ?? null));
   readonly tenantName$ = this.session$.pipe(map((s) => s?.profile.tenantname ?? null));
   readonly userProfile$ = this.session$.pipe(map((s) => s?.profile ?? null));
+  readonly isHost$ = this.session$.pipe(map((s) => s?.profile.isHost ?? false));
 
   constructor(
     private readonly apiClient: ApiClientService,
@@ -169,25 +170,27 @@ export class AuthService {
     const payload = decodeJwtPayload(accessToken);
     const userId = getClaimValue(payload, ['sub']);
     const email = getClaimValue(payload, ['email', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress']);
-    const tenantId = getClaimValue(payload, ['tenant_id']);
-    const tenantname = getClaimValue(payload, ['tenant_name', 'tenant']);    
-    if (!userId || !email || !tenantId) {
+    const tenantId = getClaimValue(payload, ['tenant_id']) || null; // empty string = host user → null
+    const tenantname = getClaimValue(payload, ['tenant_name', 'tenant']);
+    const isHost = getClaimValue(payload, ['is_host']) === 'true';
+
+    if (!userId || !email) {
       return null;
-    }    
-  
+    }
 
     const roleClaims = normalizeClaimValues(
       getClaimValues(payload, ['role', 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role']),
     );
     const permissionClaims = normalizeClaimValues(getClaimValues(payload, ['permission']));
 
-    return {      
+    return {
       userId,
       email,
       tenantId,
       tenantname,
+      isHost,
       roles: roleClaims,
-      permissions: permissionClaims,      
+      permissions: permissionClaims,
     };
   }
 

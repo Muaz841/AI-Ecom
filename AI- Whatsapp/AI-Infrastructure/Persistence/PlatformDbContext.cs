@@ -44,7 +44,9 @@ public class PlatformDbContext : DbContext
     public DbSet<RolePermission> RolePermissions { get; set; } = null!;
     public DbSet<UserRole> UserRoles { get; set; } = null!;
     public DbSet<MetaChannelConnection> MetaChannelConnections { get; set; } = null!;
+    public DbSet<MetaChannelAsset> MetaChannelAssets { get; set; } = null!;
     public DbSet<MetaOAuthState> MetaOAuthStates { get; set; } = null!;
+    public DbSet<PlatformMetaConfig> PlatformMetaConfigs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -258,13 +260,46 @@ public class PlatformDbContext : DbContext
             entity.HasIndex(e => new { e.TenantId, e.Status });
         });
 
+        modelBuilder.Entity<MetaChannelAsset>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Channel).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.AssetType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ExternalId).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ExternalName).HasMaxLength(300);
+            entity.Property(e => e.PageAccessTokenCiphertext).HasColumnType("nvarchar(max)");
+            // One connection owns its assets; unique asset per (tenant, connection, assetType, externalId)
+            entity.HasIndex(e => new { e.TenantId, e.ConnectionId, e.AssetType, e.ExternalId }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Channel, e.IsActive });
+            // Fast tenant lookup by external ID for webhook routing
+            entity.HasIndex(e => new { e.ExternalId, e.Channel, e.IsActive });
+            entity.HasOne<MetaChannelConnection>()
+                .WithMany()
+                .HasForeignKey(e => e.ConnectionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable("MetaChannelAssets");
+        });
+
         modelBuilder.Entity<MetaOAuthState>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Channel).IsRequired().HasMaxLength(50);
             entity.Property(e => e.State).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ReturnUrl).HasMaxLength(2000);
             entity.HasIndex(e => e.State).IsUnique();
             entity.HasIndex(e => new { e.TenantId, e.Channel, e.ExpiresAtUtc });
+        });
+
+        // Singleton platform-level Meta app config — no tenant filter, single row.
+        modelBuilder.Entity<PlatformMetaConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AppId).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.AppSecretProtected).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property(e => e.LoginConfigurationId).HasMaxLength(200);
+            entity.Property(e => e.GraphVersion).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.CallbackBaseUrl).HasMaxLength(500);
+            entity.ToTable("PlatformMetaConfigs");
         });
     }
 

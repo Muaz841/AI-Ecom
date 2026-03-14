@@ -1,9 +1,7 @@
 using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Infrastructure.Persistence;
-using EcomAI.Platform.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Registry;
 using System;
@@ -21,33 +19,29 @@ public class MetaMessagingService : IMetaMessagingService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly PlatformDbContext _dbContext;
-    private readonly ClientSecretsRepository _clientSecretsRepository;
     private readonly ITokenProtector _tokenProtector;
     private readonly IApplicationLogger _appLogger;
     private readonly ResiliencePipeline _sendPipeline;
-    private readonly string _graphVersion;
+    private readonly IMetaOAuthRuntimeConfigProvider _configProvider;
 
     public const string MetaHttpClientName = "MetaGraphApi";
-    public const string SendPipelineKey = "meta-send";    
-    public const string HttpClientName = MetaHttpClientName;
+    public const string SendPipelineKey    = "meta-send";
+    public const string HttpClientName     = MetaHttpClientName;
     public const string SendMessagePipeline = SendPipelineKey;
 
     public MetaMessagingService(
         IHttpClientFactory httpClientFactory,
         PlatformDbContext dbContext,
-        ClientSecretsRepository clientSecretsRepository,
         ITokenProtector tokenProtector,
         IApplicationLogger appLogger,
         ResiliencePipelineRegistry<string> pipelineRegistry,
-        IOptions<MetaOAuthSettings> metaOAuthSettings)
+        IMetaOAuthRuntimeConfigProvider configProvider)
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _clientSecretsRepository = clientSecretsRepository ?? throw new ArgumentNullException(nameof(clientSecretsRepository));
-        _tokenProtector = tokenProtector ?? throw new ArgumentNullException(nameof(tokenProtector));
-        _appLogger = appLogger ?? throw new ArgumentNullException(nameof(appLogger));
-        var configuredVersion = metaOAuthSettings.Value.GraphVersion?.Trim();
-        _graphVersion = string.IsNullOrWhiteSpace(configuredVersion) ? "25.0" : configuredVersion;
+        _dbContext         = dbContext         ?? throw new ArgumentNullException(nameof(dbContext));
+        _tokenProtector    = tokenProtector    ?? throw new ArgumentNullException(nameof(tokenProtector));
+        _appLogger         = appLogger         ?? throw new ArgumentNullException(nameof(appLogger));
+        _configProvider    = configProvider    ?? throw new ArgumentNullException(nameof(configProvider));
 
         _sendPipeline = pipelineRegistry.GetPipeline(SendPipelineKey)
             ?? throw new InvalidOperationException($"Resilience pipeline '{SendPipelineKey}' not found in registry.");
@@ -77,13 +71,17 @@ public class MetaMessagingService : IMetaMessagingService
             return new MessagingSendResult(false, null, "Tenant configuration missing", 400);
         }
 
+        var runtimeConfig = await _configProvider.GetRuntimeConfigAsync(cancellationToken);
+        var graphVersion = string.IsNullOrWhiteSpace(runtimeConfig?.GraphVersion) ? "25.0" : runtimeConfig.GraphVersion;
+
         var httpClient = _httpClientFactory.CreateClient(MetaHttpClientName);
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         string endpoint = platform.ToLowerInvariant() switch
         {
-            "whatsapp" => $"v{_graphVersion}/{recipient}/messages",
-            "instagram" => $"v{_graphVersion}/me/messages",
+            "whatsapp" => $"v{graphVersion}/{recipient}/messages",
+            "instagram" => $"v{graphVersion}/me/messages",
+            "facebook" => $"v{graphVersion}/me/messages",
             _ => throw new ArgumentException($"Unsupported platform: {platform}", nameof(platform))
         };
 
@@ -148,35 +146,66 @@ public class MetaMessagingService : IMetaMessagingService
         }
     }
 
+    /// <summary>
+    /// Resolves the outbound access token for a tenant + channel.
+    /// Priority:
+    ///   1. Page-level asset token (required for Instagram/Facebook DM send)
+    ///   2. Connection-level user token (fallback for WhatsApp or when no page asset yet)
+    /// The legacy ClientSecrets fallback has been removed — connections must be established via OAuth.
+    /// </summary>
     private async Task<string?> ResolveAccessTokenAsync(Guid tenantId, string platform, CancellationToken cancellationToken)
     {
         var normalizedChannel = platform.Trim().ToLowerInvariant() switch
         {
-            "whatsapp" => MetaChannelTypes.WhatsApp,
+            "whatsapp"  => MetaChannelTypes.WhatsApp,
             "instagram" => MetaChannelTypes.Instagram,
-            "facebook" => MetaChannelTypes.Facebook,
-            _ => platform.Trim().ToLowerInvariant()
+            "facebook"  => MetaChannelTypes.Facebook,
+            _           => platform.Trim().ToLowerInvariant()
         };
 
+        // For Instagram and Facebook, prefer the page-level access token stored in MetaChannelAssets.
+        // Outbound Instagram DM API requires a Page access token, not a user token.
+        if (normalizedChannel is MetaChannelTypes.Instagram or MetaChannelTypes.Facebook)
+        {
+            var pageAsset = await _dbContext.MetaChannelAssets
+                .AsNoTracking()
+                .Where(a => a.TenantId == tenantId
+                         && a.Channel == normalizedChannel
+                         && a.AssetType == MetaAssetTypes.Page
+                         && a.IsActive
+                         && a.PageAccessTokenCiphertext != null)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (pageAsset?.PageAccessTokenCiphertext is not null)
+            {
+                try { return _tokenProtector.Unprotect(pageAsset.PageAccessTokenCiphertext); }
+                catch (Exception ex)
+                {
+                    _appLogger.Error(ex, "Failed to decrypt page asset token for tenant {TenantId} channel {Channel}",
+                        tenantId, normalizedChannel);
+                }
+            }
+        }
+
+        // Fall back to the connection-level long-lived user token (WhatsApp uses this directly)
         var connection = await _dbContext.MetaChannelConnections
             .AsNoTracking()
-            .Where(x => x.TenantId == tenantId && x.Channel == normalizedChannel && x.Status == MetaConnectionStatuses.Active)
+            .Where(x => x.TenantId == tenantId
+                     && x.Channel == normalizedChannel
+                     && x.Status == MetaConnectionStatuses.Active)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (connection is not null)
         {
-            try
-            {
-                return _tokenProtector.Unprotect(connection.AccessTokenCiphertext);
-            }
+            try { return _tokenProtector.Unprotect(connection.AccessTokenCiphertext); }
             catch (Exception ex)
             {
-                _appLogger.Error(ex, "Failed to decrypt tenant token for tenant {TenantId} channel {Channel}", tenantId, normalizedChannel);
+                _appLogger.Error(ex, "Failed to decrypt connection token for tenant {TenantId} channel {Channel}",
+                    tenantId, normalizedChannel);
             }
         }
 
-        var secrets = await _clientSecretsRepository.FirstOrDefaultAsync(x => x.TenantRefId == tenantId);
-        return secrets?.MetaAccessToken;
+        return null;
     }
 
     public Task<MessagingSendResult> SendTemplateMessageAsync(
@@ -258,4 +287,3 @@ public class MetaMessagingService : IMetaMessagingService
         }
     }
 }
-

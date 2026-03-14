@@ -15,10 +15,8 @@ public interface IMetaIntegrationService
         CancellationToken cancellationToken = default);
 
     Task<MetaConnectCallbackResult> CompleteConnectionAsync(
-        string channel,
         string state,
         string code,
-        string? returnUrl = null,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<MetaConnectionDto>> ListConnectionsAsync(
@@ -41,7 +39,15 @@ public sealed record MetaConnectCallbackResult(
     bool Success,
     Guid? ConnectionId,
     string? Status,
+    string? ReturnUrl,
     string? ErrorMessage = null);
+
+public sealed record MetaAssetDto(
+    Guid Id,
+    string AssetType,
+    string ExternalId,
+    string? ExternalName,
+    bool IsActive);
 
 public sealed record MetaConnectionDto(
     Guid Id,
@@ -52,4 +58,5 @@ public sealed record MetaConnectionDto(
     DateTime ConnectedAtUtc,
     DateTime? AccessTokenExpiresAtUtc,
     DateTime? LastValidatedAtUtc,
-    string? LastError);
+    string? LastError,
+    IReadOnlyList<MetaAssetDto> Assets);

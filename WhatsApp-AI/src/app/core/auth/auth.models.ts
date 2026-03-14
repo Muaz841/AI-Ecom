@@ -12,18 +12,20 @@ export interface AuthResponse {
   accessTokenExpiresAtUtc: string | null;
   userId: string | null;
   email: string | null;
-  role: string | null;  
+  role: string | null;
   tenantname: string | null;
+  isHost: boolean;
   errorMessage: string | null;
 }
 
-export interface UserProfile {  
+export interface UserProfile {
   userId: string;
   email: string;
-  tenantId: string;
+  tenantId: string | null;
   tenantname: string | null;
+  isHost: boolean;
   roles: string[];
-  permissions: string[];  
+  permissions: string[];
 }
 
 export interface AuthSession {

@@ -76,11 +76,10 @@ function normalizePlatform(channel: string): MetaChannel {
 }
 
 function normalizeStatus(status: string, lastError: string | null): 'connected' | 'expired' {
+  if (lastError) return 'expired';
   const normalized = status.trim().toLowerCase();
-  if (normalized.includes('error') || normalized.includes('expired') || lastError) {
-    return 'expired';
-  }
-
+  if (normalized === 'active' || normalized === 'connected') return 'connected';
+  if (normalized.includes('error') || normalized.includes('expired') || normalized.includes('revoked')) return 'expired';
   return 'connected';
 }
 

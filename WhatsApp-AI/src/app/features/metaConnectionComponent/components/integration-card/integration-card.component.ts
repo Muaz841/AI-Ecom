@@ -15,33 +15,27 @@ export class IntegrationCardComponent {
   @Input({ required: true }) platform!: MetaChannel;
   @Input({ required: true }) title!: string;
   @Input({ required: true }) description!: string;
-  @Input({ required: true }) status: 'connected' | 'not_connected' | 'expired' = 'not_connected';
+  @Input({ required: true }) status: 'connected' | 'active' | 'not_connected' | 'expired' = 'not_connected';
   @Input({ required: true }) icon!: string;
   @Input() isBusy = false;
 
   @Output() connect = new EventEmitter<void>();
   @Output() disconnect = new EventEmitter<void>();
 
+  get isConnected(): boolean {
+    return this.status === 'connected' || this.status === 'active';
+  }
+
   get statusLabel(): string {
-    switch (this.status) {
-      case 'connected':
-        return 'Connected';
-      case 'expired':
-        return 'Expired';
-      default:
-        return 'Not Connected';
-    }
+    if (this.isConnected) return 'Connected';
+    if (this.status === 'expired') return 'Expired';
+    return 'Not Connected';
   }
 
   get statusSeverity(): 'success' | 'warn' | 'danger' {
-    switch (this.status) {
-      case 'connected':
-        return 'success';
-      case 'expired':
-        return 'danger';
-      default:
-        return 'warn';
-    }
+    if (this.isConnected) return 'success';
+    if (this.status === 'expired') return 'danger';
+    return 'warn';
   }
 
   onPrimaryAction(): void {
@@ -49,7 +43,7 @@ export class IntegrationCardComponent {
       return;
     }
 
-    if (this.status === 'connected') {
+    if (this.isConnected) {
       this.disconnect.emit();
       return;
     }
@@ -58,7 +52,7 @@ export class IntegrationCardComponent {
   }
 
   get actionLabel(): string {
-    if (this.status === 'connected') {
+    if (this.isConnected) {
       return 'Disconnect';
     }
 

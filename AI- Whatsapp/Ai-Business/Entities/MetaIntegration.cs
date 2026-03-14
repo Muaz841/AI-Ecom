@@ -138,11 +138,86 @@ public sealed class MetaChannelConnection : Entity<Guid>, ITenantEntity
     }
 }
 
+// ── Asset types stored per connection ───────────────────────────────────────
+public static class MetaAssetTypes
+{
+    public const string Page        = "page";         // Facebook Page
+    public const string IgAccount   = "ig_account";  // Instagram Business Account
+    public const string Waba        = "waba";         // WhatsApp Business Account
+    public const string PhoneNumber = "phone_number"; // WhatsApp Phone Number
+}
+
+/// <summary>
+/// Represents a specific business asset (Page, IG account, WABA, phone number)
+/// linked to a <see cref="MetaChannelConnection"/> OAuth grant.
+/// One connection may have multiple assets (e.g. multiple IG accounts across pages).
+/// The page-level access token is stored encrypted so outbound messages can use it directly.
+/// </summary>
+public sealed class MetaChannelAsset : Entity<Guid>, ITenantEntity
+{
+    public Guid ConnectionId { get; private set; }
+    public string Channel { get; private set; } = null!;      // instagram / facebook / whatsapp
+    public string AssetType { get; private set; } = null!;    // page / ig_account / waba / phone_number
+    public string ExternalId { get; private set; } = null!;   // Meta-side asset ID
+    public string? ExternalName { get; private set; }
+    public string? PageAccessTokenCiphertext { get; private set; } // encrypted page-level token
+    public bool IsActive { get; private set; } = true;
+    public DateTime CreatedAtUtc { get; private set; }
+    public DateTime UpdatedAtUtc { get; private set; }
+
+    private MetaChannelAsset() { }
+
+    public static MetaChannelAsset Create(
+        Guid tenantId,
+        Guid connectionId,
+        string channel,
+        string assetType,
+        string externalId,
+        string? externalName,
+        string? pageAccessTokenCiphertext = null)
+    {
+        if (tenantId == Guid.Empty)    throw new ArgumentException("TenantId required.",    nameof(tenantId));
+        if (connectionId == Guid.Empty) throw new ArgumentException("ConnectionId required.", nameof(connectionId));
+        if (string.IsNullOrWhiteSpace(externalId)) throw new ArgumentException("ExternalId required.", nameof(externalId));
+
+        var now = DateTime.UtcNow;
+        return new MetaChannelAsset
+        {
+            Id          = Guid.NewGuid(),
+            TenantId    = tenantId,
+            ConnectionId = connectionId,
+            Channel     = channel.Trim().ToLowerInvariant(),
+            AssetType   = assetType.Trim().ToLowerInvariant(),
+            ExternalId  = externalId.Trim(),
+            ExternalName = externalName?.Trim(),
+            PageAccessTokenCiphertext = pageAccessTokenCiphertext,
+            IsActive    = true,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        };
+    }
+
+    public void Update(string? externalName, string? pageAccessTokenCiphertext)
+    {
+        if (externalName is not null)              ExternalName = externalName.Trim();
+        if (pageAccessTokenCiphertext is not null)  PageAccessTokenCiphertext = pageAccessTokenCiphertext;
+        IsActive     = true;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void Deactivate()
+    {
+        IsActive     = false;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+}
+
 public sealed class MetaOAuthState : Entity<Guid>, ITenantEntity
 {
     public Guid UserId { get; private set; }
     public string Channel { get; private set; } = null!;
     public string State { get; private set; } = null!;
+    public string? ReturnUrl { get; private set; }
     public DateTime ExpiresAtUtc { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime? ConsumedAtUtc { get; private set; }
@@ -151,7 +226,13 @@ public sealed class MetaOAuthState : Entity<Guid>, ITenantEntity
     {
     }
 
-    public static MetaOAuthState Create(Guid tenantId, Guid userId, string channel, string state, DateTime expiresAtUtc)
+    public static MetaOAuthState Create(
+        Guid tenantId,
+        Guid userId,
+        string channel,
+        string state,
+        DateTime expiresAtUtc,
+        string? returnUrl)
     {
         if (tenantId == Guid.Empty)
         {
@@ -185,6 +266,7 @@ public sealed class MetaOAuthState : Entity<Guid>, ITenantEntity
             UserId = userId,
             Channel = channel.Trim().ToLowerInvariant(),
             State = state.Trim(),
+            ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? null : returnUrl.Trim(),
             ExpiresAtUtc = expiresAtUtc,
             CreatedAtUtc = DateTime.UtcNow
         };
@@ -197,5 +279,4 @@ public sealed class MetaOAuthState : Entity<Guid>, ITenantEntity
         ConsumedAtUtc = DateTime.UtcNow;
     }
 }
-
 

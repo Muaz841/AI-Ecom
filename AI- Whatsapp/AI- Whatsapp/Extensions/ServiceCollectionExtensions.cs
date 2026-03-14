@@ -13,7 +13,6 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Hangfire;
 using Hangfire.SqlServer;
-using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
@@ -24,6 +23,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
 using EcomAI.Platform.Infrastructure.Security;
+using EcomAI.Platform.Api.Controllers;
 using EcomAI.Platform.Api.Security;
 using EcomAI.Platform.Api.Validation;
 using EcomAI.Platform.Business.Security;
@@ -145,11 +145,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRbacService, RbacService>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         services.AddScoped<IMetaIntegrationService, MetaIntegrationService>();
+        services.AddScoped<IPlatformMetaConfigRepository, PlatformMetaConfigRepository>();
+        services.AddScoped<IPlatformSettingsService, PlatformSettingsService>();
+        services.AddScoped<IMetaOAuthRuntimeConfigProvider, PlatformSettingsService>();
         services.AddSingleton<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
         services.AddScoped<IApplicationLogger, ApplicationLogger>();
         services.Configure<AISettings>(configuration.GetSection("AI"));
-        services.Configure<MetaOAuthSettings>(configuration.GetSection("MetaOAuth"));
         services.AddSingleton<TenantEnricher>();
         services.AddScoped<MockAIService>();
         services.AddScoped<OpenAIService>();
@@ -193,14 +195,8 @@ public static class ServiceCollectionExtensions
         });
         services.AddValidatorsFromAssembly(typeof(ProcessIncomingMessageCommand).Assembly);
         services.AddValidatorsFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
-        services.AddOptions<MetaSecrets>()
-            .Configure<IConfiguration>((secrets, cfg) =>
-            {
-                secrets.AppSecret = cfg["MetaSecrets:AppSecret"]
-                    ?? throw new InvalidOperationException("Meta App Secret not found in secure storage.");
-            })
-            .ValidateDataAnnotations();
-        services.AddSingleton<IValidateOptions<MetaSecrets>, MetaSecretsValidator>();
+        // MetaWebhookSettings: verify token for hub.verify_token challenge (loaded from appsettings/env)
+        services.Configure<MetaWebhookSettings>(configuration.GetSection("MetaWebhook"));
         services.Configure<BootstrapSettings>(configuration.GetSection("Bootstrap"));
 
         var defaultConnection = configuration.GetConnectionString("DefaultConnection")
@@ -236,20 +232,3 @@ public static class HostBuilderExtensions
     }
 }
 
-public class MetaSecrets
-{
-    public string AppSecret { get; set; } = null!;
-}
-
-public class MetaSecretsValidator : IValidateOptions<MetaSecrets>
-{
-    public ValidateOptionsResult Validate(string? name, MetaSecrets options)
-    {
-        if (string.IsNullOrWhiteSpace(options.AppSecret))
-        {
-            return ValidateOptionsResult.Fail("Meta App Secret cannot be empty.");
-        }
-
-        return ValidateOptionsResult.Success;
-    }
-}

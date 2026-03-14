@@ -104,4 +104,13 @@ export const SIDEBAR_PIPELINE: SidebarModule[] = [
     requiredPermissions: ['tenants.manage'],
     subtitle: 'Create and manage platform tenants.',
   },
+  {
+    id: 'platform-settings',
+    label: 'Platform Settings',
+    route: '/host/platform',
+    icon: 'pi pi-sliders-h',
+    order: 90,
+    requiredPermissions: ['platform.settings'],
+    subtitle: 'Configure platform-level Meta OAuth credentials and global settings.',
+  },
 ];

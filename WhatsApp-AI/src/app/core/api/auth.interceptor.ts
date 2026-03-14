@@ -25,9 +25,11 @@ export class AuthInterceptor implements HttpInterceptor {
     }
 
     const token = this.tokenStore.getAccessToken();
-    const authorizedRequest = token
-      ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-      : request;
+    const baseHeaders: Record<string, string> = { 'ngrok-skip-browser-warning': 'true' };
+    if (token) {
+      baseHeaders['Authorization'] = `Bearer ${token}`;
+    }
+    const authorizedRequest = request.clone({ setHeaders: baseHeaders });
 
     return next.handle(authorizedRequest).pipe(
       catchError((error: unknown) => {
@@ -43,7 +45,10 @@ export class AuthInterceptor implements HttpInterceptor {
             }
 
             const retryRequest = request.clone({
-              setHeaders: { Authorization: `Bearer ${session.accessToken}` },
+              setHeaders: {
+                'ngrok-skip-browser-warning': 'true',
+                Authorization: `Bearer ${session.accessToken}`,
+              },
             });
 
             return next.handle(retryRequest);

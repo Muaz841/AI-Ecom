@@ -10,6 +10,7 @@ import { SIDEBAR_PIPELINE } from './core/navigation/nav-pipeline';
 import { MetaIntegrationsComponent } from './features/metaConnectionComponent/meta-integrations.component';
 import { TenantManagementComponent } from './features/tenants/tenant-management.component';
 import { InboxComponent } from './features/messaging/inbox.component';
+import { PlatformSettingsComponent } from './features/platform-settings/platform-settings.component';
 
 const messagingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'messaging');
 const contentModule = SIDEBAR_PIPELINE.find((module) => module.id === 'content');
@@ -18,6 +19,7 @@ const schedulingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'schedu
 const settingsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'settings');
 const rbacModule = SIDEBAR_PIPELINE.find((module) => module.id === 'rbac');
 const tenantsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'tenants');
+const platformSettingsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'platform-settings');
 
 export const routes: Routes = [
   {
@@ -95,6 +97,16 @@ export const routes: Routes = [
           subtitle: tenantsModule?.subtitle ?? '',
         },
         component: TenantManagementComponent,
+      },
+      {
+        path: 'host/platform',
+        canActivate: [permissionGuard],
+        data: {
+          permissions: platformSettingsModule?.requiredPermissions ?? ['platform.settings'],
+          title: platformSettingsModule?.label ?? 'Platform Settings',
+          subtitle: platformSettingsModule?.subtitle ?? '',
+        },
+        component: PlatformSettingsComponent,
       },
     ],
   },

@@ -1,5 +1,5 @@
 export type MetaChannel = 'instagram' | 'facebook' | 'whatsapp';
-export type IntegrationStatus = 'connected' | 'not_connected' | 'expired';
+export type IntegrationStatus = 'connected' | 'active' | 'not_connected' | 'expired';
 
 export interface MetaConnectStartResponse {
   success: boolean;

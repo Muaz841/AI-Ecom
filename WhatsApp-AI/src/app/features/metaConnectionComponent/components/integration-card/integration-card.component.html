@@ -19,8 +19,8 @@
       type="button"
       [label]="actionLabel"
       [loading]="isBusy"
-      [outlined]="status === 'connected'"
-      [severity]="status === 'connected' ? 'danger' : 'success'"
+      [outlined]="isConnected"
+      [severity]="isConnected ? 'danger' : 'success'"
       class="w-100 action-btn"
       (click)="onPrimaryAction()"
     ></button>

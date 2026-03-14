@@ -12,7 +12,7 @@ public class ProcessIncomingMessageCommandValidator : AbstractValidator<ProcessI
         RuleFor(x => x.Platform)
             .NotEmpty().WithMessage("Platform is required.")
             .Must(BeSupportedPlatform)
-            .WithMessage("Platform must be 'whatsapp' or 'instagram'.");
+            .WithMessage("Platform must be 'whatsapp', 'instagram', or 'facebook'.");
 
         RuleFor(x => x.From)
             .NotEmpty().WithMessage("From (sender) is required.")
@@ -35,7 +35,7 @@ public class ProcessIncomingMessageCommandValidator : AbstractValidator<ProcessI
         }
 
         var value = platform.Trim().ToLowerInvariant();
-        return value is "whatsapp" or "instagram";
+        return value is "whatsapp" or "instagram" or "facebook";
     }
 }
 

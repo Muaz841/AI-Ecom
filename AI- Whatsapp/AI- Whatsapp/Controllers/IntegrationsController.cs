@@ -46,31 +46,31 @@ public class IntegrationsController : ControllerBase
     [AllowAnonymous]
     [HttpGet("callback")]
     public async Task<IActionResult> Callback(
-        [FromQuery] string channel,
-        [FromQuery] string state,
-        [FromQuery] string code,
-        [FromQuery] string? returnUrl,
+        [FromQuery] string? state,
+        [FromQuery] string? code,
         [FromQuery] string? error,
         [FromQuery] string? error_description,
         CancellationToken cancellationToken)
     {
+        // Handle Meta error redirect (e.g., user denied, invalid redirect_uri)
+        // This must be checked BEFORE validating code/state since Meta omits them on error.
         if (!string.IsNullOrWhiteSpace(error))
         {
-            return Redirect(BuildUiRedirect(returnUrl, false, $"meta_error:{error}:{error_description}"));
+            return Redirect(BuildUiRedirect(null, false, $"meta_error:{error}:{error_description}"));
         }
 
-        if (string.IsNullOrWhiteSpace(channel) || string.IsNullOrWhiteSpace(state) || string.IsNullOrWhiteSpace(code))
+        if (string.IsNullOrWhiteSpace(state) || string.IsNullOrWhiteSpace(code))
         {
-            return BadRequest("channel, state and code are required.");
+            return Redirect(BuildUiRedirect(null, false, "meta_connect_missing_params"));
         }
 
-        var result = await _metaIntegrationService.CompleteConnectionAsync(channel, state, code, returnUrl, cancellationToken);
+        var result = await _metaIntegrationService.CompleteConnectionAsync(state, code, cancellationToken);
         if (!result.Success)
         {
-            return Redirect(BuildUiRedirect(returnUrl, false, result.ErrorMessage));
+            return Redirect(BuildUiRedirect(result.ReturnUrl, false, result.ErrorMessage));
         }
 
-        return Redirect(BuildUiRedirect(returnUrl, true, null));
+        return Redirect(BuildUiRedirect(result.ReturnUrl, true, null));
     }
 
     [Authorize(Policy = PermissionCodes.IntegrationsRead)]
@@ -130,4 +130,3 @@ public class IntegrationsController : ControllerBase
 }
 
 public sealed record MetaStartConnectionRequest(string? ReturnUrl);
-

@@ -67,7 +67,24 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             to: request.To,
             content: request.Content,
             rawPayloadJson: request.RawPayloadJson,
-            externalMessageId: request.ExternalMessageId);
+            externalMessageId: request.ExternalMessageId,
+            messageType: request.MessageType);
+
+        if (!request.AllowAutoReply)
+        {
+            await _conversationThreadRepository.SaveThreadWithMessagesAsync(
+                thread,
+                new[] { message },
+                cancellationToken);
+
+            _logger.Info(
+                "Inbound message stored without auto-reply (Platform={Platform}, MessageType={MessageType}, MessageId={MessageId})",
+                request.Platform,
+                request.MessageType,
+                message.Id);
+
+            return new ProcessIncomingMessageResult(true, null, null, message.Id);
+        }
 
         var availableProducts = await _productRepository.GetAvailableInventoryAsync(
             request.TenantId,

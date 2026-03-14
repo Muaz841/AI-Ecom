@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -75,6 +75,7 @@ export class MetaIntegrationsComponent implements OnInit, OnDestroy {
   constructor(
     private readonly integrationService: MetaIntegrationService,
     private readonly toastService: ToastService,
+    private readonly cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -160,7 +161,7 @@ export class MetaIntegrationsComponent implements OnInit, OnDestroy {
       return 'not_connected';
     }
 
-    if (channelRows.some((row) => row.status === 'connected')) {
+    if (channelRows.some((row) => row.status === 'connected' || (row.status as string) === 'active')) {
       return 'connected';
     }
 
@@ -175,10 +176,12 @@ export class MetaIntegrationsComponent implements OnInit, OnDestroy {
           this.isLoading = false;
           this.rows = rows;
           this.isConnecting = null;
+          this.cdr.markForCheck();
         },
         error: (error: unknown) => {
           this.isLoading = false;
           this.rows = [];
+          this.cdr.markForCheck();
           this.toastService.error('Load failed', this.resolveError(error));
         },
       }),

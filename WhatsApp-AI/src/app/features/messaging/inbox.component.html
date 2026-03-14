@@ -49,12 +49,38 @@
     </div>
 
     <!-- Thread count -->
-    <p class="thread-count">
-      {{ filteredThreads().length }} conversation{{ filteredThreads().length !== 1 ? 's' : '' }}
-    </p>
+    @if (!loadingThreads()) {
+      <p class="thread-count">
+        {{ filteredThreads().length }} conversation{{ filteredThreads().length !== 1 ? 's' : '' }}
+      </p>
+    }
 
     <!-- Thread list -->
     <div class="thread-list" role="listbox" aria-label="Conversations">
+
+      <!-- Loading skeleton -->
+      @if (loadingThreads()) {
+        <div class="thread-loading" aria-label="Loading conversations">
+          @for (i of [1,2,3,4]; track i) {
+            <div class="skeleton-row">
+              <div class="skeleton-avatar"></div>
+              <div class="skeleton-body">
+                <div class="skeleton-line skeleton-line-wide"></div>
+                <div class="skeleton-line skeleton-line-narrow"></div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Error state -->
+      @if (threadsError()) {
+        <div class="list-error">
+          <i class="pi pi-exclamation-circle"></i>
+          <p>{{ threadsError() }}</p>
+          <button type="button" class="retry-btn" (click)="loadThreads()">Retry</button>
+        </div>
+      }
 
       @for (thread of filteredThreads(); track thread.id) {
         <button
@@ -158,6 +184,20 @@
 
       <!-- ── Messages Area ───────────────────────── -->
       <div class="messages-area" #messagesArea role="log" aria-label="Messages" aria-live="polite">
+
+        @if (loadingMessages()) {
+          <div class="messages-loading" aria-label="Loading messages">
+            <i class="pi pi-spin pi-spinner"></i>
+            <span>Loading messages…</span>
+          </div>
+        }
+
+        @if (messagesError()) {
+          <div class="messages-error">
+            <i class="pi pi-exclamation-circle"></i>
+            <p>{{ messagesError() }}</p>
+          </div>
+        }
 
         @for (msg of currentMessages(); track msg.id) {
           <div

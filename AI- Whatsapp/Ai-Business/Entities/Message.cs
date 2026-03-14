@@ -43,7 +43,7 @@ public class Message : Entity<Guid>, ITenantEntity
 
         if (string.IsNullOrWhiteSpace(platform) || !IsValidPlatform(platform))
         {
-            throw new ArgumentException("Valid platform required (whatsapp or instagram)", nameof(platform));
+            throw new ArgumentException("Valid platform required (whatsapp, instagram, or facebook)", nameof(platform));
         }
 
         if (string.IsNullOrWhiteSpace(from))
@@ -98,7 +98,7 @@ public class Message : Entity<Guid>, ITenantEntity
 
         if (string.IsNullOrWhiteSpace(platform) || !IsValidPlatform(platform))
         {
-            throw new ArgumentException("Valid platform required (whatsapp or instagram)", nameof(platform));
+            throw new ArgumentException("Valid platform required (whatsapp, instagram, or facebook)", nameof(platform));
         }
 
         if (string.IsNullOrWhiteSpace(from))
@@ -180,7 +180,7 @@ public class Message : Entity<Guid>, ITenantEntity
     private static bool IsValidPlatform(string platform)
     {
         var lower = platform.ToLowerInvariant();
-        return lower == "whatsapp" || lower == "instagram";
+        return lower == "whatsapp" || lower == "instagram" || lower == "facebook";
     }
 }
 

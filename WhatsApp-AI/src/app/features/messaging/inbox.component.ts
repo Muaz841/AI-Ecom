@@ -1,162 +1,29 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewChecked, Component, ElementRef, ViewChild, computed, signal } from '@angular/core';
-
-type Platform = 'WhatsApp' | 'Instagram' | 'Facebook';
-type ThreadStatus = 'ai-handled' | 'pending' | 'human' | 'resolved';
-type MessageSender = 'customer' | 'bot' | 'agent';
-
-interface Message {
-  id: string;
-  sender: MessageSender;
-  content: string;
-  time: string;
-}
-
-interface Thread {
-  id: string;
-  name: string;
-  initials: string;
-  avatarColor: string;
-  platform: Platform;
-  platformColor: string;
-  lastMessage: string;
-  relativeTime: string;
-  unreadCount: number;
-  isOnline: boolean;
-  lastSeen: string;
-  status: ThreadStatus;
-  messages: Message[];
-}
-
-const PLATFORM_COLORS: Record<Platform, string> = {
-  WhatsApp: '#25D366',
-  Instagram: '#E1306C',
-  Facebook: '#1877F2',
-};
-
-const MOCK_THREADS: Thread[] = [
-  {
-    id: '1',
-    name: 'Sara Malik',
-    initials: 'SM',
-    avatarColor: '#7C3AED',
-    platform: 'WhatsApp',
-    platformColor: PLATFORM_COLORS.WhatsApp,
-    lastMessage: 'Can you help me track my order #1042?',
-    relativeTime: '2m ago',
-    unreadCount: 3,
-    isOnline: true,
-    lastSeen: '',
-    status: 'pending',
-    messages: [
-      { id: 'm1', sender: 'bot', content: 'Hello Sara! How can I help you today?', time: '10:40 AM' },
-      { id: 'm2', sender: 'customer', content: "Hi, I placed an order yesterday but haven't received a confirmation.", time: '10:42 AM' },
-      { id: 'm3', sender: 'bot', content: "I found your order #1042 placed on March 10. It's being processed and will ship within 24 hours. You'll receive a tracking link via SMS.", time: '10:42 AM' },
-      { id: 'm4', sender: 'customer', content: "That's great! Can I change the delivery address?", time: '10:45 AM' },
-      { id: 'm5', sender: 'bot', content: "Of course! Please share the new address and I'll update it right away.", time: '10:45 AM' },
-      { id: 'm6', sender: 'customer', content: 'Can you help me track my order #1042?', time: '10:58 AM' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Ahmed Khan',
-    initials: 'AK',
-    avatarColor: '#2563EB',
-    platform: 'Instagram',
-    platformColor: PLATFORM_COLORS.Instagram,
-    lastMessage: 'Is this jacket available in blue?',
-    relativeTime: '14m ago',
-    unreadCount: 1,
-    isOnline: false,
-    lastSeen: '12 min ago',
-    status: 'pending',
-    messages: [
-      { id: 'm1', sender: 'customer', content: 'I saw your ad for the premium jacket. Is it available in blue?', time: '10:30 AM' },
-      { id: 'm2', sender: 'bot', content: 'Hi Ahmed! Yes, the jacket is available in Blue, Black, and Olive. Would you like to place an order?', time: '10:30 AM' },
-      { id: 'm3', sender: 'customer', content: 'Is this jacket available in blue?', time: '10:46 AM' },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Fatima Noor',
-    initials: 'FN',
-    avatarColor: '#DB2777',
-    platform: 'Facebook',
-    platformColor: PLATFORM_COLORS.Facebook,
-    lastMessage: 'AI handled: Provided full product catalog.',
-    relativeTime: '1h ago',
-    unreadCount: 0,
-    isOnline: false,
-    lastSeen: '58 min ago',
-    status: 'ai-handled',
-    messages: [
-      { id: 'm1', sender: 'customer', content: 'Do you have a catalog of your products?', time: '09:15 AM' },
-      { id: 'm2', sender: 'bot', content: "Absolutely, Fatima! Here's our latest product catalog. Feel free to browse and let me know if you need help with any item.", time: '09:15 AM' },
-      { id: 'm3', sender: 'customer', content: "Thanks! I'll check it out.", time: '09:20 AM' },
-      { id: 'm4', sender: 'bot', content: "Great! I'm here whenever you're ready to order. Have a wonderful day!", time: '09:20 AM' },
-    ],
-  },
-  {
-    id: '4',
-    name: 'Bilal Rafiq',
-    initials: 'BR',
-    avatarColor: '#0D9488',
-    platform: 'WhatsApp',
-    platformColor: PLATFORM_COLORS.WhatsApp,
-    lastMessage: 'Please take a photo of the damaged item.',
-    relativeTime: '2h ago',
-    unreadCount: 0,
-    isOnline: true,
-    lastSeen: '',
-    status: 'human',
-    messages: [
-      { id: 'm1', sender: 'customer', content: 'I received a damaged item. What are your return policies?', time: '08:50 AM' },
-      { id: 'm2', sender: 'bot', content: "I'm sorry to hear that, Bilal! We have a 14-day hassle-free return policy. I'm escalating this to a human agent who will assist you shortly.", time: '08:50 AM' },
-      { id: 'm3', sender: 'agent', content: "Hi Bilal! I'm Zara from support. I've reviewed your case. Please take a photo of the damaged item and we'll process your refund immediately.", time: '09:05 AM' },
-      { id: 'm4', sender: 'customer', content: 'What are your return policies?', time: '09:10 AM' },
-    ],
-  },
-  {
-    id: '5',
-    name: 'Mariam Qureshi',
-    initials: 'MQ',
-    avatarColor: '#EA580C',
-    platform: 'Instagram',
-    platformColor: PLATFORM_COLORS.Instagram,
-    lastMessage: 'Order #2081 confirmed! Delivery in 2–3 days.',
-    relativeTime: '3h ago',
-    unreadCount: 0,
-    isOnline: false,
-    lastSeen: '2h ago',
-    status: 'resolved',
-    messages: [
-      { id: 'm1', sender: 'customer', content: 'I want to order the floral dress in size M.', time: '07:30 AM' },
-      { id: 'm2', sender: 'bot', content: 'Perfect choice, Mariam! The floral dress in size M is available. Total: PKR 2,450. Shall I place the order?', time: '07:30 AM' },
-      { id: 'm3', sender: 'customer', content: 'Yes please! Cash on delivery.', time: '07:32 AM' },
-      { id: 'm4', sender: 'bot', content: 'Order #2081 confirmed! Expected delivery: 2–3 business days. Thank you for shopping with us!', time: '07:32 AM' },
-    ],
-  },
-  {
-    id: '6',
-    name: 'Hassan Ali',
-    initials: 'HA',
-    avatarColor: '#4F46E5',
-    platform: 'Facebook',
-    platformColor: PLATFORM_COLORS.Facebook,
-    lastMessage: 'Free delivery on orders above PKR 3,000!',
-    relativeTime: '5h ago',
-    unreadCount: 0,
-    isOnline: false,
-    lastSeen: '4h ago',
-    status: 'ai-handled',
-    messages: [
-      { id: 'm1', sender: 'customer', content: 'Do you deliver to Lahore?', time: '06:00 AM' },
-      { id: 'm2', sender: 'bot', content: 'Yes, Hassan! We deliver to all major cities including Lahore. Standard delivery takes 2–4 business days. Express (next-day) is also available.', time: '06:00 AM' },
-      { id: 'm3', sender: 'customer', content: "What's the delivery charge?", time: '06:02 AM' },
-      { id: 'm4', sender: 'bot', content: 'Standard delivery is PKR 200 for orders below PKR 3,000. Free delivery on orders above PKR 3,000!', time: '06:02 AM' },
-    ],
-  },
-];
+import {
+  AfterViewChecked,
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  ViewChild,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { take } from 'rxjs';
+import { AuthService } from '../../core/auth/auth.service';
+import {
+  Message,
+  MessageSender,
+  Platform,
+  Thread,
+  ThreadStatus,
+  mapMessageDto,
+  mapThreadDto,
+  relativeTime,
+} from './conversation.models';
+import { InboxService } from './inbox.service';
 
 const STATUS_LABELS: Record<ThreadStatus, string> = {
   'ai-handled': 'AI',
@@ -179,8 +46,14 @@ const STATUS_CLASSES: Record<ThreadStatus, string> = {
   templateUrl: './inbox.component.html',
   styleUrl: './inbox.component.scss',
 })
-export class InboxComponent implements AfterViewChecked {
+export class InboxComponent implements OnInit, AfterViewChecked {
   @ViewChild('messagesArea') private readonly messagesArea?: ElementRef<HTMLElement>;
+
+  private readonly inboxService = inject(InboxService);
+  private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  private tenantId: string | null = null;
 
   readonly filters = [
     { id: 'all', label: 'All' },
@@ -190,9 +63,9 @@ export class InboxComponent implements AfterViewChecked {
   ];
 
   readonly platformList = [
-    { id: 'WhatsApp' as Platform, label: 'WhatsApp', color: PLATFORM_COLORS.WhatsApp },
-    { id: 'Instagram' as Platform, label: 'Instagram', color: PLATFORM_COLORS.Instagram },
-    { id: 'Facebook' as Platform, label: 'Facebook', color: PLATFORM_COLORS.Facebook },
+    { id: 'WhatsApp' as Platform, label: 'WhatsApp', color: '#25D366' },
+    { id: 'Instagram' as Platform, label: 'Instagram', color: '#E1306C' },
+    { id: 'Facebook' as Platform, label: 'Facebook', color: '#1877F2' },
   ];
 
   readonly aiSuggestions = [
@@ -201,6 +74,7 @@ export class InboxComponent implements AfterViewChecked {
     'Your order will be delivered within 2–3 business days. Is there anything else I can help with?',
   ];
 
+  // ─── UI state ───────────────────────────────────────────────────────────────
   readonly activeFilter = signal('all');
   readonly searchQuery = signal('');
   readonly activePlatforms = signal<Platform[]>([]);
@@ -208,8 +82,15 @@ export class InboxComponent implements AfterViewChecked {
   readonly messageInput = signal('');
   readonly showSuggestions = signal(false);
 
-  private readonly threads = signal<Thread[]>(MOCK_THREADS);
+  // ─── Data + async state ─────────────────────────────────────────────────────
+  readonly loadingThreads = signal(false);
+  readonly loadingMessages = signal(false);
+  readonly threadsError = signal<string | null>(null);
+  readonly messagesError = signal<string | null>(null);
 
+  private readonly threads = signal<Thread[]>([]);
+
+  // ─── Derived ────────────────────────────────────────────────────────────────
   readonly filteredThreads = computed(() => {
     const query = this.searchQuery().toLowerCase();
     const filter = this.activeFilter();
@@ -231,6 +112,67 @@ export class InboxComponent implements AfterViewChecked {
 
   private shouldScrollToBottom = false;
 
+  // ─── Lifecycle ───────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    this.authService.tenantId$.pipe(take(1), takeUntilDestroyed(this.destroyRef)).subscribe((id) => {
+      this.tenantId = id;
+      if (id) {
+        this.loadThreads();
+      }
+    });
+  }
+
+  // ─── Data loading ────────────────────────────────────────────────────────────
+  loadThreads(): void {
+    if (!this.tenantId) return;
+
+    this.loadingThreads.set(true);
+    this.threadsError.set(null);
+
+    this.inboxService
+      .listThreads(this.tenantId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (dtos) => {
+          this.threads.set(dtos.map(mapThreadDto));
+          this.loadingThreads.set(false);
+        },
+        error: () => {
+          this.threadsError.set('Failed to load conversations. Check your connection and try again.');
+          this.loadingThreads.set(false);
+        },
+      });
+  }
+
+  private loadMessagesForThread(thread: Thread): void {
+    if (!this.tenantId || thread.messagesLoaded) return;
+
+    this.loadingMessages.set(true);
+    this.messagesError.set(null);
+
+    this.inboxService
+      .getMessages(this.tenantId, thread.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (dtos) => {
+          const messages = dtos.map(mapMessageDto);
+          this.threads.update((prev) =>
+            prev.map((t) => (t.id === thread.id ? { ...t, messages, messagesLoaded: true } : t)),
+          );
+          this.selectedThread.update((t) =>
+            t?.id === thread.id ? { ...t, messages, messagesLoaded: true } : t,
+          );
+          this.loadingMessages.set(false);
+          this.shouldScrollToBottom = true;
+        },
+        error: () => {
+          this.messagesError.set('Failed to load messages.');
+          this.loadingMessages.set(false);
+        },
+      });
+  }
+
+  // ─── Actions ─────────────────────────────────────────────────────────────────
   setFilter(id: string): void {
     this.activeFilter.set(id);
   }
@@ -247,12 +189,15 @@ export class InboxComponent implements AfterViewChecked {
 
   selectThread(thread: Thread | null): void {
     this.selectedThread.set(thread);
-    if (thread?.unreadCount) {
-      this.threads.update((prev) =>
-        prev.map((t) => (t.id === thread.id ? { ...t, unreadCount: 0 } : t)),
-      );
-      this.selectedThread.update((t) => (t ? { ...t, unreadCount: 0 } : t));
+
+    if (thread) {
+      if (thread.unreadCount > 0) {
+        this.threads.update((prev) => prev.map((t) => (t.id === thread.id ? { ...t, unreadCount: 0 } : t)));
+        this.selectedThread.update((t) => (t ? { ...t, unreadCount: 0 } : t));
+      }
+      this.loadMessagesForThread(thread);
     }
+
     this.showSuggestions.set(false);
     this.shouldScrollToBottom = true;
   }
@@ -267,27 +212,31 @@ export class InboxComponent implements AfterViewChecked {
       if (ke.shiftKey) return;
       event.preventDefault();
     }
+
     const content = this.messageInput().trim();
     if (!content || !this.selectedThread()) return;
 
     const newMsg: Message = {
       id: `msg-${Date.now()}`,
-      sender: 'agent',
+      sender: 'agent' as MessageSender,
       content,
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     };
 
     const threadId = this.selectedThread()!.id;
+    const now = new Date().toISOString();
+
     this.threads.update((prev) =>
       prev.map((t) =>
         t.id === threadId
-          ? { ...t, messages: [...t.messages, newMsg], lastMessage: content, relativeTime: 'just now' }
+          ? { ...t, messages: [...t.messages, newMsg], lastMessage: content, relativeTime: relativeTime(now) }
           : t,
       ),
     );
     this.selectedThread.update((t) =>
-      t ? { ...t, messages: [...t.messages, newMsg], lastMessage: content, relativeTime: 'just now' } : t,
+      t ? { ...t, messages: [...t.messages, newMsg], lastMessage: content, relativeTime: relativeTime(now) } : t,
     );
+
     this.messageInput.set('');
     this.showSuggestions.set(false);
     this.shouldScrollToBottom = true;
