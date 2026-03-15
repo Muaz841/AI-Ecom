@@ -33,7 +33,8 @@ public record IntentRequest(
     string MessageContent,
     string InventoryContext,
     string Platform,
-    string? CustomerLanguageHint = null);
+    string? CustomerLanguageHint = null,
+    string? SystemPrompt = null);
 
 public record IntentDetectionResult(
     string DetectedIntent,
@@ -49,7 +50,8 @@ public record ReplyRequest(
     string MessageContent,
     string DetectedIntent,
     string InventoryContext,
-    string MessageIdForAudit);
+    string MessageIdForAudit,
+    string? SystemPrompt = null);
 
 public record ReplyGenerationResult(
     bool Success,

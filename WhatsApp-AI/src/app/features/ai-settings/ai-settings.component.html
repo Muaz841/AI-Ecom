@@ -1,0 +1,383 @@
+<div class="ai-page">
+
+  <!-- ── Header ───────────────────────────────────────────── -->
+  <div class="ai-header">
+    <div>
+      <h1 class="ai-title">AI Provider Settings</h1>
+      <p class="ai-subtitle">Host-level AI configuration applied to all tenant pipelines. Changes take effect immediately on the next AI call.</p>
+    </div>
+  </div>
+
+  <!-- ── Loading ──────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="ai-loading">
+      <p-progressSpinner strokeWidth="3" styleClass="ai-spinner"></p-progressSpinner>
+      <span>Loading configuration…</span>
+    </div>
+  }
+
+  @if (!loading()) {
+
+    <!-- ── Status banner ─────────────────────────────────── -->
+    <div class="status-banner" [class.configured]="config()?.isConfigured" [class.unconfigured]="!config()?.isConfigured">
+      <div class="status-icon">
+        <i [class]="config()?.isConfigured ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'"></i>
+      </div>
+      <div class="status-body">
+        <strong>{{ config()?.isConfigured ? 'AI Provider Configured' : 'Using appsettings.json Defaults' }}</strong>
+        <span>
+          @if (config()?.isConfigured) {
+            Active provider: <strong>{{ config()!.activeProvider }}</strong>
+            @if (config()!.debugModeEnabled) { &nbsp;·&nbsp; <span class="debug-pill">DEBUG MODE</span> }
+            @if (config()?.updatedAt) { &nbsp;·&nbsp; Last updated {{ formatDate(config()!.updatedAt!) }}. }
+          } @else {
+            No DB config saved. All AI calls use appsettings.json "AI" section as fallback.
+          }
+        </span>
+      </div>
+    </div>
+
+    <!-- ── Form card ──────────────────────────────────────── -->
+    <div class="ai-card">
+      <div class="card-header">
+        <div class="card-title-row">
+          <div class="card-icon"><i class="pi pi-microchip-ai"></i></div>
+          <div>
+            <h2 class="card-title">Provider Configuration</h2>
+            <p class="card-sub">Select the active AI provider and configure credentials. Settings are stored encrypted in the database and override appsettings.json.</p>
+          </div>
+        </div>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="ai-form">
+
+        <!-- Active Provider + Debug Mode row -->
+        <div class="form-row two-col">
+          <div class="form-field">
+            <label class="field-label">Active Provider <span class="required">*</span></label>
+            <p-select
+              formControlName="activeProvider"
+              [options]="providerOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="ai-select"
+            ></p-select>
+            <span class="field-hint">All AI pipeline calls will route to this provider.</span>
+          </div>
+
+          <div class="form-field">
+            <label class="field-label">Debug Mode</label>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-label">{{ form.get('debugModeEnabled')?.value ? 'Enabled — using Mock provider' : 'Disabled — using real provider' }}</span>
+                <span class="toggle-sub">When enabled, all AI calls return simulated responses regardless of provider selection.</span>
+              </div>
+              <p-toggleSwitch formControlName="debugModeEnabled"></p-toggleSwitch>
+            </div>
+          </div>
+        </div>
+
+        <p-divider></p-divider>
+
+        <!-- ── Ollama settings ─────────────────────────────── -->
+        @if (isOllama) {
+          <div class="provider-section">
+            <div class="provider-badge ollama"><i class="pi pi-server"></i> Ollama (Local)</div>
+            <div class="form-row two-col">
+              <div class="form-field">
+                <label class="field-label">Ollama Endpoint <span class="required">*</span></label>
+                <input pInputText formControlName="ollamaEndpoint" class="ai-input" autocomplete="off" />
+                <span class="field-hint">Default: http://localhost:11434</span>
+                @if (form.get('ollamaEndpoint')?.touched && form.get('ollamaEndpoint')?.invalid) {
+                  <span class="field-error"><i class="pi pi-exclamation-circle"></i> Endpoint is required</span>
+                }
+              </div>
+              <div class="form-field">
+                <label class="field-label">Ollama Model <span class="required">*</span></label>
+                <input pInputText formControlName="ollamaModel" class="ai-input" autocomplete="off" />
+                <span class="field-hint">e.g. llama3.1:8b, mistral:7b</span>
+                @if (form.get('ollamaModel')?.touched && form.get('ollamaModel')?.invalid) {
+                  <span class="field-error"><i class="pi pi-exclamation-circle"></i> Model is required</span>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- ── OpenAI settings ─────────────────────────────── -->
+        @if (isOpenAI) {
+          <div class="provider-section">
+            <div class="provider-badge-row">
+              <div class="provider-badge openai"><i class="pi pi-sparkles"></i> OpenAI</div>
+              <button type="button" pButton severity="secondary" outlined size="small"
+                icon="pi pi-refresh" label="Refresh models"
+                [loading]="loadingModels()" (click)="refreshModels()">
+              </button>
+            </div>
+            <div class="form-row two-col">
+              <div class="form-field">
+                <label class="field-label">Model <span class="required">*</span></label>
+                @if (loadingModels()) {
+                  <div class="field-loading">
+                    <p-progressSpinner strokeWidth="4" class="field-spinner"></p-progressSpinner>
+                    <span>Fetching models…</span>
+                  </div>
+                } @else {
+                  <p-select
+                    formControlName="openAIModel"
+                    [options]="modelOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select a model"
+                    class="ai-select"
+                  ></p-select>
+                }
+                @if (selectedModelInfo(); as info) {
+                  <div class="capability-badges">
+                    <p-tag [severity]="info.supportsToolCalling ? 'success' : 'secondary'"
+                      [value]="info.supportsToolCalling ? 'Tool Calling' : 'No Tool Calling'"
+                      [icon]="info.supportsToolCalling ? 'pi pi-check' : 'pi pi-times'">
+                    </p-tag>
+                    <p-tag [severity]="info.supportsStructuredOutput ? 'success' : 'secondary'"
+                      [value]="info.supportsStructuredOutput ? 'Structured Output' : 'No Structured Output'"
+                      [icon]="info.supportsStructuredOutput ? 'pi pi-check' : 'pi pi-times'">
+                    </p-tag>
+                    @if (info.contextWindow > 0) {
+                      <p-tag severity="info" [value]="(info.contextWindow / 1000) + 'K ctx'"></p-tag>
+                    }
+                    @if (info.isPreview) {
+                      <p-tag severity="warn" value="Preview"></p-tag>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="form-field">
+                <label class="field-label">
+                  API Key
+                  <span class="field-badge field-badge-secret">Encrypted at rest</span>
+                </label>
+                <div class="secret-wrap">
+                  <input
+                    [type]="showOpenAIKey() ? 'text' : 'password'"
+                    pInputText
+                    formControlName="openAIApiKey"
+                    class="ai-input secret-input"
+                    autocomplete="new-password"
+                  />
+                  <button type="button" class="secret-toggle" (click)="showOpenAIKey.set(!showOpenAIKey())"
+                    [pTooltip]="showOpenAIKey() ? 'Hide' : 'Show'" tooltipPosition="top">
+                    <i [class]="showOpenAIKey() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                  </button>
+                </div>
+                <span class="field-hint">
+                  @if (config()?.openAIApiKeySet) {
+                    <i class="pi pi-lock"></i> Key set. Leave blank to keep unchanged.
+                  } @else {
+                    Required for OpenAI API calls.
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- ── Gemini settings ─────────────────────────────── -->
+        @if (isGemini) {
+          <div class="provider-section">
+            <div class="provider-badge-row">
+              <div class="provider-badge gemini"><i class="pi pi-star"></i> Gemini</div>
+              <button type="button" pButton severity="secondary" outlined size="small"
+                icon="pi pi-refresh" label="Refresh models"
+                [loading]="loadingModels()" (click)="refreshModels()">
+              </button>
+            </div>
+            <div class="form-row two-col">
+              <div class="form-field">
+                <label class="field-label">Model <span class="required">*</span></label>
+                @if (loadingModels()) {
+                  <div class="field-loading">
+                    <p-progressSpinner strokeWidth="4" class="field-spinner"></p-progressSpinner>
+                    <span>Fetching models…</span>
+                  </div>
+                } @else {
+                  <p-select
+                    formControlName="geminiModel"
+                    [options]="modelOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select a model"
+                    class="ai-select"
+                  ></p-select>
+                }
+                @if (selectedModelInfo(); as info) {
+                  <div class="capability-badges">
+                    <p-tag [severity]="info.supportsToolCalling ? 'success' : 'secondary'"
+                      [value]="info.supportsToolCalling ? 'Tool Calling' : 'No Tool Calling'"
+                      [icon]="info.supportsToolCalling ? 'pi pi-check' : 'pi pi-times'">
+                    </p-tag>
+                    <p-tag [severity]="info.supportsStructuredOutput ? 'success' : 'secondary'"
+                      [value]="info.supportsStructuredOutput ? 'Structured Output' : 'No Structured Output'"
+                      [icon]="info.supportsStructuredOutput ? 'pi pi-check' : 'pi pi-times'">
+                    </p-tag>
+                    @if (info.contextWindow > 0) {
+                      <p-tag severity="info" [value]="(info.contextWindow / 1000) + 'K ctx'"></p-tag>
+                    }
+                    @if (info.isPreview) {
+                      <p-tag severity="warn" value="Preview"></p-tag>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="form-field">
+                <label class="field-label">
+                  API Key
+                  <span class="field-badge field-badge-secret">Encrypted at rest</span>
+                </label>
+                <div class="secret-wrap">
+                  <input
+                    [type]="showGeminiKey() ? 'text' : 'password'"
+                    pInputText
+                    formControlName="geminiApiKey"
+                    class="ai-input secret-input"
+                    autocomplete="new-password"
+                  />
+                  <button type="button" class="secret-toggle" (click)="showGeminiKey.set(!showGeminiKey())"
+                    [pTooltip]="showGeminiKey() ? 'Hide' : 'Show'" tooltipPosition="top">
+                    <i [class]="showGeminiKey() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                  </button>
+                </div>
+                <span class="field-hint">
+                  @if (config()?.geminiApiKeySet) {
+                    <i class="pi pi-lock"></i> Key set. Leave blank to keep unchanged.
+                  } @else {
+                    Required for Gemini API calls.
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- ── Mock settings ───────────────────────────────── -->
+        @if (isMock) {
+          <div class="provider-section">
+            <div class="provider-badge mock"><i class="pi pi-code"></i> Mock Provider</div>
+            <div class="mock-info">
+              <i class="pi pi-info-circle"></i>
+              <span>The Mock provider returns simulated AI responses without any external API calls. Useful for local development and testing without consuming API credits.</span>
+            </div>
+          </div>
+        }
+
+        <p-divider></p-divider>
+
+        <!-- ── Model capabilities & sampling ──────────────── -->
+        <div class="section-title">Model Capabilities &amp; Sampling</div>
+        <div class="form-row two-col">
+
+          <div class="form-field">
+            <label class="field-label">Capabilities</label>
+            <div class="capability-toggles">
+              <div class="cap-toggle-row">
+                <div class="cap-toggle-info">
+                  <span class="toggle-label">Enable Tool Calling</span>
+                  <span class="toggle-sub">Allows the AI agent to call registered tools (search_products, check_inventory, etc.). Requires a tool-capable model.</span>
+                </div>
+                <p-toggleSwitch formControlName="enableToolCalling"></p-toggleSwitch>
+              </div>
+              <div class="cap-toggle-row">
+                <div class="cap-toggle-info">
+                  <span class="toggle-label">Enable Structured Output</span>
+                  <span class="toggle-sub">Enforces JSON schema on AI responses. Requires a model that supports structured output.</span>
+                </div>
+                <p-toggleSwitch formControlName="enableStructuredOutput"></p-toggleSwitch>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label class="field-label">
+              Sampling Parameters
+              <span class="field-optional">optional — leave blank for provider defaults</span>
+            </label>
+            <div class="sampling-grid">
+              <div class="sampling-field">
+                <label class="sampling-label">Temperature</label>
+                <p-inputNumber
+                  formControlName="temperature"
+                  [min]="0" [max]="2" [step]="0.1" [maxFractionDigits]="2"
+                  placeholder="e.g. 0.7"
+                  class="sampling-input"
+                ></p-inputNumber>
+                <span class="field-hint">0.0–2.0</span>
+              </div>
+              <div class="sampling-field">
+                <label class="sampling-label">Top-P</label>
+                <p-inputNumber
+                  formControlName="topP"
+                  [min]="0" [max]="1" [step]="0.05" [maxFractionDigits]="2"
+                  placeholder="e.g. 0.9"
+                  class="sampling-input"
+                ></p-inputNumber>
+                <span class="field-hint">0.0–1.0</span>
+              </div>
+              <div class="sampling-field">
+                <label class="sampling-label">Max Tokens</label>
+                <p-inputNumber
+                  formControlName="maxTokens"
+                  [min]="1" [max]="128000" [step]="100" [useGrouping]="false"
+                  placeholder="e.g. 2048"
+                  class="sampling-input"
+                ></p-inputNumber>
+                <span class="field-hint">Max output tokens</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <p-divider></p-divider>
+
+        <!-- Request Timeout -->
+        <div class="form-field" style="max-width: 280px;">
+          <label class="field-label">Request Timeout (seconds) <span class="required">*</span></label>
+          <input pInputText type="number" formControlName="requestTimeoutSeconds" class="ai-input" />
+          <span class="field-hint">Range: 10–300 seconds.</span>
+          @if (form.get('requestTimeoutSeconds')?.touched && form.get('requestTimeoutSeconds')?.invalid) {
+            <span class="field-error"><i class="pi pi-exclamation-circle"></i> Must be between 10 and 300</span>
+          }
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="submit" pButton label="Save Configuration" icon="pi pi-check"
+            [loading]="saving()" [disabled]="form.invalid"></button>
+          <button type="button" pButton label="Reset" severity="secondary" outlined (click)="resetForm()"></button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── Info card ──────────────────────────────────────── -->
+    <div class="info-card">
+      <div class="info-row">
+        <i class="pi pi-info-circle"></i>
+        <span>API keys are <strong>never returned to the UI</strong> after saving. Enter a new value to rotate a key.</span>
+      </div>
+      <div class="info-row">
+        <i class="pi pi-info-circle"></i>
+        <span>If no DB config exists, the system falls back to the <code>AI</code> section in <code>appsettings.json</code> automatically.</span>
+      </div>
+      <div class="info-row">
+        <i class="pi pi-info-circle"></i>
+        <span><strong>Debug Mode</strong> overrides the active provider and routes all AI calls to the Mock provider.</span>
+      </div>
+      <div class="info-row">
+        <i class="pi pi-info-circle"></i>
+        <span>Save validates that the selected model supports any enabled capability. Enabling <strong>Tool Calling</strong> on an incompatible model is rejected with a clear error.</span>
+      </div>
+    </div>
+
+  }
+
+</div>

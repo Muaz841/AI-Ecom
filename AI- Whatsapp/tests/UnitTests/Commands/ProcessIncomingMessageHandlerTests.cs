@@ -11,16 +11,23 @@ namespace UnitTests.Commands;
 
 public class ProcessIncomingMessageHandlerTests
 {
+    private static ProcessIncomingMessageHandler BuildHandler(
+        FakeAiService? ai = null,
+        FakeMetaMessagingService? meta = null) =>
+        new(
+            new FakeConversationThreadRepository(),
+            new FakeProductRepository(),
+            ai ?? new FakeAiService(),
+            new FakeAgentOrchestrator(),
+            new FakeTenantPromptBuilder(),
+            meta ?? new FakeMetaMessagingService(),
+            new FakeApplicationLogger(),
+            new FakeRealtimeNotifier());
+
     [Fact]
     public async Task Handle_Uses_Fallback_Reply_When_AiReply_Generation_Fails()
     {
-        var handler = new ProcessIncomingMessageHandler(
-            new FakeConversationThreadRepository(),
-            new FakeProductRepository(),
-            new FakeAiService(shouldReplyFail: true),
-            new FakeMetaMessagingService(),
-            new FakeApplicationLogger());
-
+        var handler = BuildHandler(ai: new FakeAiService(shouldReplyFail: true));
         var result = await handler.Handle(CreateRequest(), CancellationToken.None);
 
         Assert.True(result.Success);
@@ -30,13 +37,7 @@ public class ProcessIncomingMessageHandlerTests
     [Fact]
     public async Task Handle_Returns_Failure_When_Meta_Send_Fails()
     {
-        var handler = new ProcessIncomingMessageHandler(
-            new FakeConversationThreadRepository(),
-            new FakeProductRepository(),
-            new FakeAiService(),
-            new FakeMetaMessagingService(shouldFail: true),
-            new FakeApplicationLogger());
-
+        var handler = BuildHandler(meta: new FakeMetaMessagingService(shouldFail: true));
         var result = await handler.Handle(CreateRequest(), CancellationToken.None);
 
         Assert.False(result.Success);
@@ -46,13 +47,7 @@ public class ProcessIncomingMessageHandlerTests
     [Fact]
     public async Task Handle_Returns_Success_When_Ai_And_Meta_Succeed()
     {
-        var handler = new ProcessIncomingMessageHandler(
-            new FakeConversationThreadRepository(),
-            new FakeProductRepository(),
-            new FakeAiService(),
-            new FakeMetaMessagingService(),
-            new FakeApplicationLogger());
-
+        var handler = BuildHandler();
         var result = await handler.Handle(CreateRequest(), CancellationToken.None);
 
         Assert.True(result.Success);
@@ -64,13 +59,7 @@ public class ProcessIncomingMessageHandlerTests
     [Fact]
     public async Task Handle_Uses_Fallback_Intent_And_Reply_When_AiDetectIntent_Throws()
     {
-        var handler = new ProcessIncomingMessageHandler(
-            new FakeConversationThreadRepository(),
-            new FakeProductRepository(),
-            new FakeAiService(shouldDetectThrow: true),
-            new FakeMetaMessagingService(),
-            new FakeApplicationLogger());
-
+        var handler = BuildHandler(ai: new FakeAiService(shouldDetectThrow: true));
         var result = await handler.Handle(CreateRequest(), CancellationToken.None);
 
         Assert.True(result.Success);
@@ -273,6 +262,29 @@ public class ProcessIncomingMessageHandlerTests
             IEnumerable<QuickReplyOption> quickReplies,
             CancellationToken cancellationToken = default)
             => Task.FromResult(new MessagingSendResult(true, Guid.NewGuid().ToString(), null, 200));
+    }
+
+    private sealed class FakeAgentOrchestrator : IAgentOrchestrator
+    {
+        public Task<AgentResult> RunAsync(AgentRequest request, CancellationToken ct = default)
+            => Task.FromResult(new AgentResult(
+                Success: true,
+                FinalReply: "Auto reply",
+                ToolCallsMade: Array.Empty<ToolCall>(),
+                TotalInputTokens: 8,
+                TotalOutputTokens: 5));
+    }
+
+    private sealed class FakeTenantPromptBuilder : ITenantPromptBuilder
+    {
+        public Task<string?> GetSystemPromptAsync(Guid tenantId, CancellationToken ct = default)
+            => Task.FromResult<string?>(null);
+    }
+
+    private sealed class FakeRealtimeNotifier : IRealtimeNotifier
+    {
+        public Task PublishAsync(Guid tenantId, string eventType, object payload, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class FakeApplicationLogger : IApplicationLogger

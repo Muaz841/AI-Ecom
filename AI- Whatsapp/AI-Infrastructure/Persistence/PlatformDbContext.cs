@@ -47,6 +47,8 @@ public class PlatformDbContext : DbContext
     public DbSet<MetaChannelAsset> MetaChannelAssets { get; set; } = null!;
     public DbSet<MetaOAuthState> MetaOAuthStates { get; set; } = null!;
     public DbSet<PlatformMetaConfig> PlatformMetaConfigs { get; set; } = null!;
+    public DbSet<PlatformAiConfig> PlatformAiConfigs { get; set; } = null!;
+    public DbSet<TenantAIProfile> TenantAIProfiles { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -300,6 +302,42 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.GraphVersion).IsRequired().HasMaxLength(20);
             entity.Property(e => e.CallbackBaseUrl).HasMaxLength(500);
             entity.ToTable("PlatformMetaConfigs");
+        });
+
+        // Singleton platform-level AI provider config — no tenant filter, single row.
+        modelBuilder.Entity<PlatformAiConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ActiveProvider).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.OllamaEndpoint).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.OllamaModel).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.OpenAIModel).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.OpenAIApiKeyProtected).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.GeminiModel).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.GeminiApiKeyProtected).HasColumnType("nvarchar(max)");
+            entity.ToTable("PlatformAiConfigs");
+        });
+
+        // Per-tenant AI persona profile — one row per tenant, subject to EF tenant filter.
+        modelBuilder.Entity<TenantAIProfile>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.SystemPrompt).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Tone).HasMaxLength(100);
+            entity.Property(e => e.Language).HasMaxLength(50);
+            entity.Property(e => e.BrandRules).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ForbiddenTopics).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.DefaultResponseStyle).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.AiCallsPerHourLimit).HasDefaultValue(200);
+            entity.Property(e => e.Version).HasDefaultValue(1);
+            // One profile per tenant
+            entity.HasIndex(e => e.TenantId).IsUnique();
+            entity.HasOne<TenantEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable("TenantAIProfiles");
         });
     }
 

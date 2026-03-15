@@ -31,6 +31,9 @@ using EcomAI.Platform.Business.Security;
 using EcomAI.Platform.Infrastructure.Realtime;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using EcomAI.Platform.Infrastructure.AI;
+using EcomAI.Platform.Infrastructure.AI.Tools;
+using EcomAI.Platform.Infrastructure.Caching;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -117,6 +120,19 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentTenantAccessor, CurrentTenantAccessor>();
         services.AddHttpContextAccessor();
 
+        // ── Redis distributed cache ───────────────────────────────────────────
+        var redisConnection = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrWhiteSpace(redisConnection))
+        {
+            services.AddStackExchangeRedisCache(opts => opts.Configuration = redisConnection);
+        }
+        else
+        {
+            // Fallback to in-memory cache when Redis is not configured (local dev)
+            services.AddDistributedMemoryCache();
+        }
+        services.AddSingleton<ICacheService, RedisCacheService>();
+
         services.AddDbContext<PlatformDbContext>(options =>
         {
             var connString = configuration.GetConnectionString("DefaultConnection")
@@ -150,6 +166,21 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlatformMetaConfigRepository, PlatformMetaConfigRepository>();
         services.AddScoped<IPlatformSettingsService, PlatformSettingsService>();
         services.AddScoped<IMetaOAuthRuntimeConfigProvider, PlatformSettingsService>();
+        services.AddScoped<IPlatformAiConfigRepository, PlatformAiConfigRepository>();
+        services.AddScoped<IPlatformAiSettingsService, PlatformAiSettingsService>();
+        services.AddScoped<IAiRuntimeConfigProvider, PlatformAiSettingsService>();
+        // Tenant AI profile
+        services.AddScoped<ITenantAIProfileRepository, TenantAIProfileRepository>();
+        services.AddScoped<ITenantAIProfileService, TenantAIProfileService>();
+        services.AddScoped<ITenantPromptBuilder, TenantPromptBuilder>();
+        // Tool-calling agent
+        services.AddScoped<IToolHandler, SearchProductsTool>();
+        services.AddScoped<IToolHandler, CheckInventoryTool>();
+        services.AddScoped<IToolHandler, GetShippingPolicyTool>();
+        services.AddScoped<IToolHandler, GetReturnPolicyTool>();
+        services.AddScoped<IToolRegistry, ToolRegistry>();
+        services.AddScoped<IToolExecutor, ToolExecutor>();
+        services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
         services.AddSingleton<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
         services.AddScoped<IApplicationLogger, ApplicationLogger>();

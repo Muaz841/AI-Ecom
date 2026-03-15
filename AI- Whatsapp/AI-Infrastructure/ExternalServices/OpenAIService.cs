@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -14,15 +15,18 @@ public class OpenAIService : IAIService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AISettings _settings;
+    private readonly IAiRuntimeConfigProvider _runtimeConfig;
     private readonly IApplicationLogger _logger;
 
     public OpenAIService(
         IHttpClientFactory httpClientFactory,
         IOptions<AISettings> settings,
+        IAiRuntimeConfigProvider runtimeConfig,
         IApplicationLogger logger)
     {
         _httpClientFactory = httpClientFactory;
         _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
+        _runtimeConfig = runtimeConfig;
         _logger = logger;
     }
 
@@ -34,6 +38,7 @@ public class OpenAIService : IAIService
         var prompt = BuildIntentPrompt(request);
         return ExecutePromptAsync(
             prompt,
+            request.SystemPrompt,
             simulatedResultFactory: () => new IntentDetectionResult("inquiry", 0.95, prompt, "[simulated]", 10, 6, true),
             parse: (responseText, usage, wasSimulated) => new IntentDetectionResult(
                 responseText.Trim(),
@@ -55,6 +60,7 @@ public class OpenAIService : IAIService
         var prompt = BuildReplyPrompt(request);
         return ExecutePromptAsync(
             prompt,
+            request.SystemPrompt,
             simulatedResultFactory: () => new ReplyGenerationResult(
                 true,
                 "Thanks for your message. We will assist you shortly.",
@@ -85,6 +91,7 @@ public class OpenAIService : IAIService
         var prompt = $"Write an ecommerce caption for {request.ProductName}. Description: {request.ProductDescription}. Price: {request.Price} {request.Currency}. Style: {request.StylePreferences}. Limit {request.MaxLength} chars. Include 3 hashtags in separate line prefixed by #.";
         return ExecutePromptAsync(
             prompt,
+            null,
             simulatedResultFactory: () => new CaptionGenerationResult(
                 true,
                 $"New arrival: {request.ProductName} at {request.Price} {request.Currency}. Grab yours now!",
@@ -131,6 +138,7 @@ public class OpenAIService : IAIService
 
         return ExecutePromptAsync(
             prompt,
+            null,
             simulatedResultFactory: () => new AdCopiesResult(
                 true,
                 new[] { "Fast delivery. Limited stock.", "Upgrade your style today.", "Shop now before it sells out." },
@@ -158,6 +166,7 @@ public class OpenAIService : IAIService
 
     private async Task<T> ExecutePromptAsync<T>(
         string prompt,
+        string? systemPrompt,
         Func<T> simulatedResultFactory,
         Func<string, TokenUsage, bool, T> parse,
         bool simulateOnly,
@@ -169,19 +178,29 @@ public class OpenAIService : IAIService
             return simulatedResultFactory();
         }
 
-        EnsureApiKey(_settings.OpenAIApiKey, "OpenAI");
+        // Resolve effective config: DB-first, fallback to appsettings.
+        var rt = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken);
+        var apiKey = rt?.OpenAIApiKey ?? _settings.OpenAIApiKey;
+        var model = rt?.OpenAIModel ?? _settings.OpenAIModel;
+        var timeout = rt?.RequestTimeoutSeconds ?? _settings.RequestTimeoutSeconds;
+
+        EnsureApiKey(apiKey, "OpenAI");
 
         using var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri("https://api.openai.com/");
-        client.Timeout = TimeSpan.FromSeconds(_settings.RequestTimeoutSeconds);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _settings.OpenAIApiKey);
+        client.Timeout = TimeSpan.FromSeconds(timeout);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        var body = new
-        {
-            model = _settings.OpenAIModel,
-            messages = new[] { new { role = "user", content = prompt } },
-            temperature = 0.2
-        };
+        // Build message list — prepend system message when tenant system prompt is available.
+        var messages = string.IsNullOrWhiteSpace(systemPrompt)
+            ? (object)new[] { new { role = "user", content = prompt } }
+            : (object)new object[]
+            {
+                new { role = "system", content = systemPrompt },
+                new { role = "user", content = prompt }
+            };
+
+        var body = new { model, messages, temperature = 0.2 };
 
         using var response = await client.PostAsJsonAsync("v1/chat/completions", body, cancellationToken);
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);

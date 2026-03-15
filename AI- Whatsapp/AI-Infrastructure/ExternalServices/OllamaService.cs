@@ -14,15 +14,18 @@ public class OllamaService : IAIService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AISettings _settings;
+    private readonly IAiRuntimeConfigProvider _runtimeConfig;
     private readonly IApplicationLogger _logger;
 
     public OllamaService(
         IHttpClientFactory httpClientFactory,
         IOptions<AISettings> settings,
+        IAiRuntimeConfigProvider runtimeConfig,
         IApplicationLogger logger)
     {
         _httpClientFactory = httpClientFactory;
         _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
+        _runtimeConfig = runtimeConfig;
         _logger = logger;
     }
 
@@ -34,6 +37,7 @@ public class OllamaService : IAIService
         var prompt = $"Classify customer intent.\nMessage: {request.MessageContent}\nInventory: {request.InventoryContext}\nReturn one: greeting, order_start, inquiry, complaint, unhandled.";
         return ExecutePromptAsync(
             prompt,
+            request.SystemPrompt,
             () => new IntentDetectionResult("inquiry", 0.91, prompt, "[simulated]", 12, 8, true),
             (text, usage, simulated) => new IntentDetectionResult(text.Trim(), 0.82, prompt, text, usage.InputTokens, usage.OutputTokens, simulated),
             simulateOnly,
@@ -48,6 +52,7 @@ public class OllamaService : IAIService
         var prompt = $"Reply politely to customer.\nMessage: {request.MessageContent}\nIntent: {request.DetectedIntent}\nInventory: {request.InventoryContext}";
         return ExecutePromptAsync(
             prompt,
+            request.SystemPrompt,
             () => new ReplyGenerationResult(true, "Thanks for your message. We can help you with that.", prompt, "[simulated]", 18, 20, false, true),
             (text, usage, simulated) => new ReplyGenerationResult(true, text.Trim(), prompt, text, usage.InputTokens, usage.OutputTokens, false, simulated),
             simulateOnly,
@@ -62,6 +67,7 @@ public class OllamaService : IAIService
         var prompt = $"Create an Instagram/Facebook caption for {request.ProductName}. Description: {request.ProductDescription}. Price: {request.Price} {request.Currency}. Style: {request.StylePreferences}.";
         return ExecutePromptAsync(
             prompt,
+            null,
             () => new CaptionGenerationResult(true, $"New drop: {request.ProductName}. Shop now.", new[] { "#newdrop", "#style", "#shopnow" }, prompt, "[simulated]", 22, 20, true),
             (text, usage, simulated) => new CaptionGenerationResult(true, text.Trim(), ExtractHashtags(text), prompt, text, usage.InputTokens, usage.OutputTokens, simulated),
             simulateOnly,
@@ -83,6 +89,7 @@ public class OllamaService : IAIService
 
         return ExecutePromptAsync(
             prompt,
+            null,
             () => new AdCopiesResult(true, new[] { "Limited stock, order now.", "Premium quality for everyday wear.", "Trending style, fast delivery." }, prompt, "[simulated]", 20, 24, estimate, true),
             (text, usage, simulated) => new AdCopiesResult(true, SplitLines(text), prompt, text, usage.InputTokens, usage.OutputTokens, estimate, simulated),
             simulateOnly,
@@ -94,6 +101,7 @@ public class OllamaService : IAIService
 
     private async Task<T> ExecutePromptAsync<T>(
         string prompt,
+        string? systemPrompt,
         Func<T> simulatedResultFactory,
         Func<string, TokenUsage, bool, T> parse,
         bool simulateOnly,
@@ -105,16 +113,20 @@ public class OllamaService : IAIService
             return simulatedResultFactory();
         }
 
-        using var client = _httpClientFactory.CreateClient();
-        client.BaseAddress = new Uri(_settings.OllamaEndpoint);
-        client.Timeout = TimeSpan.FromSeconds(_settings.RequestTimeoutSeconds);
+        // Resolve effective config: DB-first, fallback to appsettings.
+        var rt = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken);
+        var endpoint = rt?.OllamaEndpoint ?? _settings.OllamaEndpoint;
+        var model = rt?.OllamaModel ?? _settings.OllamaModel;
+        var timeout = rt?.RequestTimeoutSeconds ?? _settings.RequestTimeoutSeconds;
 
-        var body = new
-        {
-            model = _settings.OllamaModel,
-            prompt,
-            stream = false
-        };
+        using var client = _httpClientFactory.CreateClient();
+        client.BaseAddress = new Uri(endpoint);
+        client.Timeout = TimeSpan.FromSeconds(timeout);
+
+        // Ollama supports a top-level "system" field for the system prompt.
+        object body = string.IsNullOrWhiteSpace(systemPrompt)
+            ? new { model, prompt, stream = false }
+            : new { model, system = systemPrompt, prompt, stream = false };
 
         using var response = await client.PostAsJsonAsync("api/generate", body, cancellationToken);
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);

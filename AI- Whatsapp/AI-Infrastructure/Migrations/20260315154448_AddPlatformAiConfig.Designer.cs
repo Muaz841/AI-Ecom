@@ -4,6 +4,7 @@ using EcomAI.Platform.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI_Infrastructure.Migrations
 {
     [DbContext(typeof(PlatformDbContext))]
-    partial class PlatformDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260315154448_AddPlatformAiConfig")]
+    partial class AddPlatformAiConfig
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -490,12 +493,6 @@ namespace AI_Infrastructure.Migrations
                     b.Property<bool>("DebugModeEnabled")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("EnableStructuredOutput")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("EnableToolCalling")
-                        .HasColumnType("bit");
-
                     b.Property<string>("GeminiApiKeyProtected")
                         .HasColumnType("nvarchar(max)");
 
@@ -503,9 +500,6 @@ namespace AI_Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
-
-                    b.Property<int?>("MaxTokens")
-                        .HasColumnType("int");
 
                     b.Property<string>("OllamaEndpoint")
                         .IsRequired()
@@ -528,14 +522,8 @@ namespace AI_Infrastructure.Migrations
                     b.Property<int>("RequestTimeoutSeconds")
                         .HasColumnType("int");
 
-                    b.Property<double?>("Temperature")
-                        .HasColumnType("float");
-
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<double?>("TopP")
-                        .HasColumnType("float");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -869,60 +857,6 @@ namespace AI_Infrastructure.Migrations
                     b.ToTable("Tenants", (string)null);
                 });
 
-            modelBuilder.Entity("EcomAI.Platform.Business.Entities.TenantAIProfile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("AiCallsPerHourLimit")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(200);
-
-                    b.Property<string>("BrandRules")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DefaultResponseStyle")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ForbiddenTopics")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Language")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("SystemPrompt")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Tone")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Version")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(1);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId")
-                        .IsUnique();
-
-                    b.ToTable("TenantAIProfiles", (string)null);
-                });
-
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.UserAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1140,15 +1074,6 @@ namespace AI_Infrastructure.Migrations
                     b.HasOne("EcomAI.Platform.Business.Entities.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("EcomAI.Platform.Business.Entities.TenantAIProfile", b =>
-                {
-                    b.HasOne("EcomAI.Platform.Business.Entities.Tenant", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

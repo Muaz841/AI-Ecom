@@ -81,6 +81,178 @@ html[data-theme='dark'] {
   box-sizing: border-box;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PRIMENG FORM CONTROLS — solid backgrounds, clear borders, strong contrast
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── InputText ─────────────────────────────────────────────────────────────
+.p-inputtext {
+  background:    var(--surface-2) !important;
+  border:        1px solid var(--line) !important;
+  color:         var(--text-primary) !important;
+  border-radius: 10px !important;
+  padding:       0.75rem 0.9rem !important;
+  font-size:     0.875rem !important;
+  font-family:   'Manrope', 'Trebuchet MS', sans-serif !important;
+  width:         100%;
+  transition:    border-color 0.15s ease, box-shadow 0.15s ease !important;
+
+  &:focus,
+  &:focus-visible {
+    outline:      none !important;
+    border-color: var(--accent) !important;
+    box-shadow:   0 0 0 3px rgba(16, 185, 129, 0.14) !important;
+  }
+
+  &::placeholder {
+    color:   var(--text-muted) !important;
+    opacity: 0.75 !important;
+  }
+
+  &:disabled,
+  &[disabled] {
+    opacity: 0.45 !important;
+    cursor:  not-allowed !important;
+  }
+}
+
+// ── Password ──────────────────────────────────────────────────────────────
+.p-password { width: 100%; }
+
+// ── Textarea ──────────────────────────────────────────────────────────────
+textarea.p-inputtext,
+.p-textarea {
+  resize:      vertical !important;
+  min-height:  80px;
+  line-height: 1.55 !important;
+}
+
+// ── Select / Dropdown ─────────────────────────────────────────────────────
+.p-select,
+.p-dropdown {
+  background:    var(--surface-2) !important;
+  border:        1px solid var(--line) !important;
+  border-radius: 10px !important;
+  width:         100%;
+  transition:    border-color 0.15s ease, box-shadow 0.15s ease !important;
+
+  &:focus,
+  &.p-focus,
+  &.p-inputwrapper-focus {
+    border-color: var(--accent) !important;
+    box-shadow:   0 0 0 3px rgba(16, 185, 129, 0.14) !important;
+    outline:      none !important;
+  }
+
+  .p-select-label,
+  .p-dropdown-label {
+    color:       var(--text-primary) !important;
+    padding:     0.75rem 0.9rem !important;
+    font-size:   0.875rem !important;
+    font-family: 'Manrope', 'Trebuchet MS', sans-serif !important;
+  }
+
+  .p-select-label.p-placeholder,
+  .p-dropdown-label.p-placeholder {
+    color: var(--text-muted) !important;
+  }
+
+  .p-select-dropdown,
+  .p-dropdown-trigger {
+    color:         var(--text-secondary) !important;
+    background:    transparent !important;
+    border-left:   none !important;
+    padding-right: 0.6rem !important;
+  }
+}
+
+// Select overlay panel
+.p-select-overlay,
+.p-dropdown-panel {
+  background:    var(--surface-2) !important;
+  border:        1px solid var(--line) !important;
+  border-radius: 10px !important;
+  box-shadow:    0 8px 24px rgba(2, 6, 23, 0.45) !important;
+  margin-top:    4px !important;
+
+  .p-select-option,
+  .p-dropdown-item {
+    color:   var(--text-primary) !important;
+    padding: 0.65rem 0.9rem !important;
+
+    &:hover,
+    &.p-select-option-selected,
+    &.p-highlight {
+      background: var(--hover-soft) !important;
+      color:      var(--text-primary) !important;
+    }
+  }
+
+  .p-select-list-container,
+  .p-dropdown-items-wrapper {
+    background: var(--surface-2) !important;
+  }
+}
+
+// ── PrimeNG Buttons ────────────────────────────────────────────────────────
+// All buttons: consistent border-radius and font weight
+.p-button {
+  border-radius: 10px !important;
+  font-weight:   600 !important;
+  font-family:   'Manrope', 'Trebuchet MS', sans-serif !important;
+  padding:       0.7rem 1.25rem !important;
+}
+
+// Primary (no severity class) — accent color, solid
+.p-button:not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-danger):not(.p-button-help):not(.p-button-contrast):not(.p-button-outlined):not(.p-button-text):not(.p-button-link) {
+  background:    var(--accent) !important;
+  border-color:  var(--accent) !important;
+  color:         var(--brand-ink) !important;
+  font-weight:   700 !important;
+
+  &:hover:not(:disabled) {
+    background:   color-mix(in srgb, var(--accent) 82%, #fff) !important;
+    border-color: color-mix(in srgb, var(--accent) 82%, #fff) !important;
+  }
+
+  .p-button-label { font-weight: 700 !important; }
+}
+
+// Outlined variant: stronger border
+.p-button.p-button-outlined {
+  border-width: 1.5px !important;
+}
+
+// ── Dialog ────────────────────────────────────────────────────────────────
+.p-dialog {
+  .p-dialog-header {
+    background:    var(--surface) !important;
+    border-bottom: 1px solid var(--line) !important;
+    padding:       1.25rem 1.5rem !important;
+
+    .p-dialog-title {
+      font-size:   1rem !important;
+      font-weight: 700 !important;
+      color:       var(--text-primary) !important;
+    }
+  }
+
+  .p-dialog-content {
+    background: var(--surface) !important;
+    color:      var(--text-primary) !important;
+    padding:    1.25rem 1.5rem !important;
+  }
+
+  .p-dialog-footer {
+    background:      var(--surface) !important;
+    border-top:      1px solid var(--line) !important;
+    padding:         1rem 1.5rem !important;
+    display:         flex !important;
+    gap:             0.5rem !important;
+    justify-content: flex-end !important;
+  }
+}
+
 // ── Regular toasts (bottom-right) ──────────────────────────────────────────
 .p-toast-bottom-right {
   position: fixed !important;

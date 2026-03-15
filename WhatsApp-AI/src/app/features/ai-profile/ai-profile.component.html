@@ -1,0 +1,236 @@
+<p-toast />
+
+<div class="container-fluid py-4">
+
+  <!-- Header toolbar -->
+  <p-toolbar styleClass="mb-4 surface-card border-round-lg border-1 surface-border">
+    <ng-template #start>
+      <div class="d-flex align-items-center gap-3">
+        <i class="pi pi-user-edit text-primary" style="font-size: 1.4rem"></i>
+        <div>
+          <h5 class="mb-0 fw-semibold">AI Persona Profile</h5>
+          <small class="text-secondary">
+            Define how the AI assistant behaves for every customer conversation.
+          </small>
+        </div>
+      </div>
+    </ng-template>
+    <ng-template #end>
+      @if (profile()) {
+        <p-tag
+          value="v{{ profile()!.version }}"
+          severity="secondary"
+          class="me-2"
+          pTooltip="Profile version"
+        />
+        <p-tag
+          value="Configured"
+          severity="success"
+          icon="pi pi-check-circle"
+        />
+      } @else if (!loading()) {
+        <p-tag value="Not Configured" severity="warn" icon="pi pi-exclamation-triangle" />
+      }
+    </ng-template>
+  </p-toolbar>
+
+  <div class="row g-4">
+
+    <!-- Left: Main form -->
+    <div class="col-lg-8">
+      <p-card>
+        <form [formGroup]="form" (ngSubmit)="save()">
+
+          <!-- System Prompt -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold mb-1">
+              System Prompt <span class="text-danger">*</span>
+            </label>
+            <small class="d-block text-secondary mb-2">
+              Core instructions defining the AI assistant's role, identity, and primary purpose.
+              This is injected into every AI call for your store.
+            </small>
+            <textarea
+              pTextarea
+              formControlName="systemPrompt"
+              rows="8"
+              placeholder="You are a helpful customer support assistant for [Store Name], an online fashion store. Your role is to help customers find products, answer questions about orders, shipping, and returns, and provide a friendly shopping experience..."
+              class="w-100"
+              [autoResize]="true"
+            ></textarea>
+            @if (systemPromptControl?.invalid && systemPromptControl?.touched) {
+              <small class="text-danger">System prompt is required (min 10 characters).</small>
+            }
+          </div>
+
+          <!-- Tone + Language row -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold mb-1">Tone</label>
+              <small class="d-block text-secondary mb-2">Communication style used in all responses.</small>
+              <input
+                pInputText
+                formControlName="tone"
+                placeholder="e.g. friendly, professional, casual, formal"
+                class="w-100"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold mb-1">Language</label>
+              <small class="d-block text-secondary mb-2">Default response language (leave blank for auto-detect).</small>
+              <input
+                pInputText
+                formControlName="language"
+                placeholder="e.g. en, ur, ar"
+                class="w-100"
+              />
+            </div>
+          </div>
+
+          <!-- Brand Rules -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold mb-1">Brand Rules</label>
+            <small class="d-block text-secondary mb-2">
+              Brand voice guidelines, specific phrases to use or avoid, style standards,
+              shipping and return policy text.
+            </small>
+            <textarea
+              pTextarea
+              formControlName="brandRules"
+              rows="4"
+              placeholder="Always address customers by name if known. Never offer discounts without manager approval. Shipping is free above PKR 2000. Returns accepted within 30 days..."
+              class="w-100"
+              [autoResize]="true"
+            ></textarea>
+          </div>
+
+          <!-- Forbidden Topics -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold mb-1">Forbidden Topics</label>
+            <small class="d-block text-secondary mb-2">
+              Comma-separated topics the AI must decline to discuss (safety guardrail).
+            </small>
+            <input
+              pInputText
+              formControlName="forbiddenTopics"
+              placeholder="e.g. politics, religion, competitor brands, pricing negotiation"
+              class="w-100"
+            />
+          </div>
+
+          <!-- Response Style -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold mb-1">Default Response Style</label>
+            <small class="d-block text-secondary mb-2">
+              Template or structure for how responses should be formatted.
+            </small>
+            <textarea
+              pTextarea
+              formControlName="defaultResponseStyle"
+              rows="3"
+              placeholder="Start with a greeting, address the question directly, end with an offer to help further."
+              class="w-100"
+              [autoResize]="true"
+            ></textarea>
+          </div>
+
+          <!-- Rate limit -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold mb-1">AI Calls Per Hour Limit</label>
+            <small class="d-block text-secondary mb-2">
+              Maximum AI calls allowed per hour for this tenant. Set to 0 for unlimited.
+            </small>
+            <input
+              pInputText
+              type="number"
+              formControlName="aiCallsPerHourLimit"
+              min="0"
+              max="10000"
+              class="w-100"
+              style="max-width: 200px"
+            />
+            @if (aiCallsControl?.invalid && aiCallsControl?.touched) {
+              <small class="text-danger d-block mt-1">Value must be between 0 and 10,000.</small>
+            }
+          </div>
+
+          <!-- Submit -->
+          <div class="d-flex justify-content-end">
+            <p-button
+              type="submit"
+              label="Save Profile"
+              icon="pi pi-save"
+              [loading]="saving()"
+              [disabled]="form.invalid"
+            />
+          </div>
+
+        </form>
+      </p-card>
+    </div>
+
+    <!-- Right: Info panel -->
+    <div class="col-lg-4">
+
+      <!-- How it works -->
+      <p-card styleClass="mb-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="pi pi-info-circle text-primary"></i>
+          <span class="fw-semibold">How it works</span>
+        </div>
+        <ul class="ps-3 text-secondary" style="font-size: 0.875rem; line-height: 1.7">
+          <li>The system prompt is injected into <strong>every</strong> AI request for your tenant.</li>
+          <li>Tone and language guide the model's response style.</li>
+          <li>Brand rules and policies are included in tool-assisted responses.</li>
+          <li>Forbidden topics are enforced as hard refusals.</li>
+          <li>Safety policies are always appended and cannot be overridden.</li>
+        </ul>
+      </p-card>
+
+      <!-- Available tools -->
+      <p-card styleClass="mb-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="pi pi-wrench text-primary"></i>
+          <span class="fw-semibold">Agent Tools Available</span>
+        </div>
+        <div class="d-flex flex-column gap-2" style="font-size: 0.875rem">
+          <div class="d-flex align-items-start gap-2">
+            <i class="pi pi-search text-success mt-1"></i>
+            <div><strong>search_products</strong><br><span class="text-secondary">Search product catalog by keyword</span></div>
+          </div>
+          <div class="d-flex align-items-start gap-2">
+            <i class="pi pi-box text-info mt-1"></i>
+            <div><strong>check_inventory</strong><br><span class="text-secondary">Check stock for a specific product</span></div>
+          </div>
+          <div class="d-flex align-items-start gap-2">
+            <i class="pi pi-truck text-warning mt-1"></i>
+            <div><strong>get_shipping_policy</strong><br><span class="text-secondary">Retrieve shipping timeframes and costs</span></div>
+          </div>
+          <div class="d-flex align-items-start gap-2">
+            <i class="pi pi-refresh text-danger mt-1"></i>
+            <div><strong>get_return_policy</strong><br><span class="text-secondary">Retrieve return and refund conditions</span></div>
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Last updated -->
+      @if (profile()) {
+        <p-card>
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="pi pi-clock text-secondary"></i>
+            <span class="fw-semibold text-secondary" style="font-size: 0.875rem">Profile Info</span>
+          </div>
+          <div style="font-size: 0.875rem" class="text-secondary">
+            <div class="mb-1">Version: <strong class="text-body">{{ profile()!.version }}</strong></div>
+            <div class="mb-1">Created: <strong class="text-body">{{ profile()!.createdAt | date:'mediumDate' }}</strong></div>
+            @if (profile()!.updatedAt) {
+              <div>Updated: <strong class="text-body">{{ profile()!.updatedAt | date:'mediumDate' }}</strong></div>
+            }
+          </div>
+        </p-card>
+      }
+
+    </div>
+
+  </div>
+</div>

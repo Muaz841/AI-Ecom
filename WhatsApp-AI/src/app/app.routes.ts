@@ -14,6 +14,8 @@ import { InboxComponent } from './features/messaging/inbox.component';
 import { PlatformSettingsComponent } from './features/platform-settings/platform-settings.component';
 import { RbacComponent } from './features/rbac/rbac.component';
 import { WebhookTesterComponent } from './features/dev/webhook-tester/webhook-tester.component';
+import { AiSettingsComponent } from './features/ai-settings/ai-settings.component';
+import { AiProfileComponent } from './features/ai-profile/ai-profile.component';
 
 const messagingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'messaging');
 const contentModule = SIDEBAR_PIPELINE.find((module) => module.id === 'content');
@@ -23,6 +25,8 @@ const settingsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'settings
 const rbacModule = SIDEBAR_PIPELINE.find((module) => module.id === 'rbac');
 const tenantsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'tenants');
 const platformSettingsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'platform-settings');
+const aiSettingsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'ai-settings');
+const aiProfileModule = SIDEBAR_PIPELINE.find((module) => module.id === 'ai-profile');
 const webhookTesterModule = SIDEBAR_PIPELINE.find((module) => module.id === 'webhook-tester');
 
 export const routes: Routes = [
@@ -119,6 +123,26 @@ export const routes: Routes = [
           subtitle: platformSettingsModule?.subtitle ?? '',
         },
         component: PlatformSettingsComponent,
+      },
+      {
+        path: 'host/ai-settings',
+        canActivate: [permissionGuard],
+        data: {
+          permissions: aiSettingsModule?.requiredPermissions ?? ['platform.settings'],
+          title: aiSettingsModule?.label ?? 'AI Provider',
+          subtitle: aiSettingsModule?.subtitle ?? 'Configure AI provider, model selection, and API keys for the platform.',
+        },
+        component: AiSettingsComponent,
+      },
+      {
+        path: 'settings/ai-profile',
+        canActivate: [permissionGuard],
+        data: {
+          permissions: aiProfileModule?.requiredPermissions ?? ['ai.manage'],
+          title: aiProfileModule?.label ?? 'AI Persona',
+          subtitle: aiProfileModule?.subtitle ?? 'Define the AI assistant persona, tone, and brand rules.',
+        },
+        component: AiProfileComponent,
       },
       {
         path: 'dev/webhooks',

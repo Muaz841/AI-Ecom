@@ -4,6 +4,7 @@ using EcomAI.Platform.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI_Infrastructure.Migrations
 {
     [DbContext(typeof(PlatformDbContext))]
-    partial class PlatformDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260315162210_AddTenantAIProfile")]
+    partial class AddTenantAIProfile
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -490,12 +493,6 @@ namespace AI_Infrastructure.Migrations
                     b.Property<bool>("DebugModeEnabled")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("EnableStructuredOutput")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("EnableToolCalling")
-                        .HasColumnType("bit");
-
                     b.Property<string>("GeminiApiKeyProtected")
                         .HasColumnType("nvarchar(max)");
 
@@ -503,9 +500,6 @@ namespace AI_Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
-
-                    b.Property<int?>("MaxTokens")
-                        .HasColumnType("int");
 
                     b.Property<string>("OllamaEndpoint")
                         .IsRequired()
@@ -528,14 +522,8 @@ namespace AI_Infrastructure.Migrations
                     b.Property<int>("RequestTimeoutSeconds")
                         .HasColumnType("int");
 
-                    b.Property<double?>("Temperature")
-                        .HasColumnType("float");
-
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<double?>("TopP")
-                        .HasColumnType("float");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");

@@ -27,6 +27,8 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
     private readonly IConversationThreadRepository _conversationThreadRepository;
     private readonly IProductRepository _productRepository;
     private readonly IAIService _aiService;
+    private readonly IAgentOrchestrator _agentOrchestrator;
+    private readonly ITenantPromptBuilder _promptBuilder;
     private readonly IMetaMessagingService _metaService;
     private readonly IApplicationLogger _logger;
     private readonly IRealtimeNotifier _realtimeNotifier;
@@ -35,6 +37,8 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         IConversationThreadRepository conversationThreadRepository,
         IProductRepository productRepository,
         IAIService aiService,
+        IAgentOrchestrator agentOrchestrator,
+        ITenantPromptBuilder promptBuilder,
         IMetaMessagingService metaService,
         IApplicationLogger logger,
         IRealtimeNotifier realtimeNotifier)
@@ -42,6 +46,8 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         _conversationThreadRepository = conversationThreadRepository;
         _productRepository = productRepository;
         _aiService = aiService;
+        _agentOrchestrator = agentOrchestrator;
+        _promptBuilder = promptBuilder;
         _metaService = metaService;
         _logger = logger;
         _realtimeNotifier = realtimeNotifier;
@@ -131,6 +137,9 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         var inventoryContext = BuildInventoryContext(availableProducts);
 
+        // Resolve tenant system prompt (null = no profile configured, fall back to generic).
+        var systemPrompt = await _promptBuilder.GetSystemPromptAsync(request.TenantId, cancellationToken);
+
         var detectedIntent = FallbackIntent;
         var intentDetectedSuccessfully = false;
         try
@@ -139,7 +148,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             aiCallsUsed++;
 
             var intentResult = await _aiService.DetectIntentAsync(
-                new IntentRequest(request.Content, inventoryContext, request.Platform),
+                new IntentRequest(request.Content, inventoryContext, request.Platform, SystemPrompt: systemPrompt),
                 cancellationToken: cancellationToken);
 
             if (IsValidIntent(intentResult.DetectedIntent))
@@ -168,32 +177,40 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         {
             try
             {
-                EnsureAiBudget(aiCallsUsed);
-                aiCallsUsed++;
-
-                var replyResult = await _aiService.GenerateReplyAsync(
-                    new ReplyRequest(
+                // Use AgentOrchestrator for reply generation — enables tool-calling loop.
+                var agentResult = await _agentOrchestrator.RunAsync(
+                    new AgentRequest(
+                        request.TenantId,
                         request.Content,
                         detectedIntent,
                         inventoryContext,
-                        message.Id.ToString()),
-                    cancellationToken: cancellationToken);
+                        message.Id.ToString(),
+                        systemPrompt),
+                    cancellationToken);
 
-                if (replyResult.Success && !string.IsNullOrWhiteSpace(replyResult.GeneratedReply))
+                if (agentResult.Success && !string.IsNullOrWhiteSpace(agentResult.FinalReply))
                 {
-                    generatedReply = replyResult.GeneratedReply.Trim();
+                    generatedReply = agentResult.FinalReply.Trim();
+                    if (agentResult.ToolCallsMade.Count > 0)
+                    {
+                        _logger.Info(
+                            "Agent used {ToolCount} tool(s) for message {MessageId}: {Tools}",
+                            agentResult.ToolCallsMade.Count,
+                            message.Id,
+                            string.Join(", ", System.Linq.Enumerable.Select(agentResult.ToolCallsMade, t => t.ToolName)));
+                    }
                 }
                 else
                 {
                     _logger.Warning(
-                        "AI reply generation returned invalid/failed result for message {MessageId}. Using deterministic fallback reply. Error: {Error}",
+                        "Agent returned invalid/failed result for message {MessageId}. Using deterministic fallback. Error: {Error}",
                         message.Id,
-                        replyResult.ErrorMessage);
+                        agentResult.ErrorMessage);
                 }
             }
             catch (Exception ex)
             {
-                _logger.Warning(ex, "AI reply generation failed for message {MessageId}. Using deterministic fallback reply.", message.Id);
+                _logger.Warning(ex, "Agent orchestration failed for message {MessageId}. Using deterministic fallback.", message.Id);
             }
         }
         else

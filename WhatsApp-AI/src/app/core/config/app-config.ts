@@ -38,6 +38,15 @@ export interface AppConfig {
     users: string;
     userRole: (userId: string, roleId: string) => string;
   };
+  aiSettings: {
+    get: string;
+    save: string;
+    models: (provider: string) => string;
+  };
+  aiProfile: {
+    get: string;
+    save: string;
+  };
   dev: {
     webhookTest: string;
   };
@@ -81,6 +90,15 @@ export const APP_CONFIG: AppConfig = {
     rolePermissions: (roleId: string) => `/api/rbac/roles/${roleId}/permissions`,
     users: '/api/rbac/users',
     userRole: (userId: string, roleId: string) => `/api/rbac/users/${userId}/roles/${roleId}`,
+  },
+  aiSettings: {
+    get: '/api/host/ai-settings',
+    save: '/api/host/ai-settings',
+    models: (provider: string) => `/api/host/ai-settings/models?provider=${encodeURIComponent(provider)}`,
+  },
+  aiProfile: {
+    get: '/api/v1/tenant/ai-profile',
+    save: '/api/v1/tenant/ai-profile',
   },
   dev: {
     webhookTest: '/api/dev/webhooks/test',
