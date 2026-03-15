@@ -233,8 +233,8 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
         var config = await _repository.GetAsync(ct);
         if (config is null || string.IsNullOrWhiteSpace(config.GeminiApiKeyProtected))
         {
-            _logger.LogInformation("No Gemini API key configured. Using curated model catalog.");
-            return new List<AiModelInfoDto>(GeminiModels);
+            _logger.LogInformation("No Gemini API key configured — model list will be empty until a key is saved.");
+            return [];
         }
 
         string? apiKey = null;
@@ -242,7 +242,7 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
         catch { /* key corrupted */ }
 
         if (string.IsNullOrWhiteSpace(apiKey))
-            return new List<AiModelInfoDto>(GeminiModels);
+            return [];
 
         return await FetchGeminiModelsAsync(apiKey, ct);
     }
@@ -256,7 +256,7 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models?key={apiKey}&pageSize=100";
             var response = await client.GetFromJsonAsync<GeminiModelsResponse>(url, ct);
-            if (response?.Models is null) return new List<AiModelInfoDto>(GeminiModels);
+            if (response?.Models is null) return [];
 
             var result = response.Models
                 .Where(m => m.SupportedGenerationMethods.Contains("generateContent"))
@@ -264,12 +264,12 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
                 .OrderBy(m => m.Name)
                 .ToList();
 
-            return result.Count > 0 ? result : new List<AiModelInfoDto>(GeminiModels);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch Gemini model list from live API. Using curated catalog as fallback.");
-            return new List<AiModelInfoDto>(GeminiModels);
+            _logger.LogWarning(ex, "Failed to fetch Gemini model list from live API.");
+            return [];
         }
     }
 
@@ -389,10 +389,10 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
             DebugModeEnabled: config.DebugModeEnabled,
             OllamaEndpoint: config.OllamaEndpoint,
             OllamaModel: config.OllamaModel,
-            OpenAIModel: config.OpenAIModel,
+            OpenAIModel: string.IsNullOrWhiteSpace(config.OpenAIModel) ? null : config.OpenAIModel,
             OpenAIApiKeySet: openAIKeySet,
             OpenAIApiKeyMasked: openAIKeySet ? KeyMask : null,
-            GeminiModel: config.GeminiModel,
+            GeminiModel: string.IsNullOrWhiteSpace(config.GeminiModel) ? null : config.GeminiModel,
             GeminiApiKeySet: geminiKeySet,
             GeminiApiKeyMasked: geminiKeySet ? KeyMask : null,
             RequestTimeoutSeconds: config.RequestTimeoutSeconds,
@@ -410,10 +410,10 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
         DebugModeEnabled: true,
         OllamaEndpoint: "http://localhost:11434",
         OllamaModel: "llama3.1:8b",
-        OpenAIModel: "gpt-4o-mini",
+        OpenAIModel: null,
         OpenAIApiKeySet: false,
         OpenAIApiKeyMasked: null,
-        GeminiModel: "gemini-1.5-flash",
+        GeminiModel: null,
         GeminiApiKeySet: false,
         GeminiApiKeyMasked: null,
         RequestTimeoutSeconds: 60,

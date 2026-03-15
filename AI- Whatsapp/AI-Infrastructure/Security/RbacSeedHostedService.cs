@@ -94,6 +94,12 @@ public sealed class RbacSeedHostedService : IHostedService
             allPermissions.Select(p => RolePermission.Create(null, superAdminRole.Id, p.Id)),
             cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+
+        // Ensure all existing tenant roles have their expected permissions,
+        // and all tenant users are assigned to their role.
+        // Handles tenants created before permissions were seeded (race condition / re-used DB).
+        await EnsureTenantRolePermissionsAsync(db, allPermissions, cancellationToken);
+        await EnsureTenantUserRolesAsync(db, cancellationToken);
         
         if (string.IsNullOrWhiteSpace(_settings.SuperUserEmail) || string.IsNullOrWhiteSpace(_settings.SuperUserPassword))
         {
@@ -129,6 +135,128 @@ public sealed class RbacSeedHostedService : IHostedService
             await db.SaveChangesAsync(cancellationToken);
         }
       
+    }
+
+    // Expected permission codes per tenant role code — must stay in sync with TenantProvisioningService.DefaultTenantRoles
+    private static readonly Dictionary<string, string[]> TenantRolePermissions = new()
+    {
+        ["tenant_admin"] = PermissionCodes.TenantScoped,
+        ["manager"] = [
+            PermissionCodes.ConversationsRead,
+            PermissionCodes.ConversationsManage,
+            PermissionCodes.ProductsManage,
+            PermissionCodes.IntegrationsRead,
+            PermissionCodes.LogsRead
+        ],
+        ["agent"] = [
+            PermissionCodes.ConversationsRead,
+            PermissionCodes.ConversationsManage
+        ]
+    };
+
+    private static async Task EnsureTenantRolePermissionsAsync(
+        Persistence.PlatformDbContext db,
+        System.Collections.Generic.List<Permission> allGlobalPermissions,
+        CancellationToken cancellationToken)
+    {
+        var permissionByCode = allGlobalPermissions.ToDictionary(p => p.Code, p => p.Id);
+
+        // Load all tenant roles matching the default role codes
+        var tenantRoles = await db.Set<Role>()
+            .Where(r => r.TenantId != null && TenantRolePermissions.Keys.Contains(r.Code))
+            .ToListAsync(cancellationToken);
+
+        if (tenantRoles.Count == 0) return;
+
+        var roleIds = tenantRoles.Select(r => r.Id).ToList();
+
+        // Load all existing role permission assignments for these roles
+        var existingAssignments = await db.Set<RolePermission>()
+            .Where(rp => roleIds.Contains(rp.RoleId))
+            .Select(rp => new { rp.RoleId, rp.PermissionId })
+            .ToListAsync(cancellationToken);
+
+        var existingSet = existingAssignments
+            .Select(x => (x.RoleId, x.PermissionId))
+            .ToHashSet();
+
+        var toAdd = new System.Collections.Generic.List<RolePermission>();
+
+        foreach (var role in tenantRoles)
+        {
+            if (!TenantRolePermissions.TryGetValue(role.Code, out var expectedCodes)) continue;
+
+            foreach (var code in expectedCodes)
+            {
+                if (!permissionByCode.TryGetValue(code, out var permId)) continue;
+                if (!existingSet.Contains((role.Id, permId)))
+                {
+                    toAdd.Add(RolePermission.Create(role.TenantId, role.Id, permId));
+                }
+            }
+        }
+
+        if (toAdd.Count > 0)
+        {
+            await db.Set<RolePermission>().AddRangeAsync(toAdd, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    // Ensures every tenant UserAccount is assigned to the Role matching their denormalized Role field.
+    // Fixes users created without a corresponding UserRole entry.
+    private static async Task EnsureTenantUserRolesAsync(
+        Persistence.PlatformDbContext db,
+        CancellationToken cancellationToken)
+    {
+        // Load all tenant roles (code → role)
+        var tenantRoles = await db.Set<Role>()
+            .Where(r => r.TenantId != null && TenantRolePermissions.Keys.Contains(r.Code))
+            .ToListAsync(cancellationToken);
+
+        if (tenantRoles.Count == 0) return;
+
+        // Group roles by (tenantId, code) for fast lookup
+        var roleMap = tenantRoles
+            .GroupBy(r => (r.TenantId!.Value, r.Code))
+            .ToDictionary(g => g.Key, g => g.First().Id);
+
+        var tenantIds = tenantRoles.Select(r => r.TenantId!.Value).Distinct().ToList();
+
+        // Load all tenant users whose denormalized Role is one of the default codes
+        var tenantUsers = await db.Set<UserAccount>()
+            .Where(u => u.TenantId != null
+                && tenantIds.Contains(u.TenantId!.Value)
+                && TenantRolePermissions.Keys.Contains(u.Role))
+            .ToListAsync(cancellationToken);
+
+        if (tenantUsers.Count == 0) return;
+
+        var userIds = tenantUsers.Select(u => u.Id).ToList();
+
+        // Load existing UserRole assignments for these users
+        var existingUserRoles = await db.Set<UserRole>()
+            .Where(ur => userIds.Contains(ur.UserAccountId))
+            .Select(ur => ur.UserAccountId)
+            .ToHashSetAsync(cancellationToken);
+
+        var toAdd = new System.Collections.Generic.List<UserRole>();
+
+        foreach (var user in tenantUsers)
+        {
+            if (existingUserRoles.Contains(user.Id)) continue;
+
+            var key = (user.TenantId!.Value, user.Role);
+            if (!roleMap.TryGetValue(key, out var roleId)) continue;
+
+            toAdd.Add(UserRole.Create(user.TenantId, user.Id, roleId));
+        }
+
+        if (toAdd.Count > 0)
+        {
+            await db.Set<UserRole>().AddRangeAsync(toAdd, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

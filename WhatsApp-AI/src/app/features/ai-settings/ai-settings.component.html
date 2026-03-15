@@ -116,7 +116,7 @@
             </div>
             <div class="form-row two-col">
               <div class="form-field">
-                <label class="field-label">Model <span class="required">*</span></label>
+                <label class="field-label">Model</label>
                 @if (loadingModels()) {
                   <div class="field-loading">
                     <p-progressSpinner strokeWidth="4" class="field-spinner"></p-progressSpinner>
@@ -131,6 +131,11 @@
                     placeholder="Select a model"
                     class="ai-select"
                   ></p-select>
+                  @if (modelsLoadFailed()) {
+                    <span class="field-error"><i class="pi pi-exclamation-circle"></i> Failed to load models. Try refreshing.</span>
+                  } @else if (!config()?.openAIApiKeySet) {
+                    <span class="field-hint"><i class="pi pi-info-circle"></i> Save your API key first — models will load automatically.</span>
+                  }
                 }
                 @if (selectedModelInfo(); as info) {
                   <div class="capability-badges">
@@ -193,7 +198,7 @@
             </div>
             <div class="form-row two-col">
               <div class="form-field">
-                <label class="field-label">Model <span class="required">*</span></label>
+                <label class="field-label">Model</label>
                 @if (loadingModels()) {
                   <div class="field-loading">
                     <p-progressSpinner strokeWidth="4" class="field-spinner"></p-progressSpinner>
@@ -208,6 +213,11 @@
                     placeholder="Select a model"
                     class="ai-select"
                   ></p-select>
+                  @if (modelsLoadFailed()) {
+                    <span class="field-error"><i class="pi pi-exclamation-circle"></i> Failed to load models. Check your API key or refresh.</span>
+                  } @else if (!config()?.geminiApiKeySet) {
+                    <span class="field-hint"><i class="pi pi-info-circle"></i> Save your API key first — live models will load automatically.</span>
+                  }
                 }
                 @if (selectedModelInfo(); as info) {
                   <div class="capability-badges">

@@ -25,9 +25,14 @@ public sealed class PlatformAiConfigRepository : IPlatformAiConfigRepository
     {
         var existing = await _db.PlatformAiConfigs.FirstOrDefaultAsync(cancellationToken);
         if (existing is null)
+        {
             await _db.PlatformAiConfigs.AddAsync(config, cancellationToken);
+        }
         else
-            _db.PlatformAiConfigs.Update(config);
+        {
+            // existing is tracked; copy scalar values from the updated (untracked) entity onto it.
+            _db.Entry(existing).CurrentValues.SetValues(config);
+        }
 
         await _db.SaveChangesAsync(cancellationToken);
     }

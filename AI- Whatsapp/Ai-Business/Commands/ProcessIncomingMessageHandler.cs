@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
+using EcomAI.Platform.Business.Common;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 
@@ -23,6 +24,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
     private const int MaxAiCallsPerMessage = 2;
     private const string FallbackIntent = "unhandled";
     private const string FallbackReply = "Thanks for your message. Our team will get back to you shortly.";
+    private const string ModelNotConfiguredReply = "⚠️ Our AI assistant is not fully set up yet. Please contact support.";
 
     private readonly IConversationThreadRepository _conversationThreadRepository;
     private readonly IProductRepository _productRepository;
@@ -142,6 +144,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         var detectedIntent = FallbackIntent;
         var intentDetectedSuccessfully = false;
+        var generatedReply = FallbackReply;
         try
         {
             EnsureAiBudget(aiCallsUsed);
@@ -165,6 +168,12 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
                     intentResult.DetectedIntent);
             }
         }
+        catch (AiModelNotConfiguredException ex)
+        {
+            _logger.Warning(ex, "AI model not configured for message {MessageId}. Sending model-not-configured reply.", message.Id);
+             generatedReply = ModelNotConfiguredReply;
+            goto SendReply;
+        }
         catch (Exception ex)
         {
             _logger.Warning(ex, "Intent detection failed for message {MessageId}. Falling back to '{FallbackIntent}'", message.Id, FallbackIntent);
@@ -172,7 +181,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         message.MarkAsHandledByAI(detectedIntent);
 
-        var generatedReply = FallbackReply;
+    
         if (intentDetectedSuccessfully)
         {
             try
@@ -218,6 +227,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             _logger.Warning("Skipping AI reply generation for message {MessageId} due to failed intent detection.", message.Id);
         }
 
+        SendReply:
         var sendResult = await _metaService.SendTextMessageAsync(
             request.TenantId,
             request.Platform,

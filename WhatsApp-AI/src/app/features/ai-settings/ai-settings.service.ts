@@ -42,11 +42,15 @@ export interface AiConfigResult {
 export interface SaveAiConfigRequest {
   activeProvider: string;
   debugModeEnabled: boolean;
-  ollamaEndpoint: string;
-  ollamaModel: string;
-  openAIModel: string;
+  /** null when Ollama is not the active provider — backend preserves existing value */
+  ollamaEndpoint: string | null;
+  /** null when Ollama is not the active provider — backend preserves existing value */
+  ollamaModel: string | null;
+  /** null when OpenAI is not the active provider — backend preserves existing value */
+  openAIModel: string | null;
   openAIApiKey: string | null;
-  geminiModel: string;
+  /** null when Gemini is not the active provider — backend preserves existing value */
+  geminiModel: string | null;
   geminiApiKey: string | null;
   requestTimeoutSeconds: number;
   enableToolCalling: boolean;

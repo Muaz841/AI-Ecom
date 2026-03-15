@@ -86,12 +86,16 @@ public sealed record PlatformAiConfigResult(
 public sealed record SavePlatformAiConfigRequest(
     string ActiveProvider,
     bool DebugModeEnabled,
-    string OllamaEndpoint,
-    string OllamaModel,
-    string OpenAIModel,
+    /// <summary>Null when Ollama is not the active provider — backend preserves existing value.</summary>
+    string? OllamaEndpoint,
+    /// <summary>Null when Ollama is not the active provider — backend preserves existing value.</summary>
+    string? OllamaModel,
+    /// <summary>Null when OpenAI is not the active provider — backend preserves existing value.</summary>
+    string? OpenAIModel,
     /// <summary>Null or masked placeholder = keep existing key. New value = rotate key.</summary>
     string? OpenAIApiKey,
-    string GeminiModel,
+    /// <summary>Null when Gemini is not the active provider — backend preserves existing value.</summary>
+    string? GeminiModel,
     /// <summary>Null or masked placeholder = keep existing key. New value = rotate key.</summary>
     string? GeminiApiKey,
     int RequestTimeoutSeconds,

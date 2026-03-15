@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using EcomAI.Platform.Business.Common;
 using EcomAI.Platform.Business.Interfaces;
 using Microsoft.Extensions.Options;
 
@@ -118,6 +119,9 @@ public class GeminiService : IAIService
         var apiKey = rt?.GeminiApiKey ?? _settings.GeminiApiKey;
         var model = rt?.GeminiModel ?? _settings.GeminiModel;
         var timeout = rt?.RequestTimeoutSeconds ?? _settings.RequestTimeoutSeconds;
+
+        if (string.IsNullOrWhiteSpace(model))
+            throw new AiModelNotConfiguredException();
 
         EnsureApiKey(apiKey, "Gemini");
 

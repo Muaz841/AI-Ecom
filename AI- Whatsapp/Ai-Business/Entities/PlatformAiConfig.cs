@@ -49,11 +49,11 @@ public class PlatformAiConfig : Entity<Guid>
     public static PlatformAiConfig Create(
         string activeProvider,
         bool debugModeEnabled,
-        string ollamaEndpoint,
-        string ollamaModel,
-        string openAIModel,
+        string? ollamaEndpoint,
+        string? ollamaModel,
+        string? openAIModel,
         string? openAIApiKeyProtected,
-        string geminiModel,
+        string? geminiModel,
         string? geminiApiKeyProtected,
         int requestTimeoutSeconds,
         bool enableToolCalling = false,
@@ -69,9 +69,9 @@ public class PlatformAiConfig : Entity<Guid>
             DebugModeEnabled = debugModeEnabled,
             OllamaEndpoint = string.IsNullOrWhiteSpace(ollamaEndpoint) ? "http://localhost:11434" : ollamaEndpoint.Trim(),
             OllamaModel = string.IsNullOrWhiteSpace(ollamaModel) ? "llama3.1:8b" : ollamaModel.Trim(),
-            OpenAIModel = string.IsNullOrWhiteSpace(openAIModel) ? "gpt-4o-mini" : openAIModel.Trim(),
+            OpenAIModel = openAIModel?.Trim() ?? string.Empty,
             OpenAIApiKeyProtected = openAIApiKeyProtected,
-            GeminiModel = string.IsNullOrWhiteSpace(geminiModel) ? "gemini-1.5-flash" : geminiModel.Trim(),
+            GeminiModel = geminiModel?.Trim() ?? string.Empty,
             GeminiApiKeyProtected = geminiApiKeyProtected,
             RequestTimeoutSeconds = requestTimeoutSeconds > 0 ? requestTimeoutSeconds : 60,
             EnableToolCalling = enableToolCalling,
@@ -86,11 +86,11 @@ public class PlatformAiConfig : Entity<Guid>
     public void Update(
         string activeProvider,
         bool debugModeEnabled,
-        string ollamaEndpoint,
-        string ollamaModel,
-        string openAIModel,
+        string? ollamaEndpoint,
+        string? ollamaModel,
+        string? openAIModel,
         string? openAIApiKeyProtected,
-        string geminiModel,
+        string? geminiModel,
         string? geminiApiKeyProtected,
         int requestTimeoutSeconds,
         bool enableToolCalling = false,
@@ -103,13 +103,13 @@ public class PlatformAiConfig : Entity<Guid>
         DebugModeEnabled = debugModeEnabled;
         OllamaEndpoint = string.IsNullOrWhiteSpace(ollamaEndpoint) ? "http://localhost:11434" : ollamaEndpoint.Trim();
         OllamaModel = string.IsNullOrWhiteSpace(ollamaModel) ? "llama3.1:8b" : ollamaModel.Trim();
-        OpenAIModel = string.IsNullOrWhiteSpace(openAIModel) ? "gpt-4o-mini" : openAIModel.Trim();
+        OpenAIModel = openAIModel?.Trim() ?? OpenAIModel;
 
         // Only rotate keys when a new non-null protected value is provided.
         if (openAIApiKeyProtected is not null)
             OpenAIApiKeyProtected = openAIApiKeyProtected;
 
-        GeminiModel = string.IsNullOrWhiteSpace(geminiModel) ? "gemini-1.5-flash" : geminiModel.Trim();
+        GeminiModel = geminiModel?.Trim() ?? GeminiModel;
 
         if (geminiApiKeyProtected is not null)
             GeminiApiKeyProtected = geminiApiKeyProtected;

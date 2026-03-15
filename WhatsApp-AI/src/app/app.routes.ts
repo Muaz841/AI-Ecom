@@ -48,11 +48,11 @@ export const routes: Routes = [
         path: 'dashboard',
         canActivate: [permissionGuard],
         data: {
-          permissions: settingsModule?.requiredPermissions ?? ['integrations.read'],
-          title: 'Channel Integrations',
-          subtitle: 'Connect your social messaging channels to automate customer conversations.',
+          permissions: [],
+          title: 'Coming Soon',
+          subtitle: 'Your dashboard overview is on its way.',
         },
-        component: MetaIntegrationsComponent,
+        component: DashboardPlaceholderComponent,
       },
       {
         path: 'messaging',

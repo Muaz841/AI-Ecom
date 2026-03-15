@@ -49,6 +49,7 @@ export class AiSettingsComponent implements OnInit {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly loadingModels = signal(false);
+  readonly modelsLoadFailed = signal(false);
   readonly config = signal<AiConfigResult | null>(null);
   readonly models = signal<AiModelInfo[]>([]);
   readonly showOpenAIKey = signal(false);
@@ -89,9 +90,9 @@ export class AiSettingsComponent implements OnInit {
       debugModeEnabled: [true],
       ollamaEndpoint: ['http://localhost:11434', Validators.required],
       ollamaModel: ['llama3.1:8b', Validators.required],
-      openAIModel: ['gpt-4o-mini', Validators.required],
+      openAIModel: [null],
       openAIApiKey: [''],
-      geminiModel: ['gemini-1.5-flash', Validators.required],
+      geminiModel: [null],
       geminiApiKey: [''],
       requestTimeoutSeconds: [60, [Validators.required, Validators.min(10), Validators.max(300)]],
       enableToolCalling: [false],
@@ -132,15 +133,42 @@ export class AiSettingsComponent implements OnInit {
   get isMock(): boolean  { return this.activeProvider === 'Mock'; }
 
   loadModels(provider: string, refresh = false): void {
-    if (provider === 'Mock' || provider === 'Ollama') { this.models.set([]); return; }
+    if (provider === 'Mock' || provider === 'Ollama') {
+      this.models.set([]);
+      this.modelsLoadFailed.set(false);
+      return;
+    }
+
     this.loadingModels.set(true);
+    this.modelsLoadFailed.set(false);
+
     this.service.getModels(provider, refresh).subscribe({
       next: (result) => {
-        this.models.set(result.models);
+        let models = [...result.models];
+
+        // If the saved model is not in the loaded list (e.g. renamed / removed by provider),
+        // prepend it so the dropdown always shows the current saved value.
+        const savedModel = provider === 'OpenAI'
+          ? (this.form.get('openAIModel')?.value as string | null)
+          : (this.form.get('geminiModel')?.value as string | null);
+
+        if (savedModel && models.length > 0 && !models.some(m => m.name === savedModel)) {
+          models.unshift({
+            name: savedModel,
+            label: `${savedModel} (saved — not in current list)`,
+            supportsToolCalling: false,
+            supportsStructuredOutput: false,
+            contextWindow: 0,
+            isPreview: false,
+          });
+        }
+
+        this.models.set(models);
         this.loadingModels.set(false);
       },
       error: () => {
         this.models.set([]);
+        this.modelsLoadFailed.set(true);
         this.loadingModels.set(false);
       },
     });
@@ -159,16 +187,18 @@ export class AiSettingsComponent implements OnInit {
 
     this.saving.set(true);
     const v = this.form.value;
+    const provider: string = v.activeProvider;
 
     this.service.saveConfig({
-      activeProvider: v.activeProvider,
+      activeProvider: provider,
       debugModeEnabled: v.debugModeEnabled,
-      ollamaEndpoint: v.ollamaEndpoint?.trim(),
-      ollamaModel: v.ollamaModel?.trim(),
-      openAIModel: v.openAIModel?.trim(),
-      openAIApiKey: v.openAIApiKey?.trim() || null,
-      geminiModel: v.geminiModel?.trim(),
-      geminiApiKey: v.geminiApiKey?.trim() || null,
+      // Only send fields for the active provider; null tells the backend to preserve existing values.
+      ollamaEndpoint:  provider === 'Ollama'  ? (v.ollamaEndpoint?.trim()  ?? null) : null,
+      ollamaModel:     provider === 'Ollama'  ? (v.ollamaModel?.trim()     ?? null) : null,
+      openAIModel:     provider === 'OpenAI'  ? (v.openAIModel?.trim()     ?? null) : null,
+      openAIApiKey:    provider === 'OpenAI'  ? (v.openAIApiKey?.trim()    || null) : null,
+      geminiModel:     provider === 'Gemini'  ? (v.geminiModel?.trim()     ?? null) : null,
+      geminiApiKey:    provider === 'Gemini'  ? (v.geminiApiKey?.trim()    || null) : null,
       requestTimeoutSeconds: v.requestTimeoutSeconds,
       enableToolCalling: v.enableToolCalling ?? false,
       enableStructuredOutput: v.enableStructuredOutput ?? false,
@@ -211,9 +241,9 @@ export class AiSettingsComponent implements OnInit {
       debugModeEnabled: cfg.debugModeEnabled,
       ollamaEndpoint: cfg.ollamaEndpoint,
       ollamaModel: cfg.ollamaModel,
-      openAIModel: cfg.openAIModel,
+      openAIModel: cfg.openAIModel ?? null,
       openAIApiKey: '',
-      geminiModel: cfg.geminiModel,
+      geminiModel: cfg.geminiModel ?? null,
       geminiApiKey: '',
       requestTimeoutSeconds: cfg.requestTimeoutSeconds,
       enableToolCalling: cfg.enableToolCalling,

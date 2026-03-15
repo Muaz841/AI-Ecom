@@ -88,13 +88,13 @@ public class AiSettingsController : ControllerBase
 public sealed record SaveAiConfigApiRequest(
     [Required] string ActiveProvider,
     bool DebugModeEnabled,
-    [Required] string OllamaEndpoint,
-    [Required] string OllamaModel,
-    [Required] string OpenAIModel,
-   
+    // Provider-specific fields are optional — only the active provider's fields are sent.
+    // Null values are preserved from the existing DB record.
+    string? OllamaEndpoint,
+    string? OllamaModel,
+    string? OpenAIModel,
     string? OpenAIApiKey,
-    [Required] string GeminiModel,
-   
+    string? GeminiModel,
     string? GeminiApiKey,
     [Range(10, 300)] int RequestTimeoutSeconds = 60,
     bool EnableToolCalling = false,
