@@ -23,7 +23,6 @@
           optionLabel="label"
           optionValue="value"
           class="wt-select"
-          placeholder="Select platform"
         ></p-select>
       </div>
 
@@ -44,21 +43,21 @@
       <!-- To (Asset ID — drives tenant resolution) -->
       <div class="form-field">
         <label class="field-label">To — Business Asset ID <span class="req">*</span></label>
-        <input pInputText [(ngModel)]="to" placeholder="e.g. 123456789 (phone number ID, page ID, or IG account ID)" class="wt-input" [disabled]="useRawPayload" />
+        <input pInputText [(ngModel)]="to" class="wt-input" [disabled]="useRawPayload" />
         <span class="field-hint"><i class="pi pi-info-circle"></i> Must match an <strong>ExternalId</strong> in your MetaChannelAssets table. This is how the real pipeline resolves the tenant — no TenantId override.</span>
       </div>
 
       <!-- From -->
       <div class="form-field">
         <label class="field-label">From (Sender ID)</label>
-        <input pInputText [(ngModel)]="from" placeholder="user_123456" class="wt-input" [disabled]="useRawPayload" />
+        <input pInputText [(ngModel)]="from" class="wt-input" [disabled]="useRawPayload" />
         <span class="field-hint">Simulated user / customer ID</span>
       </div>
 
       <!-- Message -->
       <div class="form-field">
         <label class="field-label">Message</label>
-        <textarea pInputTextarea [(ngModel)]="message" placeholder="Enter the message text..." rows="3" class="wt-input" [disabled]="useRawPayload"></textarea>
+        <textarea pInputTextarea [(ngModel)]="message" rows="3" class="wt-input" [disabled]="useRawPayload"></textarea>
       </div>
 
       <p-divider></p-divider>
@@ -77,7 +76,7 @@
       @if (useRawPayload) {
         <div class="form-field">
           <label class="field-label">Raw Payload JSON</label>
-          <textarea pInputTextarea [(ngModel)]="rawPayloadJson" placeholder='{"object":"whatsapp_business_account","entry":[...]}' rows="8" class="wt-input wt-mono"></textarea>
+          <textarea pInputTextarea [(ngModel)]="rawPayloadJson" rows="8" class="wt-input wt-mono"></textarea>
         </div>
       }
 

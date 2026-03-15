@@ -136,7 +136,7 @@
 
         <div class="form-field">
           <label class="field-label">Business Name <span class="required">*</span></label>
-          <input pInputText formControlName="businessName" placeholder="e.g. Acme Corporation" class="wiz-input" autocomplete="organization" />
+          <input pInputText formControlName="businessName"class="wiz-input" autocomplete="organization" />
           @if (createForm.get('businessName')?.touched && createForm.get('businessName')?.invalid) {
             <span class="field-error"><i class="pi pi-exclamation-circle"></i> Business name is required</span>
           }
@@ -145,7 +145,7 @@
         <div class="form-field">
           <label class="field-label">Workspace URL <span class="required">*</span></label>
           <div class="slug-wrap">
-            <input pInputText formControlName="name" placeholder="acme-corp" class="wiz-input slug-input" (input)="onSlugInput()" autocomplete="off" />
+            <input pInputText formControlName="name"class="wiz-input slug-input" (input)="onSlugInput()" autocomplete="off" />
             <span class="slug-suffix">.autobaat.com</span>
           </div>
           @if (createForm.get('name')?.touched && createForm.get('name')?.invalid) {
@@ -169,14 +169,14 @@
         <div class="form-row two-col">
           <div class="form-field">
             <label class="field-label">First Name <span class="required">*</span></label>
-            <input pInputText formControlName="adminFirstName" placeholder="John" class="wiz-input" autocomplete="given-name" />
+            <input pInputText formControlName="adminFirstName"class="wiz-input" autocomplete="given-name" />
             @if (createForm.get('adminFirstName')?.touched && createForm.get('adminFirstName')?.invalid) {
               <span class="field-error"><i class="pi pi-exclamation-circle"></i> Required</span>
             }
           </div>
           <div class="form-field">
             <label class="field-label">Last Name <span class="required">*</span></label>
-            <input pInputText formControlName="adminLastName" placeholder="Smith" class="wiz-input" autocomplete="family-name" />
+            <input pInputText formControlName="adminLastName"class="wiz-input" autocomplete="family-name" />
             @if (createForm.get('adminLastName')?.touched && createForm.get('adminLastName')?.invalid) {
               <span class="field-error"><i class="pi pi-exclamation-circle"></i> Required</span>
             }
@@ -185,7 +185,7 @@
 
         <div class="form-field">
           <label class="field-label">Email <span class="required">*</span></label>
-          <input pInputText formControlName="adminEmail" placeholder="admin@acmecorp.com" class="wiz-input" type="email" autocomplete="email" />
+          <input pInputText formControlName="adminEmail"class="wiz-input" type="email" autocomplete="email" />
           @if (createForm.get('adminEmail')?.touched && createForm.get('adminEmail')?.invalid) {
             <span class="field-error"><i class="pi pi-exclamation-circle"></i> Valid email address is required</span>
           }
@@ -193,7 +193,7 @@
 
         <div class="form-field">
           <label class="field-label">Password <span class="required">*</span></label>
-          <p-password formControlName="adminPassword" placeholder="Min. 8 characters" [feedback]="true" [toggleMask]="true" class="w-full" inputStyleClass="wiz-input w-full"></p-password>
+          <p-password formControlName="adminPassword" [feedback]="true" [toggleMask]="true" class="w-full" inputStyleClass="wiz-input w-full"></p-password>
           @if (createForm.get('adminPassword')?.touched && createForm.get('adminPassword')?.invalid) {
             <span class="field-error"><i class="pi pi-exclamation-circle"></i> Password must be at least 8 characters</span>
           }

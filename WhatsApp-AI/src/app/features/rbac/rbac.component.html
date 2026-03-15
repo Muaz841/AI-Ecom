@@ -206,8 +206,7 @@
 
     <div class="form-field">
       <label class="field-label">Role Name <span class="req">*</span></label>
-      <input pInputText formControlName="name" placeholder="e.g. Support Agent" class="dlg-input"
-        (input)="onRoleNameInput()" />
+      <input pInputText formControlName="name" class="dlg-input" (input)="onRoleNameInput()" />
       @if (roleForm.get('name')?.touched && roleForm.get('name')?.invalid) {
         <span class="field-error"><i class="pi pi-exclamation-circle"></i> Name is required</span>
       }
@@ -215,7 +214,7 @@
 
     <div class="form-field">
       <label class="field-label">Role Code <span class="req">*</span></label>
-      <input pInputText formControlName="code" placeholder="e.g. support_agent" class="dlg-input dlg-mono" />
+      <input pInputText formControlName="code" class="dlg-input dlg-mono" />
       @if (roleForm.get('code')?.touched && roleForm.get('code')?.invalid) {
         <span class="field-error"><i class="pi pi-exclamation-circle"></i> Code must use lowercase letters, numbers and underscores</span>
       }
@@ -223,8 +222,7 @@
 
     <div class="form-field">
       <label class="field-label">Description</label>
-      <textarea pInputTextarea formControlName="description" placeholder="What can this role do?" rows="2"
-        class="dlg-input"></textarea>
+      <textarea pInputTextarea formControlName="description" rows="2" class="dlg-input"></textarea>
     </div>
 
   </div>

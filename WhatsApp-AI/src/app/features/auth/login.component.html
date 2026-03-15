@@ -57,20 +57,20 @@
 
       @if (mode === 'tenant') {
         <label for="tenantName">Tenant Name</label>
-        <input id="tenantName" type="text" formControlName="tenantName" placeholder="e.g. acme-store" autocomplete="organization" />
+        <input id="tenantName" type="text" formControlName="tenantName" autocomplete="organization" />
         @if (form.controls.tenantName.touched && form.controls.tenantName.invalid) {
           <small class="error">Tenant name is required.</small>
         }
       }
 
       <label for="email">Email</label>
-      <input id="email" type="email" formControlName="email" placeholder="name@company.com" autocomplete="email" />
+      <input id="email" type="email" formControlName="email" autocomplete="email" />
       @if (form.controls.email.touched && form.controls.email.invalid) {
         <small class="error">Provide a valid email address.</small>
       }
 
       <label for="password">Password</label>
-      <input id="password" type="password" formControlName="password" placeholder="At least 8 characters" autocomplete="current-password" />
+      <input id="password" type="password" formControlName="password" autocomplete="current-password" />
       @if (form.controls.password.touched && form.controls.password.invalid) {
         <small class="error">Password must be at least 8 characters.</small>
       }
