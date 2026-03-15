@@ -1,0 +1,167 @@
+<div class="wt-page">
+
+  <!-- ── Dev Warning Banner ──────────────────────────────── -->
+  <div class="wt-dev-banner">
+    <i class="pi pi-wrench"></i>
+    <span><strong>Development Only</strong> — This tool simulates incoming Meta webhooks and runs them through the full AI processing pipeline. Available only when the backend is running in Development mode.</span>
+  </div>
+
+  <div class="wt-layout">
+
+    <!-- ══════════════════════════════════════════════════════
+         LEFT — FORM
+    ══════════════════════════════════════════════════════ -->
+    <div class="wt-form-panel">
+      <h2 class="wt-section-title"><i class="pi pi-send"></i> Simulate Webhook</h2>
+
+      <!-- Platform -->
+      <div class="form-field">
+        <label class="field-label">Platform</label>
+        <p-select
+          [(ngModel)]="platform"
+          [options]="platformOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="wt-select"
+          placeholder="Select platform"
+        ></p-select>
+      </div>
+
+      <!-- Message Type -->
+      <div class="form-field">
+        <label class="field-label">Message Type</label>
+        <p-select
+          [(ngModel)]="messageType"
+          [options]="messageTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="wt-select"
+        ></p-select>
+      </div>
+
+      <p-divider></p-divider>
+
+      <!-- To (Asset ID — drives tenant resolution) -->
+      <div class="form-field">
+        <label class="field-label">To — Business Asset ID <span class="req">*</span></label>
+        <input pInputText [(ngModel)]="to" placeholder="e.g. 123456789 (phone number ID, page ID, or IG account ID)" class="wt-input" [disabled]="useRawPayload" />
+        <span class="field-hint"><i class="pi pi-info-circle"></i> Must match an <strong>ExternalId</strong> in your MetaChannelAssets table. This is how the real pipeline resolves the tenant — no TenantId override.</span>
+      </div>
+
+      <!-- From -->
+      <div class="form-field">
+        <label class="field-label">From (Sender ID)</label>
+        <input pInputText [(ngModel)]="from" placeholder="user_123456" class="wt-input" [disabled]="useRawPayload" />
+        <span class="field-hint">Simulated user / customer ID</span>
+      </div>
+
+      <!-- Message -->
+      <div class="form-field">
+        <label class="field-label">Message</label>
+        <textarea pInputTextarea [(ngModel)]="message" placeholder="Enter the message text..." rows="3" class="wt-input" [disabled]="useRawPayload"></textarea>
+      </div>
+
+      <p-divider></p-divider>
+
+      <!-- Raw JSON override -->
+      <div class="form-field">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Use Raw JSON Payload</span>
+            <span class="toggle-sub">Override auto-generated payload with custom JSON</span>
+          </div>
+          <p-toggleSwitch [(ngModel)]="useRawPayload"></p-toggleSwitch>
+        </div>
+      </div>
+
+      @if (useRawPayload) {
+        <div class="form-field">
+          <label class="field-label">Raw Payload JSON</label>
+          <textarea pInputTextarea [(ngModel)]="rawPayloadJson" placeholder='{"object":"whatsapp_business_account","entry":[...]}' rows="8" class="wt-input wt-mono"></textarea>
+        </div>
+      }
+
+      <!-- Actions -->
+      <div class="wt-actions">
+        <button pButton label="Send Test Webhook" icon="pi pi-send" [loading]="sending()" (click)="send()" class="wt-send-btn"></button>
+        @if (hasResult()) {
+          <button pButton label="Clear" icon="pi pi-times" severity="secondary" outlined (click)="reset()"></button>
+        }
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         RIGHT — OUTPUT
+    ══════════════════════════════════════════════════════ -->
+    <div class="wt-output-panel">
+      <h2 class="wt-section-title"><i class="pi pi-align-left"></i> Result</h2>
+
+      @if (!hasResult() && !sending()) {
+        <div class="wt-empty-output">
+          <i class="pi pi-send"></i>
+          <span>Configure the form and send a test webhook to see the result here.</span>
+        </div>
+      }
+
+      @if (sending()) {
+        <div class="wt-empty-output">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Processing...</span>
+        </div>
+      }
+
+      @if (hasResult() && response(); as res) {
+
+        <!-- Status Badge -->
+        <div class="result-status-row">
+          <p-tag
+            [value]="res.success ? 'Success' : 'Failed'"
+            [severity]="res.success ? 'success' : 'danger'"
+          ></p-tag>
+          <span class="result-status-code">HTTP {{ res.statusCode }}</span>
+          <span class="result-message">{{ res.resultMessage }}</span>
+        </div>
+
+        @if (res.success) {
+          <div class="result-meta-row">
+            <span class="meta-pill"><i class="pi pi-check-circle"></i> {{ res.processedCount }} message{{ res.processedCount === 1 ? '' : 's' }} processed</span>
+          </div>
+        }
+
+        <!-- AI Fields -->
+        @if (res.detectedIntent || res.replySent) {
+          <div class="result-ai-fields">
+            @if (res.detectedIntent) {
+              <div class="ai-field">
+                <span class="ai-field-label"><i class="pi pi-brain"></i> Detected Intent</span>
+                <span class="ai-field-value intent-chip">{{ res.detectedIntent }}</span>
+              </div>
+            }
+            @if (res.replySent) {
+              <div class="ai-field">
+                <span class="ai-field-label"><i class="pi pi-reply"></i> Reply Sent</span>
+                <span class="ai-field-value">{{ res.replySent }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        @if (res.errorMessage) {
+          <div class="result-error">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>{{ res.errorMessage }}</span>
+          </div>
+        }
+
+        <p-divider></p-divider>
+
+        <!-- Request Payload -->
+        <div class="output-section">
+          <span class="output-label">Request Payload Sent</span>
+          <pre class="json-block">{{ formatJson(res.requestPayload) }}</pre>
+        </div>
+      }
+    </div>
+
+  </div>
+</div>

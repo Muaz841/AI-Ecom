@@ -1,0 +1,297 @@
+.wt-page {
+  padding: 1.5rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+// ── Dev Warning Banner ─────────────────────────────────────────────────────
+.wt-dev-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: color-mix(in srgb, var(--yellow-500) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--yellow-500) 35%, transparent);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-size: 0.85rem;
+  line-height: 1.5;
+
+  i {
+    color: var(--yellow-500);
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+}
+
+// ── Layout ────────────────────────────────────────────────────────────────
+.wt-layout {
+  display: grid;
+  grid-template-columns: 480px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ── Panel Base ────────────────────────────────────────────────────────────
+.wt-form-panel,
+.wt-output-panel {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.wt-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  i { color: var(--primary-color); }
+}
+
+// ── Form Fields ───────────────────────────────────────────────────────────
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  .req { color: var(--red-400); margin-left: 2px; }
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.wt-input {
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.wt-select {
+  width: 100%;
+}
+
+.wt-mono {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.8rem;
+}
+
+.form-row.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+// ── Toggle Row ────────────────────────────────────────────────────────────
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.toggle-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.toggle-sub {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────
+.wt-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding-top: 0.25rem;
+}
+
+.wt-send-btn {
+  flex: 1;
+}
+
+// ── Output Panel ──────────────────────────────────────────────────────────
+.wt-empty-output {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  color: var(--text-color-secondary);
+  text-align: center;
+
+  i {
+    font-size: 2rem;
+    opacity: 0.4;
+  }
+
+  span { font-size: 0.875rem; }
+}
+
+.result-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.result-status-code {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: var(--text-color-secondary);
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.result-message {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+}
+
+.result-meta-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--green-500) 12%, transparent);
+  color: var(--green-400);
+  padding: 0.2rem 0.65rem;
+  border-radius: 99px;
+  border: 1px solid color-mix(in srgb, var(--green-500) 25%, transparent);
+}
+
+// ── AI Fields ─────────────────────────────────────────────────────────────
+.result-ai-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface-ground);
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+}
+
+.ai-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.ai-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  min-width: 140px;
+}
+
+.ai-field-value {
+  font-size: 0.875rem;
+  color: var(--text-color);
+  word-break: break-word;
+}
+
+.intent-chip {
+  background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+  color: var(--primary-color);
+  padding: 0.1rem 0.6rem;
+  border-radius: 99px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+// ── Error ─────────────────────────────────────────────────────────────────
+.result-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--red-500) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red-500) 25%, transparent);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--red-400);
+
+  i { flex-shrink: 0; margin-top: 2px; }
+}
+
+// ── JSON Block ────────────────────────────────────────────────────────────
+.output-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.output-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-color-secondary);
+}
+
+.json-block {
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--text-color);
+  overflow-x: auto;
+  white-space: pre;
+  max-height: 480px;
+  overflow-y: auto;
+}

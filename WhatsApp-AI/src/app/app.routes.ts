@@ -13,6 +13,7 @@ import { TenantUsersComponent } from './features/tenants/tenant-users/tenant-use
 import { InboxComponent } from './features/messaging/inbox.component';
 import { PlatformSettingsComponent } from './features/platform-settings/platform-settings.component';
 import { RbacComponent } from './features/rbac/rbac.component';
+import { WebhookTesterComponent } from './features/dev/webhook-tester/webhook-tester.component';
 
 const messagingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'messaging');
 const contentModule = SIDEBAR_PIPELINE.find((module) => module.id === 'content');
@@ -22,6 +23,7 @@ const settingsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'settings
 const rbacModule = SIDEBAR_PIPELINE.find((module) => module.id === 'rbac');
 const tenantsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'tenants');
 const platformSettingsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'platform-settings');
+const webhookTesterModule = SIDEBAR_PIPELINE.find((module) => module.id === 'webhook-tester');
 
 export const routes: Routes = [
   {
@@ -117,6 +119,16 @@ export const routes: Routes = [
           subtitle: platformSettingsModule?.subtitle ?? '',
         },
         component: PlatformSettingsComponent,
+      },
+      {
+        path: 'dev/webhooks',
+        canActivate: [permissionGuard],
+        data: {
+          permissions: webhookTesterModule?.requiredPermissions ?? ['platform.settings'],
+          title: webhookTesterModule?.label ?? 'Webhook Tester',
+          subtitle: webhookTesterModule?.subtitle ?? 'Simulate incoming Meta webhook events for development testing.',
+        },
+        component: WebhookTesterComponent,
       },
     ],
   },

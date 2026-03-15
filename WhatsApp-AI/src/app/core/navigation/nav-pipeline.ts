@@ -111,4 +111,13 @@ export const SIDEBAR_PIPELINE: SidebarModule[] = [
     requiredPermissions: ['platform.settings'],
     subtitle: 'Configure platform-level Meta OAuth credentials and global settings.',
   },
+  {
+    id: 'webhook-tester',
+    label: 'Webhook Tester',
+    route: '/dev/webhooks',
+    icon: 'pi pi-send',
+    order: 95,
+    requiredPermissions: ['platform.settings'],
+    subtitle: 'Simulate incoming Meta webhook events for development testing.',
+  },
 ];

@@ -38,6 +38,9 @@ export interface AppConfig {
     users: string;
     userRole: (userId: string, roleId: string) => string;
   };
+  dev: {
+    webhookTest: string;
+  };
 }
 
 export const APP_CONFIG: AppConfig = {
@@ -78,5 +81,8 @@ export const APP_CONFIG: AppConfig = {
     rolePermissions: (roleId: string) => `/api/rbac/roles/${roleId}/permissions`,
     users: '/api/rbac/users',
     userRole: (userId: string, roleId: string) => `/api/rbac/users/${userId}/roles/${roleId}`,
+  },
+  dev: {
+    webhookTest: '/api/dev/webhooks/test',
   },
 };

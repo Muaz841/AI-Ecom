@@ -26,6 +26,7 @@ using EcomAI.Platform.Infrastructure.Security;
 using EcomAI.Platform.Api.Controllers;
 using EcomAI.Platform.Api.Security;
 using EcomAI.Platform.Api.Validation;
+using EcomAI.Platform.Api.Webhooks;
 using EcomAI.Platform.Business.Security;
 using EcomAI.Platform.Infrastructure.Realtime;
 using System.Text;
@@ -152,6 +153,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
         services.AddScoped<IApplicationLogger, ApplicationLogger>();
+        services.AddScoped<IWebhookProcessor, WebhookProcessor>();
         services.AddScoped<IRealtimeNotifier, SignalRNotifier>();
         services.AddSignalR();
         services.Configure<AISettings>(configuration.GetSection("AI"));
