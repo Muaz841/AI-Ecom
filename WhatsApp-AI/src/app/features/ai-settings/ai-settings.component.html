@@ -11,7 +11,7 @@
   <!-- ── Loading ──────────────────────────────────────────── -->
   @if (loading()) {
     <div class="ai-loading">
-      <p-progressSpinner strokeWidth="3" styleClass="ai-spinner"></p-progressSpinner>
+      <p-progressSpinner strokeWidth="3" class="ai-spinner"></p-progressSpinner>
       <span>Loading configuration…</span>
     </div>
   }
@@ -53,6 +53,7 @@
 
         <!-- Active Provider + Debug Mode row -->
         <div class="form-row two-col">
+
           <div class="form-field">
             <label class="field-label">Active Provider <span class="required">*</span></label>
             <p-select
@@ -65,16 +66,31 @@
             <span class="field-hint">All AI pipeline calls will route to this provider.</span>
           </div>
 
+          <!-- Debug Mode -->
           <div class="form-field">
             <label class="field-label">Debug Mode</label>
-            <div class="toggle-row">
-              <div class="toggle-info">
-                <span class="toggle-label">{{ form.get('debugModeEnabled')?.value ? 'Enabled — using Mock provider' : 'Disabled — using real provider' }}</span>
-                <span class="toggle-sub">When enabled, all AI calls return simulated responses regardless of provider selection.</span>
+            <div class="debug-mode-block">
+              <div class="debug-mode-left">
+                <div class="debug-mode-title-row">
+                  <p-tag
+                    [severity]="form.get('debugModeEnabled')?.value ? 'danger' : 'success'"
+                    [value]="form.get('debugModeEnabled')?.value ? 'Debug Mode' : 'Live'"
+                    [icon]="form.get('debugModeEnabled')?.value ? 'pi pi-wrench' : 'pi pi-check-circle'"
+                    [rounded]="true"
+                    class="debug-status-tag"
+                  ></p-tag>
+                  <span class="debug-mode-label">
+                    {{ form.get('debugModeEnabled')?.value ? 'Mock responses enabled' : 'Using real provider' }}
+                  </span>
+                </div>
+                <span class="debug-mode-desc">When enabled, all AI calls return simulated responses regardless of provider selection.</span>
               </div>
-              <p-toggleSwitch formControlName="debugModeEnabled"></p-toggleSwitch>
+              <div class="debug-mode-right">
+                <p-toggleSwitch formControlName="debugModeEnabled"></p-toggleSwitch>
+              </div>
             </div>
           </div>
+
         </div>
 
         <p-divider></p-divider>
@@ -107,6 +123,8 @@
         <!-- ── OpenAI settings ─────────────────────────────── -->
         @if (isOpenAI) {
           <div class="provider-section">
+
+            <!-- Provider header: badge + refresh button -->
             <div class="provider-badge-row">
               <div class="provider-badge openai"><i class="pi pi-sparkles"></i> OpenAI</div>
               <button type="button" pButton severity="secondary" outlined size="small"
@@ -114,81 +132,86 @@
                 [loading]="loadingModels()" (click)="refreshModels()">
               </button>
             </div>
-            <div class="form-row two-col">
-              <div class="form-field">
-                <label class="field-label">Model</label>
-                @if (loadingModels()) {
-                  <div class="field-loading">
-                    <p-progressSpinner strokeWidth="4" class="field-spinner"></p-progressSpinner>
-                    <span>Fetching models…</span>
-                  </div>
-                } @else {
-                  <p-select
-                    formControlName="openAIModel"
-                    [options]="modelOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select a model"
-                    class="ai-select"
-                  ></p-select>
-                  @if (modelsLoadFailed()) {
-                    <span class="field-error"><i class="pi pi-exclamation-circle"></i> Failed to load models. Try refreshing.</span>
-                  } @else if (!config()?.openAIApiKeySet) {
-                    <span class="field-hint"><i class="pi pi-info-circle"></i> Save your API key first — models will load automatically.</span>
-                  }
-                }
-                @if (selectedModelInfo(); as info) {
-                  <div class="capability-badges">
-                    <p-tag [severity]="info.supportsToolCalling ? 'success' : 'secondary'"
-                      [value]="info.supportsToolCalling ? 'Tool Calling' : 'No Tool Calling'"
-                      [icon]="info.supportsToolCalling ? 'pi pi-check' : 'pi pi-times'">
-                    </p-tag>
-                    <p-tag [severity]="info.supportsStructuredOutput ? 'success' : 'secondary'"
-                      [value]="info.supportsStructuredOutput ? 'Structured Output' : 'No Structured Output'"
-                      [icon]="info.supportsStructuredOutput ? 'pi pi-check' : 'pi pi-times'">
-                    </p-tag>
-                    @if (info.contextWindow > 0) {
-                      <p-tag severity="info" [value]="(info.contextWindow / 1000) + 'K ctx'"></p-tag>
-                    }
-                    @if (info.isPreview) {
-                      <p-tag severity="warn" value="Preview"></p-tag>
-                    }
-                  </div>
-                }
-              </div>
-              <div class="form-field">
-                <label class="field-label">
-                  API Key
-                  <span class="field-badge field-badge-secret">Encrypted at rest</span>
-                </label>
-                <div class="secret-wrap">
-                  <input
-                    [type]="showOpenAIKey() ? 'text' : 'password'"
-                    pInputText
-                    formControlName="openAIApiKey"
-                    class="ai-input secret-input"
-                    autocomplete="new-password"
-                  />
-                  <button type="button" class="secret-toggle" (click)="showOpenAIKey.set(!showOpenAIKey())"
-                    [pTooltip]="showOpenAIKey() ? 'Hide' : 'Show'" tooltipPosition="top">
-                    <i [class]="showOpenAIKey() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-                  </button>
+
+            <!-- Model dropdown (full width) -->
+            <div class="form-field">
+              <label class="field-label">Model</label>
+              @if (loadingModels()) {
+                <div class="field-loading">
+                  <p-progressSpinner strokeWidth="4" class="field-spinner"></p-progressSpinner>
+                  <span>Fetching models…</span>
                 </div>
-                <span class="field-hint">
-                  @if (config()?.openAIApiKeySet) {
-                    <i class="pi pi-lock"></i> Key set. Leave blank to keep unchanged.
-                  } @else {
-                    Required for OpenAI API calls.
+              } @else {
+                <p-select
+                  formControlName="openAIModel"
+                  [options]="modelOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select a model"
+                  class="ai-select"
+                ></p-select>
+                @if (modelsLoadFailed()) {
+                  <span class="field-error"><i class="pi pi-exclamation-circle"></i> Failed to load models. Try refreshing.</span>
+                } @else if (!config()?.openAIApiKeySet) {
+                  <span class="field-hint"><i class="pi pi-info-circle"></i> Save your API key first — models will load automatically.</span>
+                }
+              }
+              @if (selectedModelInfo(); as info) {
+                <div class="capability-badges">
+                  <p-tag [severity]="info.supportsToolCalling ? 'success' : 'secondary'"
+                    [value]="info.supportsToolCalling ? 'Tool Calling' : 'No Tool Calling'"
+                    [icon]="info.supportsToolCalling ? 'pi pi-check' : 'pi pi-times'">
+                  </p-tag>
+                  <p-tag [severity]="info.supportsStructuredOutput ? 'success' : 'secondary'"
+                    [value]="info.supportsStructuredOutput ? 'Structured Output' : 'No Structured Output'"
+                    [icon]="info.supportsStructuredOutput ? 'pi pi-check' : 'pi pi-times'">
+                  </p-tag>
+                  @if (info.contextWindow > 0) {
+                    <p-tag severity="info" [value]="(info.contextWindow / 1000) + 'K ctx'"></p-tag>
                   }
-                </span>
-              </div>
+                  @if (info.isPreview) {
+                    <p-tag severity="warn" value="Preview"></p-tag>
+                  }
+                </div>
+              }
             </div>
+
+            <!-- API Key (full width) -->
+            <div class="form-field">
+              <label class="field-label">
+                API Key
+                <span class="field-badge field-badge-secret">Encrypted at rest</span>
+              </label>
+              <div class="secret-wrap">
+                <input
+                  [type]="showOpenAIKey() ? 'text' : 'password'"
+                  pInputText
+                  formControlName="openAIApiKey"
+                  class="ai-input secret-input"
+                  autocomplete="new-password"
+                />
+                <button type="button" class="secret-toggle" (click)="showOpenAIKey.set(!showOpenAIKey())"
+                  [pTooltip]="showOpenAIKey() ? 'Hide' : 'Show'" tooltipPosition="top">
+                  <i [class]="showOpenAIKey() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                </button>
+              </div>
+              <span class="field-hint">
+                @if (config()?.openAIApiKeySet) {
+                  <i class="pi pi-lock"></i> Key set. Leave blank to keep unchanged.
+                } @else {
+                  Required for OpenAI API calls.
+                }
+              </span>
+            </div>
+
           </div>
         }
 
         <!-- ── Gemini settings ─────────────────────────────── -->
         @if (isGemini) {
           <div class="provider-section">
+
+            <!-- Provider header: badge + refresh button -->
             <div class="provider-badge-row">
               <div class="provider-badge gemini"><i class="pi pi-star"></i> Gemini</div>
               <button type="button" pButton severity="secondary" outlined size="small"
@@ -196,75 +219,78 @@
                 [loading]="loadingModels()" (click)="refreshModels()">
               </button>
             </div>
-            <div class="form-row two-col">
-              <div class="form-field">
-                <label class="field-label">Model</label>
-                @if (loadingModels()) {
-                  <div class="field-loading">
-                    <p-progressSpinner strokeWidth="4" class="field-spinner"></p-progressSpinner>
-                    <span>Fetching models…</span>
-                  </div>
-                } @else {
-                  <p-select
-                    formControlName="geminiModel"
-                    [options]="modelOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select a model"
-                    class="ai-select"
-                  ></p-select>
-                  @if (modelsLoadFailed()) {
-                    <span class="field-error"><i class="pi pi-exclamation-circle"></i> Failed to load models. Check your API key or refresh.</span>
-                  } @else if (!config()?.geminiApiKeySet) {
-                    <span class="field-hint"><i class="pi pi-info-circle"></i> Save your API key first — live models will load automatically.</span>
-                  }
-                }
-                @if (selectedModelInfo(); as info) {
-                  <div class="capability-badges">
-                    <p-tag [severity]="info.supportsToolCalling ? 'success' : 'secondary'"
-                      [value]="info.supportsToolCalling ? 'Tool Calling' : 'No Tool Calling'"
-                      [icon]="info.supportsToolCalling ? 'pi pi-check' : 'pi pi-times'">
-                    </p-tag>
-                    <p-tag [severity]="info.supportsStructuredOutput ? 'success' : 'secondary'"
-                      [value]="info.supportsStructuredOutput ? 'Structured Output' : 'No Structured Output'"
-                      [icon]="info.supportsStructuredOutput ? 'pi pi-check' : 'pi pi-times'">
-                    </p-tag>
-                    @if (info.contextWindow > 0) {
-                      <p-tag severity="info" [value]="(info.contextWindow / 1000) + 'K ctx'"></p-tag>
-                    }
-                    @if (info.isPreview) {
-                      <p-tag severity="warn" value="Preview"></p-tag>
-                    }
-                  </div>
-                }
-              </div>
-              <div class="form-field">
-                <label class="field-label">
-                  API Key
-                  <span class="field-badge field-badge-secret">Encrypted at rest</span>
-                </label>
-                <div class="secret-wrap">
-                  <input
-                    [type]="showGeminiKey() ? 'text' : 'password'"
-                    pInputText
-                    formControlName="geminiApiKey"
-                    class="ai-input secret-input"
-                    autocomplete="new-password"
-                  />
-                  <button type="button" class="secret-toggle" (click)="showGeminiKey.set(!showGeminiKey())"
-                    [pTooltip]="showGeminiKey() ? 'Hide' : 'Show'" tooltipPosition="top">
-                    <i [class]="showGeminiKey() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-                  </button>
+
+            <!-- Model dropdown (full width) -->
+            <div class="form-field">
+              <label class="field-label">Model</label>
+              @if (loadingModels()) {
+                <div class="field-loading">
+                  <p-progressSpinner strokeWidth="4" class="field-spinner"></p-progressSpinner>
+                  <span>Fetching models…</span>
                 </div>
-                <span class="field-hint">
-                  @if (config()?.geminiApiKeySet) {
-                    <i class="pi pi-lock"></i> Key set. Leave blank to keep unchanged.
-                  } @else {
-                    Required for Gemini API calls.
+              } @else {
+                <p-select
+                  formControlName="geminiModel"
+                  [options]="modelOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select a model"
+                  class="ai-select"
+                ></p-select>
+                @if (modelsLoadFailed()) {
+                  <span class="field-error"><i class="pi pi-exclamation-circle"></i> Failed to load models. Check your API key or refresh.</span>
+                } @else if (!config()?.geminiApiKeySet) {
+                  <span class="field-hint"><i class="pi pi-info-circle"></i> Save your API key first — live models will load automatically.</span>
+                }
+              }
+              @if (selectedModelInfo(); as info) {
+                <div class="capability-badges">
+                  <p-tag [severity]="info.supportsToolCalling ? 'success' : 'secondary'"
+                    [value]="info.supportsToolCalling ? 'Tool Calling' : 'No Tool Calling'"
+                    [icon]="info.supportsToolCalling ? 'pi pi-check' : 'pi pi-times'">
+                  </p-tag>
+                  <p-tag [severity]="info.supportsStructuredOutput ? 'success' : 'secondary'"
+                    [value]="info.supportsStructuredOutput ? 'Structured Output' : 'No Structured Output'"
+                    [icon]="info.supportsStructuredOutput ? 'pi pi-check' : 'pi pi-times'">
+                  </p-tag>
+                  @if (info.contextWindow > 0) {
+                    <p-tag severity="info" [value]="(info.contextWindow / 1000) + 'K ctx'"></p-tag>
                   }
-                </span>
-              </div>
+                  @if (info.isPreview) {
+                    <p-tag severity="warn" value="Preview"></p-tag>
+                  }
+                </div>
+              }
             </div>
+
+            <!-- API Key (full width) -->
+            <div class="form-field">
+              <label class="field-label">
+                API Key
+                <span class="field-badge field-badge-secret">Encrypted at rest</span>
+              </label>
+              <div class="secret-wrap">
+                <input
+                  [type]="showGeminiKey() ? 'text' : 'password'"
+                  pInputText
+                  formControlName="geminiApiKey"
+                  class="ai-input secret-input"
+                  autocomplete="new-password"
+                />
+                <button type="button" class="secret-toggle" (click)="showGeminiKey.set(!showGeminiKey())"
+                  [pTooltip]="showGeminiKey() ? 'Hide' : 'Show'" tooltipPosition="top">
+                  <i [class]="showGeminiKey() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                </button>
+              </div>
+              <span class="field-hint">
+                @if (config()?.geminiApiKeySet) {
+                  <i class="pi pi-lock"></i> Key set. Leave blank to keep unchanged.
+                } @else {
+                  Required for Gemini API calls.
+                }
+              </span>
+            </div>
+
           </div>
         }
 
@@ -282,68 +308,100 @@
         <p-divider></p-divider>
 
         <!-- ── Model capabilities & sampling ──────────────── -->
-        <div class="section-title">Model Capabilities &amp; Sampling</div>
-        <div class="form-row two-col">
+        <div class="section-block">
+          <div class="section-block-header">
+            <i class="pi pi-sliders-h"></i>
+            <span>Model Capabilities &amp; Sampling</span>
+          </div>
+          <div class="section-block-body">
+            <div class="form-row two-col">
 
-          <div class="form-field">
-            <label class="field-label">Capabilities</label>
-            <div class="capability-toggles">
-              <div class="cap-toggle-row">
-                <div class="cap-toggle-info">
-                  <span class="toggle-label">Enable Tool Calling</span>
-                  <span class="toggle-sub">Allows the AI agent to call registered tools (search_products, check_inventory, etc.). Requires a tool-capable model.</span>
+              <div class="form-field">
+                <label class="field-label">Capabilities</label>
+                <div class="feature-toggle-list">
+
+                  <!-- Tool Calling -->
+                  <div class="feature-toggle-card">
+                    <div class="ftc-left">
+                      <div class="ftc-title-row">
+                        <p-tag
+                          [severity]="form.get('enableToolCalling')?.value ? 'success' : 'secondary'"
+                          [value]="form.get('enableToolCalling')?.value ? 'On' : 'Off'"
+                          [rounded]="true"
+                          class="ftc-status-tag"
+                        ></p-tag>
+                        <span class="ftc-title">Enable Tool Calling</span>
+                      </div>
+                      <span class="ftc-desc">Allows the AI agent to call registered tools (search_products, check_inventory, etc.).</span>
+                    </div>
+                    <div class="ftc-switch">
+                      <p-toggleSwitch formControlName="enableToolCalling"></p-toggleSwitch>
+                    </div>
+                  </div>
+
+                  <!-- Structured Output -->
+                  <div class="feature-toggle-card">
+                    <div class="ftc-left">
+                      <div class="ftc-title-row">
+                        <p-tag
+                          [severity]="form.get('enableStructuredOutput')?.value ? 'success' : 'secondary'"
+                          [value]="form.get('enableStructuredOutput')?.value ? 'On' : 'Off'"
+                          [rounded]="true"
+                          class="ftc-status-tag"
+                        ></p-tag>
+                        <span class="ftc-title">Enable Structured Output</span>
+                      </div>
+                      <span class="ftc-desc">Enforces JSON schema on AI responses. Requires a model that supports structured output.</span>
+                    </div>
+                    <div class="ftc-switch">
+                      <p-toggleSwitch formControlName="enableStructuredOutput"></p-toggleSwitch>
+                    </div>
+                  </div>
+
                 </div>
-                <p-toggleSwitch formControlName="enableToolCalling"></p-toggleSwitch>
               </div>
-              <div class="cap-toggle-row">
-                <div class="cap-toggle-info">
-                  <span class="toggle-label">Enable Structured Output</span>
-                  <span class="toggle-sub">Enforces JSON schema on AI responses. Requires a model that supports structured output.</span>
+
+              <div class="form-field">
+                <label class="field-label">
+                  Sampling Parameters
+                  <span class="field-optional">optional — leave blank for provider defaults</span>
+                </label>
+                <div class="sampling-grid">
+                  <div class="sampling-field">
+                    <label class="sampling-label">Temperature</label>
+                    <p-inputNumber
+                      formControlName="temperature"
+                      [min]="0" [max]="2" [step]="0.1" [maxFractionDigits]="2"
+                      placeholder="e.g. 0.7"
+                      class="sampling-input"
+                    ></p-inputNumber>
+                    <span class="field-hint">0.0–2.0</span>
+                  </div>
+                  <div class="sampling-field">
+                    <label class="sampling-label">Top-P</label>
+                    <p-inputNumber
+                      formControlName="topP"
+                      [min]="0" [max]="1" [step]="0.05" [maxFractionDigits]="2"
+                      placeholder="e.g. 0.9"
+                      class="sampling-input"
+                    ></p-inputNumber>
+                    <span class="field-hint">0.0–1.0</span>
+                  </div>
+                  <div class="sampling-field">
+                    <label class="sampling-label">Max Tokens</label>
+                    <p-inputNumber
+                      formControlName="maxTokens"
+                      [min]="1" [max]="128000" [step]="100" [useGrouping]="false"
+                      placeholder="e.g. 2048"
+                      class="sampling-input"
+                    ></p-inputNumber>
+                    <span class="field-hint">Max output tokens</span>
+                  </div>
                 </div>
-                <p-toggleSwitch formControlName="enableStructuredOutput"></p-toggleSwitch>
               </div>
+
             </div>
           </div>
-
-          <div class="form-field">
-            <label class="field-label">
-              Sampling Parameters
-              <span class="field-optional">optional — leave blank for provider defaults</span>
-            </label>
-            <div class="sampling-grid">
-              <div class="sampling-field">
-                <label class="sampling-label">Temperature</label>
-                <p-inputNumber
-                  formControlName="temperature"
-                  [min]="0" [max]="2" [step]="0.1" [maxFractionDigits]="2"
-                  placeholder="e.g. 0.7"
-                  class="sampling-input"
-                ></p-inputNumber>
-                <span class="field-hint">0.0–2.0</span>
-              </div>
-              <div class="sampling-field">
-                <label class="sampling-label">Top-P</label>
-                <p-inputNumber
-                  formControlName="topP"
-                  [min]="0" [max]="1" [step]="0.05" [maxFractionDigits]="2"
-                  placeholder="e.g. 0.9"
-                  class="sampling-input"
-                ></p-inputNumber>
-                <span class="field-hint">0.0–1.0</span>
-              </div>
-              <div class="sampling-field">
-                <label class="sampling-label">Max Tokens</label>
-                <p-inputNumber
-                  formControlName="maxTokens"
-                  [min]="1" [max]="128000" [step]="100" [useGrouping]="false"
-                  placeholder="e.g. 2048"
-                  class="sampling-input"
-                ></p-inputNumber>
-                <span class="field-hint">Max output tokens</span>
-              </div>
-            </div>
-          </div>
-
         </div>
 
         <p-divider></p-divider>
@@ -384,7 +442,7 @@
       </div>
       <div class="info-row">
         <i class="pi pi-info-circle"></i>
-        <span>Save validates that the selected model supports any enabled capability. Enabling <strong>Tool Calling</strong> on an incompatible model is rejected with a clear error.</span>
+        <span>Enabling <strong>Tool Calling</strong> on an incompatible model is rejected with a clear error.</span>
       </div>
     </div>
 

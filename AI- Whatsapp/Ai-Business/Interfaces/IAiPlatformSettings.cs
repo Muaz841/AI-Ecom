@@ -8,16 +8,16 @@ namespace EcomAI.Platform.Business.Interfaces;
 
 /// <summary>
 /// Decrypted runtime config read from the DB. Returned by IAiRuntimeConfigProvider.
-/// All string fields are guaranteed non-null when returned (defaulted if blank in DB).
+/// GeminiModel / OpenAIModel are null when the host has not yet selected a model.
 /// </summary>
 public sealed record AiRuntimeConfig(
-    string ActiveProvider,        // "OpenAI" | "Gemini" | "Ollama" | "Mock"
+    string ActiveProvider,         // "OpenAI" | "Gemini" | "Ollama" | "Mock"
     bool DebugModeEnabled,
     string OllamaEndpoint,
     string OllamaModel,
-    string OpenAIModel,
+    string? OpenAIModel,           // null = not yet selected by host
     string? OpenAIApiKey,          // null when not configured
-    string GeminiModel,
+    string? GeminiModel,           // null = not yet selected by host
     string? GeminiApiKey,          // null when not configured
     int RequestTimeoutSeconds,
     bool EnableToolCalling,
@@ -69,10 +69,10 @@ public sealed record PlatformAiConfigResult(
     bool DebugModeEnabled,
     string OllamaEndpoint,
     string OllamaModel,
-    string OpenAIModel,
+    string? OpenAIModel,           // null = not yet selected by host
     bool OpenAIApiKeySet,
     string? OpenAIApiKeyMasked,
-    string GeminiModel,
+    string? GeminiModel,           // null = not yet selected by host
     bool GeminiApiKeySet,
     string? GeminiApiKeyMasked,
     int RequestTimeoutSeconds,

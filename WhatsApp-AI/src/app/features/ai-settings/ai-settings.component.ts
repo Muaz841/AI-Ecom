@@ -6,6 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { CardModule } from 'primeng/card';
 import { DividerModule } from 'primeng/divider';
 import { TagModule } from 'primeng/tag';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -34,6 +35,7 @@ const AI_PROVIDERS = [
     InputNumberModule,
     SelectModule,
     ToggleSwitchModule,
+    CardModule,
     DividerModule,
     TagModule,
     ProgressSpinnerModule,

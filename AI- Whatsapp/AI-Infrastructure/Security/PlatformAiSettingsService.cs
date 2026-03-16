@@ -16,47 +16,8 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
 {
     private const string KeyMask = "••••••••••••••••";
 
-    // ── Curated model catalog (OpenAI) ────────────────────────────────────────
-    private static readonly IReadOnlyList<AiModelInfoDto> OpenAiModels =
-    [
-        new("gpt-4o",          "GPT-4o",           true,  true,  128_000, false),
-        new("gpt-4o-mini",     "GPT-4o Mini",      true,  true,  128_000, false),
-        new("gpt-4-turbo",     "GPT-4 Turbo",      true,  false, 128_000, false),
-        new("gpt-3.5-turbo",   "GPT-3.5 Turbo",    true,  false, 16_385,  false),
-        new("o1",              "o1",               false, false, 200_000, false),
-        new("o1-mini",         "o1-mini",          false, false, 128_000, false),
-        new("o3-mini",         "o3-mini",          false, false, 200_000, true),
-    ];
 
-    // ── Curated model catalog (Gemini) ────────────────────────────────────────
-    private static readonly IReadOnlyList<AiModelInfoDto> GeminiModels =
-    [
-        new("gemini-2.0-flash",               "Gemini 2.0 Flash",          true,  true,  1_000_000, false),
-        new("gemini-2.0-flash-lite",          "Gemini 2.0 Flash Lite",     true,  true,  1_000_000, false),
-        new("gemini-1.5-pro",                 "Gemini 1.5 Pro",            true,  true,  2_000_000, false),
-        new("gemini-1.5-flash",               "Gemini 1.5 Flash",          true,  true,  1_000_000, false),
-        new("gemini-1.5-flash-8b",            "Gemini 1.5 Flash-8B",       true,  true,  1_000_000, false),
-        new("gemini-2.0-flash-thinking-exp",  "Gemini 2.0 Thinking (exp)", false, false, 32_000,    true),
-    ];
 
-    // ── Known capability map for validation ───────────────────────────────────
-    private static readonly Dictionary<string, (bool ToolCalling, bool StructuredOutput)> KnownCapabilities
-        = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["gpt-4o"]                            = (true,  true),
-        ["gpt-4o-mini"]                       = (true,  true),
-        ["gpt-4-turbo"]                       = (true,  false),
-        ["gpt-3.5-turbo"]                     = (true,  false),
-        ["o1"]                                = (false, false),
-        ["o1-mini"]                           = (false, false),
-        ["o3-mini"]                           = (false, false),
-        ["gemini-2.0-flash"]                  = (true,  true),
-        ["gemini-2.0-flash-lite"]             = (true,  true),
-        ["gemini-1.5-pro"]                    = (true,  true),
-        ["gemini-1.5-flash"]                  = (true,  true),
-        ["gemini-1.5-flash-8b"]               = (true,  true),
-        ["gemini-2.0-flash-thinking-exp"]     = (false, false),
-    };
 
     private readonly IPlatformAiConfigRepository _repository;
     private readonly ITokenProtector _tokenProtector;
@@ -78,7 +39,7 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
         _logger = logger;
     }
 
-    // ── IPlatformAiSettingsService ────────────────────────────────────────────
+    
 
     public async Task<PlatformAiConfigResult> GetAiConfigAsync(CancellationToken cancellationToken = default)
     {
@@ -173,7 +134,7 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
 
         var models = provider.Trim().ToLowerInvariant() switch
         {
-            "openai" => new List<AiModelInfoDto>(OpenAiModels),
+            
             "gemini" => await FetchGeminiModelsWithFallbackAsync(cancellationToken),
             "ollama" => await FetchOllamaModelsAsync(cancellationToken),
             "mock"   => [new AiModelInfoDto("mock-model", "Mock (Debug)", false, false, 0, false)],
@@ -355,12 +316,6 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
                 return;
             }
         }
-
-        // 2. Fall back to static dictionary
-        if (KnownCapabilities.TryGetValue(model, out var caps))
-            EnforceCapabilities(model, caps.ToolCalling, caps.StructuredOutput, request);
-
-        // 3. Unknown model → allow save without blocking
     }
 
     private static void EnforceCapabilities(

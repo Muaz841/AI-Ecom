@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace EcomAI.Platform.Infrastructure.AI;
 
@@ -26,17 +27,20 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
     private readonly IAIService _aiService;
     private readonly IToolRegistry _toolRegistry;
     private readonly IToolExecutor _toolExecutor;
+    private readonly IAiRuntimeConfigProvider _runtimeConfig;
     private readonly IApplicationLogger _logger;
 
     public AgentOrchestrator(
         IAIService aiService,
         IToolRegistry toolRegistry,
         IToolExecutor toolExecutor,
+        IAiRuntimeConfigProvider runtimeConfig,
         IApplicationLogger logger)
     {
         _aiService = aiService;
         _toolRegistry = toolRegistry;
         _toolExecutor = toolExecutor;
+        _runtimeConfig = runtimeConfig;
         _logger = logger;
     }
 
@@ -46,8 +50,12 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
         var totalInputTokens = 0;
         var totalOutputTokens = 0;
 
-        // Build enhanced system prompt with tool definitions
-        var systemPrompt = BuildSystemPromptWithTools(request.SystemPrompt);
+        // Respect EnableToolCalling flag from host AI config
+        var rt = await _runtimeConfig.GetRuntimeConfigAsync(ct);
+        var toolCallingEnabled = rt?.EnableToolCalling ?? true; // default on if no DB config
+
+        // Build system prompt — inject tool definitions only when tool calling is enabled
+        var systemPrompt = BuildSystemPromptWithTools(request.SystemPrompt, toolCallingEnabled);
 
         // Accumulate context across iterations
         var contextBuilder = new StringBuilder();
@@ -111,9 +119,9 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
             "Maximum agent iterations reached without a final response.");
     }
 
-    private string BuildSystemPromptWithTools(string? tenantSystemPrompt)
+    private string BuildSystemPromptWithTools(string? tenantSystemPrompt, bool injectTools)
     {
-        var tools = _toolRegistry.GetAll();
+        var tools = injectTools ? _toolRegistry.GetAll() : [];
         var sb = new StringBuilder();
 
         if (!string.IsNullOrWhiteSpace(tenantSystemPrompt))

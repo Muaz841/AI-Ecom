@@ -253,6 +253,171 @@ textarea.p-inputtext,
   }
 }
 
+// ── Toggle Switch ─────────────────────────────────────────────────────────
+.p-toggleswitch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  height: 1.375rem;
+
+  .p-toggleswitch-input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    border-radius: 30px;
+    cursor: pointer;
+    margin: 0;
+  }
+
+  .p-toggleswitch-slider {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 30px;
+    background: var(--surface-2);
+    border: 1.5px solid var(--line);
+    transition: background 150ms ease, border-color 150ms ease;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      width: 1rem;
+      height: 1rem;
+      background: var(--text-muted);
+      border-radius: 50%;
+      top: 50%;
+      transform: translateY(-50%);
+      left: 2px;
+      transition: transform 150ms ease, background 150ms ease;
+    }
+  }
+
+  &.p-toggleswitch-checked {
+    .p-toggleswitch-slider {
+      background: var(--accent);
+      border-color: var(--accent);
+
+      &::before {
+        transform: translateY(-50%) translateX(1.1rem);
+        background: #fff;
+      }
+    }
+  }
+
+  &.p-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+// ── Tag ────────────────────────────────────────────────────────────────────
+.p-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+
+  &.p-tag-rounded { border-radius: 30px; }
+
+  .p-tag-icon { font-size: 0.72rem; margin-right: 0.1rem; }
+  .p-tag-label { line-height: 1.4; }
+
+  &.p-tag-success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+
+  &.p-tag-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  &.p-tag-info {
+    background: rgba(6, 182, 212, 0.15);
+    color: #06b6d4;
+    border-color: rgba(6, 182, 212, 0.3);
+  }
+
+  &.p-tag-warn {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  &.p-tag-secondary {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border-color: var(--line);
+  }
+
+  &.p-tag-contrast {
+    background: var(--text-primary);
+    color: var(--bg);
+    border-color: var(--text-primary);
+  }
+}
+
+// ── Card ───────────────────────────────────────────────────────────────────
+.p-card {
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  display: block;
+
+  .p-card-body { padding: 1rem 1.25rem; }
+
+  .p-card-header {
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-bg-2);
+  }
+
+  .p-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.2rem;
+  }
+
+  .p-card-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .p-card-footer {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+}
+
+// ── Divider ────────────────────────────────────────────────────────────────
+.p-divider {
+  &.p-divider-horizontal {
+    border-top: 1px solid var(--line);
+    margin: 0.5rem 0;
+  }
+}
+
 // ── Regular toasts (bottom-right) ──────────────────────────────────────────
 .p-toast-bottom-right {
   position: fixed !important;

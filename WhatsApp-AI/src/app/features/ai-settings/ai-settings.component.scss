@@ -97,7 +97,6 @@
   background: var(--panel-bg);
   border: 1px solid var(--line);
   border-radius: 14px;
-  overflow: hidden;
 }
 
 .card-header {
@@ -247,35 +246,75 @@
   i { color: #f59e0b; margin-top: 0.05rem; flex-shrink: 0; }
 }
 
-// ── Toggle row ────────────────────────────────────────────────────────────────
+// ── Debug Mode block ─────────────────────────────────────────────────────────
 
-.toggle-row {
+.debug-mode-block {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0.875rem;
+  gap: 1.25rem;
+  padding: 1rem 1.1rem;
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  min-height: 56px;
+  border-radius: 12px;
 }
 
-.toggle-info {
+.debug-mode-left {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
 }
 
-.toggle-label {
+.debug-mode-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.debug-mode-label {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.3;
 }
 
-.toggle-sub {
+.debug-mode-desc {
   font-size: 0.775rem;
   color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.debug-mode-right {
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ── Debug status tag (larger than default) ────────────────────────────────────
+.debug-status-tag.p-tag {
+  padding: 0.3rem 0.75rem !important;
+  font-size: 0.8rem !important;
+  border-radius: 30px !important;
+  gap: 0.4rem !important;
+  font-weight: 700 !important;
+
+  .p-tag-icon { font-size: 0.78rem !important; }
+  .p-tag-label { line-height: 1.3 !important; }
+}
+
+// ── Capability badges (model capability tags) ─────────────────────────────────
+.capability-badges .p-tag {
+  padding: 0.28rem 0.7rem;
+  font-size: 0.78rem;
+  gap: 0.35rem;
+  font-weight: 700;
+
+  .p-tag-icon { font-size: 0.75rem; }
+  .p-tag-label { line-height: 1.3; }
 }
 
 // ── Secret input ──────────────────────────────────────────────────────────────
@@ -349,12 +388,171 @@
   margin-bottom: 1rem;
 }
 
+// ── Provider card (p-card wrapping provider content) ──────────────────────────
+.provider-card {
+  &.p-card { border: 1px solid var(--line); }
+
+  .provider-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-bg-2);
+    border-radius: 10px 10px 0 0;
+  }
+}
+
+// ── Debug Mode card ───────────────────────────────────────────────────────────
+.debug-mode-card {
+  &.p-card { border: 1px solid var(--line); }
+
+  .debug-mode-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .debug-mode-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .debug-mode-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+// ── Capabilities card ─────────────────────────────────────────────────────────
+.capabilities-card {
+  &.p-card { border: 1px solid var(--line); }
+
+  .capabilities-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-bg-2);
+    border-radius: 10px 10px 0 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    i { color: var(--accent); }
+  }
+}
+
+// ── Cap toggle right (tag + switch) — legacy, kept for safety ─────────────────
+.cap-toggle-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+// ── Feature Toggle Card ───────────────────────────────────────────────────────
+// Each capability toggle gets its own isolated card.
+// NO overflow:hidden so the switch is never clipped.
+.feature-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.feature-toggle-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.875rem 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.ftc-left {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ftc-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: nowrap;
+}
+
+.ftc-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.ftc-desc {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+// Fixed-width switch column — switch never moves or overflows
+.ftc-switch {
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Status tag inside feature toggle card
+.ftc-status-tag.p-tag {
+  padding: 0.2rem 0.55rem !important;
+  font-size: 0.72rem !important;
+  border-radius: 30px !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 // ── Capability badges under model dropdown ────────────────────────────────────
 .capability-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
   margin-top: 0.5rem;
+}
+
+// ── Section block (capabilities wrapper) ─────────────────────────────────────
+.section-block {
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.section-block-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-bg-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  i { color: var(--accent); }
+}
+
+.section-block-body {
+  padding: 1rem 1.1rem;
 }
 
 // ── Capabilities + sampling section ──────────────────────────────────────────
