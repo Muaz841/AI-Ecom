@@ -189,7 +189,6 @@ public static class ServiceCollectionExtensions
         services.AddSignalR();
         services.Configure<AISettings>(configuration.GetSection("AI"));
         services.AddSingleton<TenantEnricher>();
-        services.AddScoped<MockAIService>();
         services.AddScoped<OpenAIService>();
         services.AddScoped<GeminiService>();
         services.AddScoped<OllamaService>();

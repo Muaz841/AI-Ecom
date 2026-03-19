@@ -40,6 +40,28 @@
 
       <p-divider></p-divider>
 
+      <!-- Asset selector (optional) -->
+      <div class="form-field">
+        <label class="field-label">Choose Asset (optional)</label>
+        <p-select
+          [(ngModel)]="selectedAsset"
+          [options]="assetOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select asset to auto-fill To"
+          class="wt-select"
+          [disabled]="useRawPayload"
+        ></p-select>
+        <div class="field-actions">
+          <button type="button" pButton label="Use Asset ID" icon="pi pi-check"
+            severity="secondary" outlined size="small"
+            [disabled]="!selectedAsset || useRawPayload"
+            (click)="applySelectedAsset()">
+          </button>
+        </div>
+        <span class="field-hint">Assets are loaded from your current Meta integrations.</span>
+      </div>
+
       <!-- To (Asset ID — drives tenant resolution) -->
       <div class="form-field">
         <label class="field-label">To — Business Asset ID <span class="req">*</span></label>
@@ -127,21 +149,44 @@
           </div>
         }
 
-        <!-- AI Fields -->
-        @if (res.detectedIntent || res.replySent) {
-          <div class="result-ai-fields">
-            @if (res.detectedIntent) {
-              <div class="ai-field">
-                <span class="ai-field-label"><i class="pi pi-brain"></i> Detected Intent</span>
-                <span class="ai-field-value intent-chip">{{ res.detectedIntent }}</span>
-              </div>
+        <!-- Provider Badge -->
+        @if (res.aiProvider) {
+          <div class="result-provider-row">
+            <span class="provider-chip"><i class="pi pi-microchip-ai"></i> {{ res.aiProvider }}</span>
+            @if (res.aiModel) {
+              <span class="model-chip">{{ res.aiModel }}</span>
             }
-            @if (res.replySent) {
-              <div class="ai-field">
-                <span class="ai-field-label"><i class="pi pi-reply"></i> Reply Sent</span>
-                <span class="ai-field-value">{{ res.replySent }}</span>
-              </div>
+            @if (res.inputTokens || res.outputTokens) {
+              <span class="token-chip"><i class="pi pi-bolt"></i> {{ res.inputTokens }} in / {{ res.outputTokens }} out</span>
             }
+          </div>
+        }
+
+        <!-- Detected Intent -->
+        @if (res.detectedIntent) {
+          <div class="result-row">
+            <span class="row-label"><i class="pi pi-brain"></i> Intent</span>
+            <span class="intent-chip">{{ res.detectedIntent }}</span>
+          </div>
+        }
+
+        <!-- Tool Calls -->
+        @if (res.toolCallsMade?.length) {
+          <div class="result-row">
+            <span class="row-label"><i class="pi pi-wrench"></i> Tools Used</span>
+            <div class="tool-chips">
+              @for (tool of res.toolCallsMade; track tool) {
+                <span class="tool-chip">{{ tool }}</span>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- AI Reply Bubble -->
+        @if (res.replySent) {
+          <div class="ai-reply-section">
+            <span class="row-label"><i class="pi pi-comment"></i> AI Reply</span>
+            <div class="ai-reply-bubble">{{ res.replySent }}</div>
           </div>
         }
 

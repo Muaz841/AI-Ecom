@@ -16,21 +16,27 @@ public sealed class PlatformAiConfigRepository : IPlatformAiConfigRepository
         _db = db;
     }
 
+    // IgnoreQueryFilters is required: PlatformAiConfig is a host-level singleton
+    // with TenantId = null. The global EF tenant filter would otherwise exclude
+    // this row when executing inside a tenant request context.
     public Task<PlatformAiConfig?> GetAsync(CancellationToken cancellationToken = default)
         => _db.PlatformAiConfigs
               .AsNoTracking()
+              .IgnoreQueryFilters()
               .FirstOrDefaultAsync(cancellationToken);
 
     public async Task SaveAsync(PlatformAiConfig config, CancellationToken cancellationToken = default)
     {
-        var existing = await _db.PlatformAiConfigs.FirstOrDefaultAsync(cancellationToken);
+        var existing = await _db.PlatformAiConfigs
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(cancellationToken);
+
         if (existing is null)
         {
             await _db.PlatformAiConfigs.AddAsync(config, cancellationToken);
         }
         else
         {
-            // existing is tracked; copy scalar values from the updated (untracked) entity onto it.
             _db.Entry(existing).CurrentValues.SetValues(config);
         }
 

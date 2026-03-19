@@ -32,91 +32,42 @@ public class OpenAIService : IAIService
 
     public Task<IntentDetectionResult> DetectIntentAsync(
         IntentRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default)
     {
         var prompt = BuildIntentPrompt(request);
         return ExecutePromptAsync(
             prompt,
             request.SystemPrompt,
-            simulatedResultFactory: () => new IntentDetectionResult("inquiry", 0.95, prompt, "[simulated]", 10, 6, true),
-            parse: (responseText, usage, wasSimulated) => new IntentDetectionResult(
-                responseText.Trim(),
-                0.85,
-                prompt,
-                responseText,
-                usage.InputTokens,
-                usage.OutputTokens,
-                wasSimulated),
-            simulateOnly,
+            (text, usage) => new IntentDetectionResult(text.Trim(), 0.85, prompt, text, usage.InputTokens, usage.OutputTokens),
             cancellationToken);
     }
 
     public Task<ReplyGenerationResult> GenerateReplyAsync(
         ReplyRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default)
     {
         var prompt = BuildReplyPrompt(request);
         return ExecutePromptAsync(
             prompt,
             request.SystemPrompt,
-            simulatedResultFactory: () => new ReplyGenerationResult(
-                true,
-                "Thanks for your message. We will assist you shortly.",
-                prompt,
-                "[simulated]",
-                16,
-                18,
-                false,
-                true),
-            parse: (responseText, usage, wasSimulated) => new ReplyGenerationResult(
-                true,
-                responseText.Trim(),
-                prompt,
-                responseText,
-                usage.InputTokens,
-                usage.OutputTokens,
-                false,
-                wasSimulated),
-            simulateOnly,
+            (text, usage) => new ReplyGenerationResult(true, text.Trim(), prompt, text, usage.InputTokens, usage.OutputTokens, false),
             cancellationToken);
     }
 
     public Task<CaptionGenerationResult> GenerateCaptionAsync(
         CaptionRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default)
     {
         var prompt = $"Write an ecommerce caption for {request.ProductName}. Description: {request.ProductDescription}. Price: {request.Price} {request.Currency}. Style: {request.StylePreferences}. Limit {request.MaxLength} chars. Include 3 hashtags in separate line prefixed by #.";
         return ExecutePromptAsync(
             prompt,
             null,
-            simulatedResultFactory: () => new CaptionGenerationResult(
-                true,
-                $"New arrival: {request.ProductName} at {request.Price} {request.Currency}. Grab yours now!",
-                new[] { "#NewArrival", "#ShopNow", "#Fashion" },
-                prompt,
-                "[simulated]",
-                20,
-                25,
-                true),
-            parse: (responseText, usage, wasSimulated) => new CaptionGenerationResult(
-                true,
-                responseText.Trim(),
-                ExtractHashtags(responseText),
-                prompt,
-                responseText,
-                usage.InputTokens,
-                usage.OutputTokens,
-                wasSimulated),
-            simulateOnly,
+            (text, usage) => new CaptionGenerationResult(true, text.Trim(), ExtractHashtags(text), prompt, text, usage.InputTokens, usage.OutputTokens),
             cancellationToken);
     }
 
     public Task<AdCopiesResult> GenerateAdCopiesAsync(
         AdRequest request,
-        bool simulateOnly = false,
         bool estimateTokensOnly = false,
         CancellationToken cancellationToken = default)
     {
@@ -124,65 +75,50 @@ public class OpenAIService : IAIService
         var estimate = EstimateTokens(prompt);
 
         if (estimateTokensOnly)
-        {
-            return Task.FromResult(new AdCopiesResult(
-                true,
-                Array.Empty<string>(),
-                prompt,
-                "[estimate-only]",
-                0,
-                0,
-                estimate,
-                true));
-        }
+            return Task.FromResult(new AdCopiesResult(true, Array.Empty<string>(), prompt, "[estimate-only]", 0, 0, estimate));
 
         return ExecutePromptAsync(
             prompt,
             null,
-            simulatedResultFactory: () => new AdCopiesResult(
-                true,
-                new[] { "Fast delivery. Limited stock.", "Upgrade your style today.", "Shop now before it sells out." },
-                prompt,
-                "[simulated]",
-                24,
-                32,
-                estimate,
-                true),
-            parse: (responseText, usage, wasSimulated) => new AdCopiesResult(
-                true,
-                SplitLines(responseText),
-                prompt,
-                responseText,
-                usage.InputTokens,
-                usage.OutputTokens,
-                estimate,
-                wasSimulated),
-            simulateOnly,
+            (text, usage) => new AdCopiesResult(true, SplitLines(text), prompt, text, usage.InputTokens, usage.OutputTokens, estimate),
             cancellationToken);
     }
 
-    public (string ProviderName, string ModelVersion) GetCurrentProviderInfo()
-        => ("OpenAI", _settings.OpenAIModel);
+    public async Task<(string ProviderName, string ModelVersion)> GetCurrentProviderInfoAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var rtConfig = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken);
+        return ("OpenAI", rtConfig?.OpenAIModel ?? "not set");
+    }
+
+    public Task<AgentTurnResult> GenerateAgentTurnAsync(
+        AgentTurnRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var userText = request.Contents
+            .LastOrDefault(c => c.Role == "user" && c.Text is not null)?.Text ?? string.Empty;
+
+        var replyRequest = new ReplyRequest(userText, "inquiry", string.Empty, "agent", request.SystemPrompt);
+        return GenerateReplyAsync(replyRequest, cancellationToken)
+            .ContinueWith(t =>
+            {
+                var r = t.Result;
+                return new AgentTurnResult(r.Success, r.GeneratedReply, null,
+                    r.InputTokensUsed, r.OutputTokensUsed, r.ErrorMessage);
+            }, TaskScheduler.Default);
+    }
 
     private async Task<T> ExecutePromptAsync<T>(
         string prompt,
         string? systemPrompt,
-        Func<T> simulatedResultFactory,
-        Func<string, TokenUsage, bool, T> parse,
-        bool simulateOnly,
+        Func<string, TokenUsage, T> parse,
         CancellationToken cancellationToken)
     {
-        if (simulateOnly)
-        {
-            _logger.Info("OpenAI simulate-only prompt: {Prompt}", prompt);
-            return simulatedResultFactory();
-        }
-
-        // Resolve effective config: DB-first, fallback to appsettings.
-        var rt = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken);
-        var apiKey = rt?.OpenAIApiKey ?? _settings.OpenAIApiKey;
-        var model = rt?.OpenAIModel ?? _settings.OpenAIModel;
-        var timeout = rt?.RequestTimeoutSeconds ?? _settings.RequestTimeoutSeconds;
+        var rt      = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
+                      ?? throw new InvalidOperationException("AI provider is not configured. Configure it in Host > AI Settings.");
+        var apiKey  = rt.OpenAIApiKey;
+        var model   = rt.OpenAIModel;
+        var timeout = rt.RequestTimeoutSeconds;
 
         EnsureApiKey(apiKey, "OpenAI");
 
@@ -191,13 +127,12 @@ public class OpenAIService : IAIService
         client.Timeout = TimeSpan.FromSeconds(timeout);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        // Build message list — prepend system message when tenant system prompt is available.
         var messages = string.IsNullOrWhiteSpace(systemPrompt)
             ? (object)new[] { new { role = "user", content = prompt } }
             : (object)new object[]
             {
                 new { role = "system", content = systemPrompt },
-                new { role = "user", content = prompt }
+                new { role = "user",   content = prompt }
             };
 
         var body = new { model, messages, temperature = 0.2 };
@@ -211,27 +146,20 @@ public class OpenAIService : IAIService
         }
 
         using var doc = JsonDocument.Parse(raw);
-        var text = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? string.Empty;
+        var text  = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? string.Empty;
         var usage = ReadUsage(doc.RootElement);
 
         _logger.Info(
             "OpenAI prompt={Prompt} response={Response} inputTokens={InputTokens} outputTokens={OutputTokens}",
-            prompt,
-            text,
-            usage.InputTokens,
-            usage.OutputTokens);
+            prompt, text, usage.InputTokens, usage.OutputTokens);
 
-        return parse(text, usage, false);
+        return parse(text, usage);
     }
 
     private static TokenUsage ReadUsage(JsonElement root)
     {
-        if (!root.TryGetProperty("usage", out var usage))
-        {
-            return new TokenUsage(0, 0);
-        }
-
-        var input = usage.TryGetProperty("prompt_tokens", out var p) ? p.GetInt32() : 0;
+        if (!root.TryGetProperty("usage", out var usage)) return new TokenUsage(0, 0);
+        var input  = usage.TryGetProperty("prompt_tokens",     out var p) ? p.GetInt32() : 0;
         var output = usage.TryGetProperty("completion_tokens", out var c) ? c.GetInt32() : 0;
         return new TokenUsage(input, output);
     }
@@ -242,21 +170,19 @@ public class OpenAIService : IAIService
         => text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static string[] ExtractHashtags(string text)
-        => text.Split(' ', StringSplitOptions.RemoveEmptyEntries)   
+        => text.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Where(t => t.StartsWith('#'))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-    private static void EnsureApiKey(string apiKey, string provider)
+    private static void EnsureApiKey(string? apiKey, string provider)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
-        {
             throw new InvalidOperationException($"{provider} API key is missing.");
-        }
     }
 
     private static string BuildIntentPrompt(IntentRequest r)
-        => $"Classify intent from this {r.Platform} customer message.\nMessage: {r.MessageContent}\nInventory: {r.InventoryContext}\nAllowed intents: greeting, order_start, inquiry, complaint, unhandled.\nReturn only one intent word.";
+        => $"Classify the customer intent from this {r.Platform} message. Return only one word: greeting, order_start, inquiry, complaint, unhandled.\nMessage: {r.MessageContent}";
 
     private static string BuildReplyPrompt(ReplyRequest r)
         => $"You are a helpful fashion store assistant.\nCustomer message: {r.MessageContent}\nIntent: {r.DetectedIntent}\nInventory: {r.InventoryContext}\nReply in concise customer-care tone.";

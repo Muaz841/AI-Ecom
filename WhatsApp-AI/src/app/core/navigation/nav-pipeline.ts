@@ -135,7 +135,7 @@ export const SIDEBAR_PIPELINE: SidebarModule[] = [
     route: '/dev/webhooks',
     icon: 'pi pi-send',
     order: 95,
-    requiredPermissions: ['platform.settings'],
+    requiredPermissions: [],
     subtitle: 'Simulate incoming Meta webhook events for development testing.',
   },
 ];

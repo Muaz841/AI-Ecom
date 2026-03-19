@@ -18,6 +18,15 @@ export interface MetaConnection {
   accessTokenExpiresAtUtc: string | null;
   lastValidatedAtUtc: string | null;
   lastError: string | null;
+  assets?: MetaAsset[];
+}
+
+export interface MetaAsset {
+  id: string;
+  assetType: string;
+  externalId: string;
+  externalName: string | null;
+  isActive: boolean;
 }
 
 export interface MetaConnectionView {

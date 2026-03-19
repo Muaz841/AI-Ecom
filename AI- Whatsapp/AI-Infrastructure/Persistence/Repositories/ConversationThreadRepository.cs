@@ -92,7 +92,8 @@ public class ConversationThreadRepository : IConversationThreadRepository
 
         if (messages.Count > 0)
         {
-            _context.Set<Message>().UpdateRange(messages);
+            // These are new message aggregates; use AddRange to avoid concurrency conflicts.
+            _context.Set<Message>().AddRange(messages);
         }
 
         await _context.SaveChangesAsync(cancellationToken);

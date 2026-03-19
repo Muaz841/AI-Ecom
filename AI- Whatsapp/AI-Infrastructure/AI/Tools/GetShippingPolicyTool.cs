@@ -15,7 +15,7 @@ namespace EcomAI.Platform.Infrastructure.AI.Tools;
 public sealed class GetShippingPolicyTool : IToolHandler
 {
     public string ToolName => "get_shipping_policy";
-    public string Description => "Retrieve the store's shipping policy, delivery timeframes, and shipping costs.";
+    public string Description => "Use this tool ONLY when the customer asks about delivery times, shipping costs, how long their order will take to arrive, or whether the store ships to their location. No parameters required.";
     public string ParametersSchema => """{"type":"object","properties":{}}""";
 
     private readonly PlatformDbContext _db;

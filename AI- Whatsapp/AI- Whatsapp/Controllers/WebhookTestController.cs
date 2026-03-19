@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Api.Webhooks;
+using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Business.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
@@ -12,25 +15,24 @@ using Microsoft.Extensions.Hosting;
 namespace EcomAI.Platform.Api.Controllers;
 
 [ApiController]
-[Authorize(Policy = PermissionCodes.PlatformSettings)]
+[Authorize]
 [Route("api/dev/webhooks")]
 public class WebhookTestController : ControllerBase
 {
-    private readonly IWebhookProcessor   _processor;
-    private readonly IWebHostEnvironment _env;
+    private readonly IWebhookProcessor        _processor;
+    private readonly IWebHostEnvironment      _env;
+    private readonly IAiRuntimeConfigProvider _runtimeConfig;
 
-    public WebhookTestController(IWebhookProcessor processor, IWebHostEnvironment env)
+    public WebhookTestController(
+        IWebhookProcessor processor,
+        IWebHostEnvironment env,
+        IAiRuntimeConfigProvider runtimeConfig)
     {
-        _processor = processor;
-        _env       = env;
+        _processor     = processor;
+        _env           = env;
+        _runtimeConfig = runtimeConfig;
     }
 
-    /// <summary>
-    /// Simulates an incoming Meta webhook. Builds a realistic Meta-shaped payload and runs
-    /// it through the exact same pipeline as production (tenant resolution by asset,
-    /// MediatR dispatch, AI processing, AppLogs write). Signature validation is skipped.
-    /// Dev environment only.
-    /// </summary>
     [HttpPost("test")]
     public async Task<ActionResult<WebhookTestResponse>> SimulateWebhook(
         [FromBody] WebhookTestRequest request,
@@ -53,8 +55,7 @@ public class WebhookTestController : ControllerBase
         {
             payloadJson = BuildPayload(platform, request.From, request.To, request.Message, messageType);
         }
-
-        // Run through the real pipeline — signature is skipped, tenant resolved from asset IDs
+        
         var result = await _processor.ProcessAsync(
             rawJson:           payloadJson,
             skipSignature:     true,
@@ -63,7 +64,17 @@ public class WebhookTestController : ControllerBase
             correlationId:     HttpContext.TraceIdentifier,
             cancellationToken: cancellationToken);
 
-        var first          = result.MessageResults.Count > 0 ? result.MessageResults[0] : null;
+
+        var first    = result.MessageResults.Count > 0 ? result.MessageResults[0] : null;
+        var rtConfig = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken);
+        var provider = rtConfig?.ActiveProvider.ToString() ?? "Unknown";
+        var model    = rtConfig?.ActiveProvider switch
+        {
+            EcomAI.Platform.Business.AIProvider.OpenAI => rtConfig.OpenAIModel ?? "not set",
+            EcomAI.Platform.Business.AIProvider.Gemini => rtConfig.GeminiModel ?? "not set",
+            EcomAI.Platform.Business.AIProvider.Ollama => rtConfig.OllamaModel,
+            _ => "not set"
+        }   ?? "not set";
 
         return Ok(new WebhookTestResponse(
             RequestPayload: payloadJson,
@@ -73,10 +84,15 @@ public class WebhookTestController : ControllerBase
             ProcessedCount: result.ProcessedCount,
             DetectedIntent: first?.DetectedIntent,
             ReplySent:      first?.ReplySent,
-            ErrorMessage:   result.ErrorMessage ?? (result.Success ? null : first?.ErrorMessage)));
+            ErrorMessage:   result.ErrorMessage ?? (result.Success ? null : first?.ErrorMessage),
+            ToolCallsMade:  first?.ToolCallsMade?.ToList() ?? new List<string>(),
+            InputTokens:    first?.InputTokens ?? 0,
+            OutputTokens:   first?.OutputTokens ?? 0,
+            AiProvider:     provider,
+            AiModel:        model));
     }
 
-    // ── Payload builders ─────────────────────────────────────────────────────
+   
 
     private static string BuildPayload(
         string platform, string from, string to, string message, string messageType)
@@ -187,7 +203,6 @@ public class WebhookTestController : ControllerBase
     }
 }
 
-// ── DTOs ──────────────────────────────────────────────────────────────────────
 
 /// <summary>
 /// Test webhook request. Tenant is NOT supplied — it is resolved from the asset IDs
@@ -204,11 +219,16 @@ public sealed record WebhookTestRequest(
     bool   UseRawPayload   = false);
 
 public sealed record WebhookTestResponse(
-    string  RequestPayload,
-    int     StatusCode,
-    bool    Success,
-    string  ResultMessage,
-    int     ProcessedCount,
-    string? DetectedIntent,
-    string? ReplySent,
-    string? ErrorMessage);
+    string       RequestPayload,
+    int          StatusCode,
+    bool         Success,
+    string       ResultMessage,
+    int          ProcessedCount,
+    string?      DetectedIntent,
+    string?      ReplySent,
+    string?      ErrorMessage,
+    List<string> ToolCallsMade,
+    int          InputTokens,
+    int          OutputTokens,
+    string       AiProvider,
+    string       AiModel);

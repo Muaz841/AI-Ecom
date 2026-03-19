@@ -80,7 +80,7 @@
                     class="debug-status-tag"
                   ></p-tag>
                   <span class="debug-mode-label">
-                    {{ form.get('debugModeEnabled')?.value ? 'Mock responses enabled' : 'Using real provider' }}
+                    {{ form.get('debugModeEnabled')?.value ? 'Debug logging enabled' : 'Using real provider' }}
                   </span>
                 </div>
                 <span class="debug-mode-desc">When enabled, all AI calls return simulated responses regardless of provider selection.</span>
@@ -294,17 +294,6 @@
           </div>
         }
 
-        <!-- ── Mock settings ───────────────────────────────── -->
-        @if (isMock) {
-          <div class="provider-section">
-            <div class="provider-badge mock"><i class="pi pi-code"></i> Mock Provider</div>
-            <div class="mock-info">
-              <i class="pi pi-info-circle"></i>
-              <span>The Mock provider returns simulated AI responses without any external API calls. Useful for local development and testing without consuming API credits.</span>
-            </div>
-          </div>
-        }
-
         <p-divider></p-divider>
 
         <!-- ── Model capabilities & sampling ──────────────── -->
@@ -434,11 +423,7 @@
       </div>
       <div class="info-row">
         <i class="pi pi-info-circle"></i>
-        <span>If no DB config exists, the system falls back to the <code>AI</code> section in <code>appsettings.json</code> automatically.</span>
-      </div>
-      <div class="info-row">
-        <i class="pi pi-info-circle"></i>
-        <span><strong>Debug Mode</strong> overrides the active provider and routes all AI calls to the Mock provider.</span>
+        <span><strong>Debug Mode</strong> enables verbose AI request/response logging without changing the active provider.</span>
       </div>
       <div class="info-row">
         <i class="pi pi-info-circle"></i>

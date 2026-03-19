@@ -88,8 +88,6 @@ public class AiSettingsController : ControllerBase
 public sealed record SaveAiConfigApiRequest(
     [Required] string ActiveProvider,
     bool DebugModeEnabled,
-    // Provider-specific fields are optional — only the active provider's fields are sent.
-    // Null values are preserved from the existing DB record.
     string? OllamaEndpoint,
     string? OllamaModel,
     string? OpenAIModel,

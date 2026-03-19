@@ -31,99 +31,97 @@ public class OllamaService : IAIService
 
     public Task<IntentDetectionResult> DetectIntentAsync(
         IntentRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default)
     {
-        var prompt = $"Classify customer intent.\nMessage: {request.MessageContent}\nInventory: {request.InventoryContext}\nReturn one: greeting, order_start, inquiry, complaint, unhandled.";
+        var prompt = $"Classify the customer intent. Return only one word: greeting, order_start, inquiry, complaint, unhandled.\nMessage: {request.MessageContent}";
         return ExecutePromptAsync(
             prompt,
             request.SystemPrompt,
-            () => new IntentDetectionResult("inquiry", 0.91, prompt, "[simulated]", 12, 8, true),
-            (text, usage, simulated) => new IntentDetectionResult(text.Trim(), 0.82, prompt, text, usage.InputTokens, usage.OutputTokens, simulated),
-            simulateOnly,
+            (text, usage) => new IntentDetectionResult(text.Trim(), 0.82, prompt, text, usage.InputTokens, usage.OutputTokens),
             cancellationToken);
     }
 
     public Task<ReplyGenerationResult> GenerateReplyAsync(
         ReplyRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default)
     {
         var prompt = $"Reply politely to customer.\nMessage: {request.MessageContent}\nIntent: {request.DetectedIntent}\nInventory: {request.InventoryContext}";
         return ExecutePromptAsync(
             prompt,
             request.SystemPrompt,
-            () => new ReplyGenerationResult(true, "Thanks for your message. We can help you with that.", prompt, "[simulated]", 18, 20, false, true),
-            (text, usage, simulated) => new ReplyGenerationResult(true, text.Trim(), prompt, text, usage.InputTokens, usage.OutputTokens, false, simulated),
-            simulateOnly,
+            (text, usage) => new ReplyGenerationResult(true, text.Trim(), prompt, text, usage.InputTokens, usage.OutputTokens, false),
             cancellationToken);
     }
 
     public Task<CaptionGenerationResult> GenerateCaptionAsync(
         CaptionRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default)
     {
         var prompt = $"Create an Instagram/Facebook caption for {request.ProductName}. Description: {request.ProductDescription}. Price: {request.Price} {request.Currency}. Style: {request.StylePreferences}.";
         return ExecutePromptAsync(
             prompt,
             null,
-            () => new CaptionGenerationResult(true, $"New drop: {request.ProductName}. Shop now.", new[] { "#newdrop", "#style", "#shopnow" }, prompt, "[simulated]", 22, 20, true),
-            (text, usage, simulated) => new CaptionGenerationResult(true, text.Trim(), ExtractHashtags(text), prompt, text, usage.InputTokens, usage.OutputTokens, simulated),
-            simulateOnly,
+            (text, usage) => new CaptionGenerationResult(true, text.Trim(), ExtractHashtags(text), prompt, text, usage.InputTokens, usage.OutputTokens),
             cancellationToken);
     }
 
     public Task<AdCopiesResult> GenerateAdCopiesAsync(
         AdRequest request,
-        bool simulateOnly = false,
         bool estimateTokensOnly = false,
         CancellationToken cancellationToken = default)
     {
         var prompt = $"Generate {request.VariationCount} ad copy variants for {request.ProductName}. Description: {request.Description}. Price: {request.Price}. One per line.";
         var estimate = EstimateTokens(prompt);
         if (estimateTokensOnly)
-        {
-            return Task.FromResult(new AdCopiesResult(true, Array.Empty<string>(), prompt, "[estimate-only]", 0, 0, estimate, true));
-        }
+            return Task.FromResult(new AdCopiesResult(true, Array.Empty<string>(), prompt, "[estimate-only]", 0, 0, estimate));
 
         return ExecutePromptAsync(
             prompt,
             null,
-            () => new AdCopiesResult(true, new[] { "Limited stock, order now.", "Premium quality for everyday wear.", "Trending style, fast delivery." }, prompt, "[simulated]", 20, 24, estimate, true),
-            (text, usage, simulated) => new AdCopiesResult(true, SplitLines(text), prompt, text, usage.InputTokens, usage.OutputTokens, estimate, simulated),
-            simulateOnly,
+            (text, usage) => new AdCopiesResult(true, SplitLines(text), prompt, text, usage.InputTokens, usage.OutputTokens, estimate),
             cancellationToken);
     }
 
-    public (string ProviderName, string ModelVersion) GetCurrentProviderInfo()
-        => ("Ollama", _settings.OllamaModel);
+    public async Task<(string ProviderName, string ModelVersion)> GetCurrentProviderInfoAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var rtConfig = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken);
+        return ("Ollama", rtConfig?.OllamaModel ?? "not set");
+    }
+
+    public Task<AgentTurnResult> GenerateAgentTurnAsync(
+        AgentTurnRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var userText = request.Contents
+            .LastOrDefault(c => c.Role == "user" && c.Text is not null)?.Text ?? string.Empty;
+
+        var replyRequest = new ReplyRequest(userText, "inquiry", string.Empty, "agent", request.SystemPrompt);
+        return GenerateReplyAsync(replyRequest, cancellationToken)
+            .ContinueWith(t =>
+            {
+                var r = t.Result;
+                return new AgentTurnResult(r.Success, r.GeneratedReply, null,
+                    r.InputTokensUsed, r.OutputTokensUsed, r.ErrorMessage);
+            }, TaskScheduler.Default);
+    }
 
     private async Task<T> ExecutePromptAsync<T>(
         string prompt,
         string? systemPrompt,
-        Func<T> simulatedResultFactory,
-        Func<string, TokenUsage, bool, T> parse,
-        bool simulateOnly,
+        Func<string, TokenUsage, T> parse,
         CancellationToken cancellationToken)
     {
-        if (simulateOnly)
-        {
-            _logger.Info("Ollama simulate-only prompt: {Prompt}", prompt);
-            return simulatedResultFactory();
-        }
-
-        // Resolve effective config: DB-first, fallback to appsettings.
-        var rt = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken);
-        var endpoint = rt?.OllamaEndpoint ?? _settings.OllamaEndpoint;
-        var model = rt?.OllamaModel ?? _settings.OllamaModel;
-        var timeout = rt?.RequestTimeoutSeconds ?? _settings.RequestTimeoutSeconds;
+        var rt       = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
+                       ?? throw new InvalidOperationException("AI provider is not configured. Configure it in Host > AI Settings.");
+        var endpoint = rt.OllamaEndpoint;
+        var model    = rt.OllamaModel;
+        var timeout  = rt.RequestTimeoutSeconds;
 
         using var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri(endpoint);
         client.Timeout = TimeSpan.FromSeconds(timeout);
 
-        // Ollama supports a top-level "system" field for the system prompt.
         object body = string.IsNullOrWhiteSpace(systemPrompt)
             ? new { model, prompt, stream = false }
             : new { model, system = systemPrompt, prompt, stream = false };
@@ -144,17 +142,13 @@ public class OllamaService : IAIService
         var usage = ReadUsage(doc.RootElement, prompt, text);
         _logger.Info("Ollama prompt={Prompt} response={Response} in={Input} out={Output}", prompt, text, usage.InputTokens, usage.OutputTokens);
 
-        return parse(text, usage, false);
+        return parse(text, usage);
     }
 
     private static TokenUsage ReadUsage(JsonElement root, string prompt, string completion)
     {
-        var input = root.TryGetProperty("prompt_eval_count", out var p)
-            ? p.GetInt32()
-            : EstimateTokens(prompt);
-        var output = root.TryGetProperty("eval_count", out var c)
-            ? c.GetInt32()
-            : EstimateTokens(completion);
+        var input  = root.TryGetProperty("prompt_eval_count", out var p) ? p.GetInt32() : EstimateTokens(prompt);
+        var output = root.TryGetProperty("eval_count",        out var c) ? c.GetInt32() : EstimateTokens(completion);
         return new TokenUsage(input, output);
     }
 

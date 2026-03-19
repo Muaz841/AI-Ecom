@@ -14,7 +14,6 @@ namespace EcomAI.Platform.Infrastructure.ExternalServices;
 
 public class GeminiService : IAIService
 {
-    // ── Safety policy — always appended to every system instruction ───────────
     private const string SafetyPolicy =
         "\n\n[SAFETY POLICY] You must never produce content that is harmful, illegal, " +
         "deceptive, sexually explicit, or violates privacy. If a request asks for such " +
@@ -39,116 +38,181 @@ public class GeminiService : IAIService
 
     public Task<IntentDetectionResult> DetectIntentAsync(
         IntentRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default)
     {
-        var prompt = $"Analyze customer intent. Message: {request.MessageContent}. Inventory: {request.InventoryContext}. Return only: greeting | order_start | inquiry | complaint | unhandled.";
+        var prompt = $"Classify the customer intent from this message. Return only one word: greeting | order_start | inquiry | complaint | unhandled.\nMessage: {request.MessageContent}";
         return ExecutePromptAsync(
             prompt,
             request.SystemPrompt,
-            () => new IntentDetectionResult("inquiry", 0.93, prompt, "[simulated]", 11, 6, true),
-            (text, usage, simulated) => new IntentDetectionResult(text.Trim(), 0.85, prompt, text, usage.InputTokens, usage.OutputTokens, simulated),
-            simulateOnly,
+            (text, usage) => new IntentDetectionResult(text.Trim(), 0.85, prompt, text, usage.InputTokens, usage.OutputTokens),
             cancellationToken);
     }
 
     public Task<ReplyGenerationResult> GenerateReplyAsync(
         ReplyRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default)
     {
         var prompt = $"Reply as polite ecommerce support.\nMessage: {request.MessageContent}\nIntent: {request.DetectedIntent}\nInventory: {request.InventoryContext}";
         return ExecutePromptAsync(
             prompt,
             request.SystemPrompt,
-            () => new ReplyGenerationResult(true, "Thanks for contacting us. We will help you right away.", prompt, "[simulated]", 18, 16, false, true),
-            (text, usage, simulated) => new ReplyGenerationResult(true, text.Trim(), prompt, text, usage.InputTokens, usage.OutputTokens, false, simulated),
-            simulateOnly,
+            (text, usage) => new ReplyGenerationResult(true, text.Trim(), prompt, text, usage.InputTokens, usage.OutputTokens, false),
             cancellationToken);
     }
 
     public Task<CaptionGenerationResult> GenerateCaptionAsync(
         CaptionRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default)
     {
         var prompt = $"Generate a caption for {request.ProductName}, description {request.ProductDescription}, price {request.Price} {request.Currency}, style {request.StylePreferences}.";
         return ExecutePromptAsync(
             prompt,
             null,
-            () => new CaptionGenerationResult(true, $"Introducing {request.ProductName}. Shop now!", new[] { "#Style", "#ShopNow", "#New" }, prompt, "[simulated]", 20, 18, true),
-            (text, usage, simulated) => new CaptionGenerationResult(true, text.Trim(), ExtractHashtags(text), prompt, text, usage.InputTokens, usage.OutputTokens, simulated),
-            simulateOnly,
+            (text, usage) => new CaptionGenerationResult(true, text.Trim(), ExtractHashtags(text), prompt, text, usage.InputTokens, usage.OutputTokens),
             cancellationToken);
     }
 
     public Task<AdCopiesResult> GenerateAdCopiesAsync(
         AdRequest request,
-        bool simulateOnly = false,
         bool estimateTokensOnly = false,
         CancellationToken cancellationToken = default)
     {
         var prompt = $"Generate {request.VariationCount} ad copy variations for {request.ProductName}. Description: {request.Description}. Price: {request.Price}. One per line.";
         var estimate = EstimateTokens(prompt);
         if (estimateTokensOnly)
-            return Task.FromResult(new AdCopiesResult(true, Array.Empty<string>(), prompt, "[estimate-only]", 0, 0, estimate, true));
+            return Task.FromResult(new AdCopiesResult(true, Array.Empty<string>(), prompt, "[estimate-only]", 0, 0, estimate));
 
         return ExecutePromptAsync(
             prompt,
             null,
-            () => new AdCopiesResult(true, new[] { "Ad copy 1", "Ad copy 2", "Ad copy 3" }, prompt, "[simulated]", 20, 30, estimate, true),
-            (text, usage, simulated) => new AdCopiesResult(true, SplitLines(text), prompt, text, usage.InputTokens, usage.OutputTokens, estimate, simulated),
-            simulateOnly,
+            (text, usage) => new AdCopiesResult(true, SplitLines(text), prompt, text, usage.InputTokens, usage.OutputTokens, estimate),
             cancellationToken);
     }
 
-    public (string ProviderName, string ModelVersion) GetCurrentProviderInfo()
-        => ("Google Gemini", _settings.GeminiModel);
+    public async Task<(string ProviderName, string ModelVersion)> GetCurrentProviderInfoAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var rtConfig = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken);
+        return ("Google Gemini", rtConfig?.GeminiModel ?? "not set");
+    }
+
+    // ── Native agent turn (multi-turn function calling) ────────────────────────
+
+    public async Task<AgentTurnResult> GenerateAgentTurnAsync(
+        AgentTurnRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var rt      = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
+                      ?? throw new InvalidOperationException("AI provider is not configured. Configure it in Host > AI Settings.");
+        var apiKey  = rt.GeminiApiKey;
+        var model   = rt.GeminiModel;
+        var timeout = rt.RequestTimeoutSeconds;
+
+        if (string.IsNullOrWhiteSpace(model))
+            throw new AiModelNotConfiguredException();
+
+        EnsureApiKey(apiKey, "Gemini");
+
+        var systemInstruction = BuildSystemInstruction(request.SystemPrompt);
+        var generationConfig  = BuildGenerationConfig(rt);
+        var contents = request.Contents.Select(BuildGeminiContentPart).ToArray();
+
+        object[]? tools = null;
+        if (request.Tools.Count > 0)
+        {
+            var declarations = request.Tools
+                .Select(t => new
+                {
+                    name        = t.Name,
+                    description = t.Description,
+                    parameters  = ParseJsonOrEmpty(t.ParametersSchema),
+                })
+                .ToArray();
+            tools = [new { functionDeclarations = declarations }];
+        }
+
+        var body = BuildAgentRequestBody(systemInstruction, contents, generationConfig, tools);
+
+        using var client = _httpClientFactory.CreateClient();
+        client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+        client.Timeout = TimeSpan.FromSeconds(timeout);
+
+        var path = $"v1beta/models/{model}:generateContent?key={Uri.EscapeDataString(apiKey!)}";
+        using var response = await client.PostAsJsonAsync(path, body, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.Error("Gemini agent turn failed. Model={Model} Status={Status} Body={Body}",
+                model, response.StatusCode, raw);
+            throw new InvalidOperationException($"Gemini request failed ({response.StatusCode}).");
+        }
+
+        using var doc = JsonDocument.Parse(raw);
+        var usage = ReadUsage(doc.RootElement, string.Empty);
+
+        var candidatesEl = doc.RootElement.GetProperty("candidates");
+        if (candidatesEl.GetArrayLength() == 0)
+            return new AgentTurnResult(false, null, null, usage.InputTokens, usage.OutputTokens,
+                "Gemini returned no candidates.");
+
+        var partsEl = candidatesEl[0].GetProperty("content").GetProperty("parts");
+        if (partsEl.GetArrayLength() == 0)
+            return new AgentTurnResult(false, null, null, usage.InputTokens, usage.OutputTokens,
+                "Gemini returned empty parts.");
+
+        var firstPart = partsEl[0];
+
+        if (firstPart.TryGetProperty("functionCall", out var funcCallEl))
+        {
+            var toolName = funcCallEl.GetProperty("name").GetString() ?? string.Empty;
+            var argsJson = funcCallEl.TryGetProperty("args", out var argsEl)
+                ? argsEl.GetRawText()
+                : "{}";
+
+            _logger.Info("Gemini native functionCall: {Tool} | model={Model}", toolName, model);
+            return new AgentTurnResult(true, null, new ToolCall(toolName, argsJson),
+                usage.InputTokens, usage.OutputTokens);
+        }
+
+        var text = firstPart.TryGetProperty("text", out var textEl)
+            ? textEl.GetString() ?? string.Empty
+            : string.Empty;
+
+        _logger.Info("Gemini agent turn final. Model={Model} Tokens: in={In} out={Out}",
+            model, usage.InputTokens, usage.OutputTokens);
+
+        return new AgentTurnResult(true, text.Trim(), null, usage.InputTokens, usage.OutputTokens);
+    }
 
     // ── Core execution ────────────────────────────────────────────────────────
 
     private async Task<T> ExecutePromptAsync<T>(
         string prompt,
         string? tenantSystemPrompt,
-        Func<T> simulatedResultFactory,
-        Func<string, TokenUsage, bool, T> parse,
-        bool simulateOnly,
+        Func<string, TokenUsage, T> parse,
         CancellationToken cancellationToken)
     {
-        if (simulateOnly)
-        {
-            _logger.Info("Gemini simulate-only prompt: {Prompt}", prompt);
-            return simulatedResultFactory();
-        }
+        var rt      = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
+                      ?? throw new InvalidOperationException("AI provider is not configured. Configure it in Host > AI Settings.");
+        var apiKey  = rt.GeminiApiKey;
+        var model   = rt.GeminiModel;
+        var timeout = rt.RequestTimeoutSeconds;
 
-        // ── 1. Resolve effective runtime config (DB-first, appsettings fallback) ──
-        var rt = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken);
-        var apiKey = rt?.GeminiApiKey ?? _settings.GeminiApiKey;
-        var model  = rt?.GeminiModel  ?? _settings.GeminiModel;
-        var timeout = rt?.RequestTimeoutSeconds ?? _settings.RequestTimeoutSeconds;
-
-        // ── 2. Guard: model must be selected ──────────────────────────────────
         if (string.IsNullOrWhiteSpace(model))
             throw new AiModelNotConfiguredException();
 
         EnsureApiKey(apiKey, "Gemini");
 
-        // ── 3. Build system instruction (tenant prompt + safety policy) ────────
         var systemInstruction = BuildSystemInstruction(tenantSystemPrompt);
-
-        // ── 4. Build generationConfig (sampling + structured output) ──────────
-        var generationConfig = BuildGenerationConfig(rt);
-
-        // ── 5. Assemble request body ──────────────────────────────────────────
+        var generationConfig  = BuildGenerationConfig(rt);
         var body = BuildRequestBody(prompt, systemInstruction, generationConfig);
 
-        // ── 6. Send request ───────────────────────────────────────────────────
         using var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
         client.Timeout = TimeSpan.FromSeconds(timeout);
 
-        var path = $"v1beta/models/{model}:generateContent?key={Uri.EscapeDataString(apiKey)}";
-
+        var path = $"v1beta/models/{model}:generateContent?key={Uri.EscapeDataString(apiKey!)}";
         using var response = await client.PostAsJsonAsync(path, body, cancellationToken);
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);
 
@@ -158,7 +222,6 @@ public class GeminiService : IAIService
             throw new InvalidOperationException($"Gemini request failed ({response.StatusCode}).");
         }
 
-        // ── 7. Parse response ─────────────────────────────────────────────────
         using var doc = JsonDocument.Parse(raw);
         var text = doc.RootElement
             .GetProperty("candidates")[0]
@@ -169,86 +232,89 @@ public class GeminiService : IAIService
 
         var usage = ReadUsage(doc.RootElement, prompt);
 
-        // ── 8. Observability — structured token log ───────────────────────────
         _logger.Info(
             "Gemini call completed. Model={Model} PromptTokens={In} OutputTokens={Out} TotalTokens={Total}",
             model, usage.InputTokens, usage.OutputTokens, usage.InputTokens + usage.OutputTokens);
 
-        return parse(text, usage, false);
+        return parse(text, usage);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Builds the systemInstruction value.
-    /// Tenant system prompt (brand voice, rules) is prepended; safety policy is always appended.
-    /// </summary>
     private static string BuildSystemInstruction(string? tenantSystemPrompt)
     {
         var base_ = string.IsNullOrWhiteSpace(tenantSystemPrompt)
             ? string.Empty
             : tenantSystemPrompt.Trim();
-
         return base_ + SafetyPolicy;
     }
 
-    /// <summary>
-    /// Builds generationConfig from runtime settings.
-    /// Temperature, TopP, MaxTokens are omitted when null — Gemini uses its defaults.
-    /// ResponssMimeType is set to application/json when structured output is enabled.
-    /// </summary>
     private static Dictionary<string, object>? BuildGenerationConfig(AiRuntimeConfig? rt)
     {
         if (rt is null) return null;
-
         var config = new Dictionary<string, object>();
-
-        if (rt.Temperature is not null)
-            config["temperature"] = rt.Temperature.Value;
-
-        if (rt.TopP is not null)
-            config["topP"] = rt.TopP.Value;
-
-        if (rt.MaxTokens is not null)
-            config["maxOutputTokens"] = rt.MaxTokens.Value;
-
-        // Structured output — enforce JSON response format
-        if (rt.EnableStructuredOutput)
-            config["responseMimeType"] = "application/json";
-
+        if (rt.Temperature is not null) config["temperature"]      = rt.Temperature.Value;
+        if (rt.TopP is not null)        config["topP"]             = rt.TopP.Value;
+        if (rt.MaxTokens is not null)   config["maxOutputTokens"]  = rt.MaxTokens.Value;
+        if (rt.EnableStructuredOutput)  config["responseMimeType"] = "application/json";
         return config.Count > 0 ? config : null;
     }
 
-    /// <summary>Assembles the full Gemini generateContent request body.</summary>
     private static object BuildRequestBody(
         string prompt,
         string systemInstruction,
         Dictionary<string, object>? generationConfig)
     {
-        // Using anonymous objects — serialized by System.Text.Json via PostAsJsonAsync.
-        // Omit null/empty optional fields to keep the request clean.
-        var contents = new[]
-        {
-            new { role = "user", parts = new[] { new { text = prompt } } }
-        };
-
+        var contents = new[] { new { role = "user", parts = new[] { new { text = prompt } } } };
         var sysInstruction = new { parts = new[] { new { text = systemInstruction } } };
 
-        if (generationConfig is not null)
+        return generationConfig is not null
+            ? new { systemInstruction = sysInstruction, generationConfig, contents }
+            : (object)new { systemInstruction = sysInstruction, contents };
+    }
+
+    private static object BuildGeminiContentPart(AgentContentPart part)
+    {
+        if (part.Text is not null)
+            return new { role = part.Role, parts = new[] { new { text = part.Text } } };
+
+        if (part.FunctionCall is not null)
         {
-            return new
-            {
-                systemInstruction = sysInstruction,
-                generationConfig,
-                contents
-            };
+            var args = ParseJsonOrEmpty(part.FunctionCall.ArgumentsJson);
+            return new { role = "model", parts = new[] { new { functionCall = new { name = part.FunctionCall.ToolName, args } } } };
         }
 
-        return new
+        if (part.FunctionResponse is not null)
         {
-            systemInstruction = sysInstruction,
-            contents
+            var responseObj = ParseJsonOrEmpty(part.FunctionResponse.ResultJson);
+            return new { role = "user", parts = new[] { new { functionResponse = new { name = part.FunctionResponse.ToolName, response = responseObj } } } };
+        }
+
+        throw new InvalidOperationException("AgentContentPart must have Text, FunctionCall, or FunctionResponse.");
+    }
+
+    private static object BuildAgentRequestBody(
+        string systemInstruction,
+        object[] contents,
+        Dictionary<string, object>? generationConfig,
+        object[]? tools)
+    {
+        var sysInstr = new { parts = new[] { new { text = systemInstruction } } };
+
+        return (tools, generationConfig) switch
+        {
+            ({ } t, { } gc) => new { systemInstruction = sysInstr, tools = t, generationConfig = gc, contents },
+            ({ } t, null)   => new { systemInstruction = sysInstr, tools = t, contents },
+            (null, { } gc)  => new { systemInstruction = sysInstr, generationConfig = gc, contents },
+            _               => (object)new { systemInstruction = sysInstr, contents },
         };
+    }
+
+    private static object ParseJsonOrEmpty(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new { };
+        try   { return JsonSerializer.Deserialize<JsonElement>(json); }
+        catch { return new { }; }
     }
 
     private static TokenUsage ReadUsage(JsonElement root, string prompt)

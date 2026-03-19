@@ -88,6 +88,12 @@
   gap: 0.25rem;
 }
 
+.field-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
 .wt-input {
   width: 100%;
   font-size: 0.875rem;
@@ -205,24 +211,61 @@
   border: 1px solid color-mix(in srgb, var(--green-500) 25%, transparent);
 }
 
-// ── AI Fields ─────────────────────────────────────────────────────────────
-.result-ai-fields {
+// ── Provider / Model / Token row ──────────────────────────────────────────
+.result-provider-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
-  background: var(--surface-ground);
-  border-radius: 8px;
-  border: 1px solid var(--surface-border);
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.ai-field {
+.provider-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--primary-color);
+  padding: 0.2rem 0.65rem;
+  border-radius: 99px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 25%, transparent);
+}
+
+.model-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--surface-ground);
+  color: var(--text-color-secondary);
+  padding: 0.2rem 0.65rem;
+  border-radius: 99px;
+  border: 1px solid var(--surface-border);
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.token-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--yellow-500) 10%, transparent);
+  color: var(--yellow-600);
+  padding: 0.2rem 0.65rem;
+  border-radius: 99px;
+  border: 1px solid color-mix(in srgb, var(--yellow-500) 25%, transparent);
+}
+
+// ── Result rows (intent, tools) ───────────────────────────────────────────
+.result-row {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
 }
 
-.ai-field-label {
+.row-label {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-color-secondary);
@@ -232,13 +275,8 @@
   align-items: center;
   gap: 0.3rem;
   white-space: nowrap;
-  min-width: 140px;
-}
-
-.ai-field-value {
-  font-size: 0.875rem;
-  color: var(--text-color);
-  word-break: break-word;
+  min-width: 110px;
+  padding-top: 0.15rem;
 }
 
 .intent-chip {
@@ -248,6 +286,44 @@
   border-radius: 99px;
   font-weight: 600;
   font-size: 0.75rem;
+}
+
+.tool-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tool-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.73rem;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--orange-500) 12%, transparent);
+  color: var(--orange-400);
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--orange-500) 25%, transparent);
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+// ── AI Reply Bubble ────────────────────────────────────────────────────────
+.ai-reply-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ai-reply-bubble {
+  background: color-mix(in srgb, var(--green-500) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--green-500) 25%, transparent);
+  border-radius: 0 12px 12px 12px;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--text-color);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 // ── Error ─────────────────────────────────────────────────────────────────

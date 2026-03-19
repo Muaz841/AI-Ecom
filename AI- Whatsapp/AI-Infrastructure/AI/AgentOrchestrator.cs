@@ -1,24 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
-using Microsoft.Extensions.Options;
 
 namespace EcomAI.Platform.Infrastructure.AI;
 
 /// <summary>
-/// Drives a multi-step tool-calling loop:
-/// 1. Inject tool definitions into system prompt.
-/// 2. Call the AI model via GenerateReplyAsync.
-/// 3. Parse response for a tool call JSON block.
-/// 4. Execute the tool, append result to context, repeat (max MaxIterations).
-/// 5. Return the final text response.
+/// Drives a native multi-turn tool-calling loop using the provider's first-class
+/// function-calling API (Gemini functionDeclarations / functionResponse).
 ///
-/// Tool invocation format the AI must produce:
-/// {"tool_call":{"name":"&lt;tool_name&gt;","args":{...}}}
+/// Loop per iteration:
+/// 1. Call GenerateAgentTurnAsync with full conversation history + tool definitions.
+/// 2. FunctionCall response → execute via IToolExecutor, append functionCall +
+///    functionResponse to history, repeat.
+/// 3. TextReply response → done; return as final answer.
+/// 4. Stop after MaxIterations regardless.
 /// </summary>
 public sealed class AgentOrchestrator : IAgentOrchestrator
 {
@@ -46,140 +43,82 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
 
     public async Task<AgentResult> RunAsync(AgentRequest request, CancellationToken ct = default)
     {
-        var toolCallsMade = new List<ToolCall>();
-        var totalInputTokens = 0;
+        var toolCallsMade     = new List<ToolCall>();
+        var totalInputTokens  = 0;
         var totalOutputTokens = 0;
 
-        // Respect EnableToolCalling flag from host AI config
         var rt = await _runtimeConfig.GetRuntimeConfigAsync(ct);
-        var toolCallingEnabled = rt?.EnableToolCalling ?? true; // default on if no DB config
+        IReadOnlyList<ToolDefinition> tools = (rt?.EnableToolCalling ?? true)
+            ? _toolRegistry.GetAll()
+            : [];
 
-        // Build system prompt — inject tool definitions only when tool calling is enabled
-        var systemPrompt = BuildSystemPromptWithTools(request.SystemPrompt, toolCallingEnabled);
-
-        // Accumulate context across iterations
-        var contextBuilder = new StringBuilder();
-        contextBuilder.AppendLine(request.MessageContent);
+        // Initialise conversation with the user's message
+        var contents = new List<AgentContentPart>
+        {
+            new("user", Text: request.MessageContent),
+        };
 
         for (var iteration = 0; iteration < MaxIterations; iteration++)
         {
-            var currentContext = contextBuilder.ToString().Trim();
+            var turn = await _aiService.GenerateAgentTurnAsync(
+                new AgentTurnRequest(request.SystemPrompt, contents, tools),
+                ct);
 
-            var replyResult = await _aiService.GenerateReplyAsync(
-                new ReplyRequest(
-                    currentContext,
-                    request.DetectedIntent,
-                    request.InventoryContext,
-                    request.MessageIdForAudit,
-                    systemPrompt),
-                cancellationToken: ct);
+            totalInputTokens  += turn.InputTokens;
+            totalOutputTokens += turn.OutputTokens;
 
-            totalInputTokens += replyResult.InputTokensUsed;
-            totalOutputTokens += replyResult.OutputTokensUsed;
+            if (!turn.Success)
+                return new AgentResult(false, null, toolCallsMade,
+                    totalInputTokens, totalOutputTokens,
+                    turn.ErrorMessage ?? "AI turn failed.");
 
-            if (!replyResult.Success || string.IsNullOrWhiteSpace(replyResult.GeneratedReply))
+            // ── Final text answer ─────────────────────────────────────────────
+            if (turn.TextReply is not null)
             {
-                return new AgentResult(false, null, toolCallsMade, totalInputTokens, totalOutputTokens,
-                    replyResult.ErrorMessage ?? "AI returned empty response.");
-            }
+                _logger.Info(
+                    "AgentOrchestrator completed in {Iter} iteration(s) for {MsgId}. " +
+                    "Tools={Count} Tokens: in={In} out={Out}",
+                    iteration + 1, request.MessageIdForAudit,
+                    toolCallsMade.Count, totalInputTokens, totalOutputTokens);
 
-            var rawResponse = replyResult.GeneratedReply.Trim();
-
-            // Check if response contains a tool call
-            var toolCall = TryParseToolCall(rawResponse);
-            if (toolCall is null)
-            {
-                // No tool call — this is the final answer
-                _logger.Info("AgentOrchestrator completed in {Iteration} iteration(s) for message {MessageId}. " +
-                             "Tools used: {ToolCount}. Tokens: in={In} out={Out}",
-                    iteration + 1, request.MessageIdForAudit, toolCallsMade.Count,
-                    totalInputTokens, totalOutputTokens);
-
-                return new AgentResult(true, rawResponse, toolCallsMade,
+                return new AgentResult(true, turn.TextReply, toolCallsMade,
                     totalInputTokens, totalOutputTokens);
             }
 
-            // Execute the tool and append result to context
-            toolCallsMade.Add(toolCall);
-            _logger.Info("Agent tool call: {ToolName} | iteration={Iter} | messageId={MsgId}",
-                toolCall.ToolName, iteration + 1, request.MessageIdForAudit);
+            // ── Native function call ──────────────────────────────────────────
+            if (turn.FunctionCall is not null)
+            {
+                var toolCall = turn.FunctionCall;
+                toolCallsMade.Add(toolCall);
 
-            var toolResult = await _toolExecutor.ExecuteAsync(request.TenantId, toolCall, ct);
+                _logger.Info(
+                    "Agent native tool call: {Tool} | iteration={Iter} | messageId={MsgId}",
+                    toolCall.ToolName, iteration + 1, request.MessageIdForAudit);
 
-            contextBuilder.AppendLine();
-            contextBuilder.AppendLine($"[Tool: {toolCall.ToolName}]");
-            contextBuilder.AppendLine($"Result: {toolResult.ResultJson}");
-            contextBuilder.AppendLine("Based on the above tool result, now provide your final response to the customer.");
+                // Append model's functionCall to conversation history
+                contents.Add(new AgentContentPart("model", FunctionCall: toolCall));
+
+                // Execute the tool
+                var toolResult = await _toolExecutor.ExecuteAsync(request.TenantId, toolCall, ct);
+
+                // Append functionResponse — Gemini expects role "user" for tool results
+                contents.Add(new AgentContentPart("user", FunctionResponse: toolResult));
+
+                continue;
+            }
+
+            // Neither TextReply nor FunctionCall — unexpected empty response
+            return new AgentResult(false, null, toolCallsMade,
+                totalInputTokens, totalOutputTokens,
+                "AI returned an empty response (no text and no function call).");
         }
 
-        _logger.Warning("AgentOrchestrator hit max iterations ({Max}) for message {MessageId}. Returning last response.",
+        _logger.Warning(
+            "AgentOrchestrator hit max iterations ({Max}) for message {MsgId}.",
             MaxIterations, request.MessageIdForAudit);
 
-        return new AgentResult(false, null, toolCallsMade, totalInputTokens, totalOutputTokens,
+        return new AgentResult(false, null, toolCallsMade,
+            totalInputTokens, totalOutputTokens,
             "Maximum agent iterations reached without a final response.");
-    }
-
-    private string BuildSystemPromptWithTools(string? tenantSystemPrompt, bool injectTools)
-    {
-        var tools = injectTools ? _toolRegistry.GetAll() : [];
-        var sb = new StringBuilder();
-
-        if (!string.IsNullOrWhiteSpace(tenantSystemPrompt))
-        {
-            sb.AppendLine(tenantSystemPrompt);
-            sb.AppendLine();
-        }
-
-        if (tools.Count > 0)
-        {
-            sb.AppendLine("AVAILABLE TOOLS:");
-            sb.AppendLine("You may call one of the following tools by responding with ONLY this JSON and nothing else:");
-            sb.AppendLine("""{"tool_call":{"name":"<tool_name>","args":{<args>}}}""");
-            sb.AppendLine("If you need to use a tool, output only the JSON above. Do NOT include any other text.");
-            sb.AppendLine("If you do not need a tool, respond normally with your final answer.");
-            sb.AppendLine();
-            sb.AppendLine("Tool list:");
-
-            foreach (var tool in tools)
-            {
-                sb.AppendLine($"- {tool.Name}: {tool.Description} | schema: {tool.ParametersSchema}");
-            }
-
-            sb.AppendLine();
-            sb.AppendLine("IMPORTANT: Only call a tool when you genuinely need the information to answer the customer. " +
-                          "Never call a tool that accesses another tenant's data. " +
-                          "Do not call more than one tool per response.");
-        }
-
-        return sb.ToString().Trim();
-    }
-
-    private static ToolCall? TryParseToolCall(string response)
-    {
-        // Look for {"tool_call":{"name":"...","args":{...}}} pattern
-        var trimmed = response.Trim();
-        if (!trimmed.StartsWith("{")) return null;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(trimmed);
-            if (!doc.RootElement.TryGetProperty("tool_call", out var toolCallNode)) return null;
-
-            var name = toolCallNode.TryGetProperty("name", out var nameProp)
-                ? nameProp.GetString()
-                : null;
-
-            if (string.IsNullOrWhiteSpace(name)) return null;
-
-            var argsJson = toolCallNode.TryGetProperty("args", out var argsProp)
-                ? argsProp.GetRawText()
-                : "{}";
-
-            return new ToolCall(name, argsJson);
-        }
-        catch
-        {
-            return null;
-        }
     }
 }

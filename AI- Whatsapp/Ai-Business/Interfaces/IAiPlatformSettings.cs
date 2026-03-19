@@ -7,11 +7,10 @@ namespace EcomAI.Platform.Business.Interfaces;
 // ── Runtime config (decrypted, consumed by AI services) ───────────────────────
 
 /// <summary>
-/// Decrypted runtime config read from the DB. Returned by IAiRuntimeConfigProvider.
-/// GeminiModel / OpenAIModel are null when the host has not yet selected a model.
+/// Decrypted runtime config read from the DB. Single source of truth — never falls back to appsettings.
 /// </summary>
 public sealed record AiRuntimeConfig(
-    string ActiveProvider,         // "OpenAI" | "Gemini" | "Ollama" | "Mock"
+    AIProvider ActiveProvider,
     bool DebugModeEnabled,
     string OllamaEndpoint,
     string OllamaModel,
@@ -28,7 +27,8 @@ public sealed record AiRuntimeConfig(
 
 /// <summary>
 /// Resolves the current AI provider config from the database at runtime.
-/// Returns null when no DB record exists (factory falls back to appsettings).
+/// Returns null when no DB record exists — callers must handle this as a
+/// "not configured" state rather than falling back to appsettings.
 /// </summary>
 public interface IAiRuntimeConfigProvider
 {
@@ -45,7 +45,6 @@ public interface IPlatformAiConfigRepository
 
 // ── Model catalog DTOs ────────────────────────────────────────────────────────
 
-/// <summary>Metadata about a specific AI model from a provider.</summary>
 public sealed record AiModelInfoDto(
     string Name,
     string Label,
@@ -54,7 +53,6 @@ public sealed record AiModelInfoDto(
     int ContextWindow,
     bool IsPreview);
 
-/// <summary>List of available models returned by GetModelsAsync.</summary>
 public sealed record AiModelListResult(
     string Provider,
     IReadOnlyList<AiModelInfoDto> Models,
@@ -62,17 +60,17 @@ public sealed record AiModelListResult(
 
 // ── UI DTOs ────────────────────────────────────────────────────────────────────
 
-/// <summary>Response DTO — API keys are always masked, never returned as plaintext.</summary>
+/// <summary>Response DTO — API keys always masked. ActiveProvider is string for JSON serialization compatibility.</summary>
 public sealed record PlatformAiConfigResult(
     bool IsConfigured,
-    string ActiveProvider,
+    string ActiveProvider,          // "OpenAI" | "Gemini" | "Ollama"
     bool DebugModeEnabled,
     string OllamaEndpoint,
     string OllamaModel,
-    string? OpenAIModel,           // null = not yet selected by host
+    string? OpenAIModel,
     bool OpenAIApiKeySet,
     string? OpenAIApiKeyMasked,
-    string? GeminiModel,           // null = not yet selected by host
+    string? GeminiModel,
     bool GeminiApiKeySet,
     string? GeminiApiKeyMasked,
     int RequestTimeoutSeconds,
@@ -83,20 +81,15 @@ public sealed record PlatformAiConfigResult(
     int? MaxTokens,
     string? UpdatedAt);
 
+/// <summary>Save request — ActiveProvider arrives as string from Angular, parsed to AIProvider enum in the service.</summary>
 public sealed record SavePlatformAiConfigRequest(
     string ActiveProvider,
     bool DebugModeEnabled,
-    /// <summary>Null when Ollama is not the active provider — backend preserves existing value.</summary>
     string? OllamaEndpoint,
-    /// <summary>Null when Ollama is not the active provider — backend preserves existing value.</summary>
     string? OllamaModel,
-    /// <summary>Null when OpenAI is not the active provider — backend preserves existing value.</summary>
     string? OpenAIModel,
-    /// <summary>Null or masked placeholder = keep existing key. New value = rotate key.</summary>
     string? OpenAIApiKey,
-    /// <summary>Null when Gemini is not the active provider — backend preserves existing value.</summary>
     string? GeminiModel,
-    /// <summary>Null or masked placeholder = keep existing key. New value = rotate key.</summary>
     string? GeminiApiKey,
     int RequestTimeoutSeconds,
     bool EnableToolCalling = false,

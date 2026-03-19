@@ -19,7 +19,6 @@ const AI_PROVIDERS = [
   { label: 'Ollama (Local)', value: 'Ollama' },
   { label: 'OpenAI', value: 'OpenAI' },
   { label: 'Gemini', value: 'Gemini' },
-  { label: 'Mock (Debug)', value: 'Mock' },
 ];
 
 @Component({
@@ -132,10 +131,9 @@ export class AiSettingsComponent implements OnInit {
   get isOllama(): boolean { return this.activeProvider === 'Ollama'; }
   get isOpenAI(): boolean { return this.activeProvider === 'OpenAI'; }
   get isGemini(): boolean { return this.activeProvider === 'Gemini'; }
-  get isMock(): boolean  { return this.activeProvider === 'Mock'; }
 
   loadModels(provider: string, refresh = false): void {
-    if (provider === 'Mock' || provider === 'Ollama') {
+    if (provider === 'Ollama') {
       this.models.set([]);
       this.modelsLoadFailed.set(false);
       return;

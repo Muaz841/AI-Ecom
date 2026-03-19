@@ -27,7 +27,6 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
     private const string ModelNotConfiguredReply = "⚠️ Our AI assistant is not fully set up yet. Please contact support.";
 
     private readonly IConversationThreadRepository _conversationThreadRepository;
-    private readonly IProductRepository _productRepository;
     private readonly IAIService _aiService;
     private readonly IAgentOrchestrator _agentOrchestrator;
     private readonly ITenantPromptBuilder _promptBuilder;
@@ -37,7 +36,6 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
     public ProcessIncomingMessageHandler(
         IConversationThreadRepository conversationThreadRepository,
-        IProductRepository productRepository,
         IAIService aiService,
         IAgentOrchestrator agentOrchestrator,
         ITenantPromptBuilder promptBuilder,
@@ -46,7 +44,6 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         IRealtimeNotifier realtimeNotifier)
     {
         _conversationThreadRepository = conversationThreadRepository;
-        _productRepository = productRepository;
         _aiService = aiService;
         _agentOrchestrator = agentOrchestrator;
         _promptBuilder = promptBuilder;
@@ -58,7 +55,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
     public async Task<ProcessIncomingMessageResult> Handle(ProcessIncomingMessageCommand request, CancellationToken cancellationToken)
     {
         var aiCallsUsed = 0;
-        var provider = _aiService.GetCurrentProviderInfo();
+        var provider = await _aiService.GetCurrentProviderInfoAsync(cancellationToken);
         _logger.Info(
             "Processing incoming message with AI provider {Provider}/{Model} for tenant {TenantId} on {Platform}",
             provider.ProviderName,
@@ -132,26 +129,22 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             return new ProcessIncomingMessageResult(true, null, null, message.Id);
         }
 
-        var availableProducts = await _productRepository.GetAvailableInventoryAsync(
-            request.TenantId,
-            maxItems: 15,
-            cancellationToken: cancellationToken);
-
-        var inventoryContext = BuildInventoryContext(availableProducts);
-
         // Resolve tenant system prompt (null = no profile configured, fall back to generic).
         var systemPrompt = await _promptBuilder.GetSystemPromptAsync(request.TenantId, cancellationToken);
 
         var detectedIntent = FallbackIntent;
         var intentDetectedSuccessfully = false;
         var generatedReply = FallbackReply;
+        IReadOnlyList<string> toolCallsMade = Array.Empty<string>();
+        var inputTokens  = 0;
+        var outputTokens = 0;
         try
         {
             EnsureAiBudget(aiCallsUsed);
             aiCallsUsed++;
 
             var intentResult = await _aiService.DetectIntentAsync(
-                new IntentRequest(request.Content, inventoryContext, request.Platform, SystemPrompt: systemPrompt),
+                new IntentRequest(request.Content, request.Platform, SystemPrompt: systemPrompt),
                 cancellationToken: cancellationToken);
 
             if (IsValidIntent(intentResult.DetectedIntent))
@@ -171,7 +164,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         catch (AiModelNotConfiguredException ex)
         {
             _logger.Warning(ex, "AI model not configured for message {MessageId}. Sending model-not-configured reply.", message.Id);
-             generatedReply = ModelNotConfiguredReply;
+            generatedReply = ModelNotConfiguredReply;
             goto SendReply;
         }
         catch (Exception ex)
@@ -181,18 +174,16 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
 
         message.MarkAsHandledByAI(detectedIntent);
 
-    
         if (intentDetectedSuccessfully)
         {
             try
             {
-                // Use AgentOrchestrator for reply generation — enables tool-calling loop.
+               
                 var agentResult = await _agentOrchestrator.RunAsync(
                     new AgentRequest(
                         request.TenantId,
                         request.Content,
                         detectedIntent,
-                        inventoryContext,
                         message.Id.ToString(),
                         systemPrompt),
                     cancellationToken);
@@ -200,13 +191,16 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
                 if (agentResult.Success && !string.IsNullOrWhiteSpace(agentResult.FinalReply))
                 {
                     generatedReply = agentResult.FinalReply.Trim();
+                    toolCallsMade  = agentResult.ToolCallsMade.Select(t => t.ToolName).ToList();
+                    inputTokens    = agentResult.TotalInputTokens;
+                    outputTokens   = agentResult.TotalOutputTokens;
                     if (agentResult.ToolCallsMade.Count > 0)
                     {
                         _logger.Info(
                             "Agent used {ToolCount} tool(s) for message {MessageId}: {Tools}",
                             agentResult.ToolCallsMade.Count,
                             message.Id,
-                            string.Join(", ", System.Linq.Enumerable.Select(agentResult.ToolCallsMade, t => t.ToolName)));
+                            string.Join(", ", agentResult.ToolCallsMade.Select(t => t.ToolName)));
                     }
                 }
                 else
@@ -262,18 +256,10 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             true,
             generatedReply,
             detectedIntent,
-            message.Id);
-    }
-
-    private static string BuildInventoryContext(IReadOnlyList<ProductInventoryItem> products)
-    {
-        if (!products.Any())
-        {
-            return "No products currently available.";
-        }
-
-        return string.Join("\n", products.Take(15).Select(p =>
-            $"{p.Name} - {p.BasePrice:C} ({p.Currency}) | Stock: {p.TotalStock}"));
+            message.Id,
+            ToolCallsMade: toolCallsMade,
+            InputTokens:   inputTokens,
+            OutputTokens:  outputTokens);
     }
 
     private static bool IsValidIntent(string? intent)
@@ -287,4 +273,3 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         }
     }
 }
-

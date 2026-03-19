@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Interfaces;
@@ -22,7 +23,12 @@ public sealed class ToolExecutor : IToolExecutor
         if (handler is null)
         {
             _logger.Warning("Tool '{ToolName}' not found in registry for tenant {TenantId}.", call.ToolName, tenantId);
-            return new ToolResult(call.ToolName, false, "{}", $"Tool '{call.ToolName}' is not available.");
+            var notFoundJson = JsonSerializer.Serialize(new
+            {
+                error = $"Tool '{call.ToolName}' is not available.",
+                suggestion = "Respond to the customer based on what you already know."
+            });
+            return new ToolResult(call.ToolName, false, notFoundJson, $"Tool '{call.ToolName}' is not available.");
         }
 
         try
@@ -40,7 +46,12 @@ public sealed class ToolExecutor : IToolExecutor
         catch (Exception ex)
         {
             _logger.Error(ex, "Tool '{ToolName}' threw an exception for tenant {TenantId}.", call.ToolName, tenantId);
-            return new ToolResult(call.ToolName, false, "{}", ex.Message);
+            var errorJson = JsonSerializer.Serialize(new
+            {
+                error = $"Tool '{call.ToolName}' encountered an unexpected error.",
+                suggestion = "Apologise to the customer and ask them to try again or contact support."
+            });
+            return new ToolResult(call.ToolName, false, errorJson, ex.Message);
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using MediatR;
 
 namespace EcomAI.Platform.Business.Commands;
@@ -20,6 +21,8 @@ public record ProcessIncomingMessageResult(
     string? ReplySent,
     string? DetectedIntent,
     Guid? CreatedMessageId,
-    string? ErrorMessage = null
-);
+    string? ErrorMessage = null,
+    IReadOnlyList<string>? ToolCallsMade = null,
+    int InputTokens = 0,
+    int OutputTokens = 0);
 

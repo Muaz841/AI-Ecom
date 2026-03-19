@@ -126,9 +126,7 @@ export const routes: Routes = [
       },
       {
         path: 'host/ai-settings',
-        canActivate: [permissionGuard],
         data: {
-          permissions: aiSettingsModule?.requiredPermissions ?? ['platform.settings'],
           title: aiSettingsModule?.label ?? 'AI Provider',
           subtitle: aiSettingsModule?.subtitle ?? 'Configure AI provider, model selection, and API keys for the platform.',
         },

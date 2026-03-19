@@ -59,7 +59,7 @@ public sealed class WebhookProcessor : IWebhookProcessor
         string correlationId,
         CancellationToken cancellationToken = default)
     {
-        // ── Signature validation ──────────────────────────────────────────────
+        
         if (!skipSignature)
         {
             var runtimeConfig = await _configProvider.GetRuntimeConfigAsync(cancellationToken);
@@ -78,8 +78,7 @@ public sealed class WebhookProcessor : IWebhookProcessor
                 return new WebhookProcessResult(false, 401, "Invalid signature.", 0, []);
             }
         }
-
-        // ── Parse payload ────────────────────────────────────────────────────
+        
         MetaWebhookPayload? payload;
         try
         {
@@ -101,8 +100,7 @@ public sealed class WebhookProcessor : IWebhookProcessor
                 endpoint, correlationId, cancellationToken);
             return new WebhookProcessResult(false, 400, "Invalid or empty payload.", 0, []);
         }
-
-        // ── Route to platform handler ────────────────────────────────────────
+       
         return (payload.Object?.ToLowerInvariant()) switch
         {
             "whatsapp_business_account" =>
@@ -119,8 +117,7 @@ public sealed class WebhookProcessor : IWebhookProcessor
             _ => new WebhookProcessResult(true, 200, "Unknown object type — ignored.", 0, [])
         };
     }
-
-    // ── WhatsApp ─────────────────────────────────────────────────────────────
+    
 
     private async Task<WebhookProcessResult> HandleWhatsAppAsync(
         MetaWebhookPayload payload,
@@ -186,8 +183,7 @@ public sealed class WebhookProcessor : IWebhookProcessor
             $"WhatsApp: {messageResults.Count} message(s) processed.",
             messageResults.Count, messageResults);
     }
-
-    // ── Instagram / Facebook ──────────────────────────────────────────────────
+    
 
     private async Task<WebhookProcessResult> HandleInstagramOrFacebookAsync(
         MetaWebhookPayload payload,

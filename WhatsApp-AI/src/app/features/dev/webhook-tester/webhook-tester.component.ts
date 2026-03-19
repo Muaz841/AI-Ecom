@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -9,6 +9,8 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TagModule } from 'primeng/tag';
 import { DividerModule } from 'primeng/divider';
 import { WebhookTesterService, WebhookTestRequest, WebhookTestResponse } from './webhook-tester.service';
+import { MetaIntegrationService } from '../../../core/integrations/meta-integration.service';
+import { MetaConnection, MetaAsset } from '../../../core/integrations/meta-integration.models';
 import { ToastService } from '../../../core/ui/toast.service';
 
 interface SelectOption {
@@ -45,7 +47,7 @@ export class WebhookTesterComponent {
     { label: 'Comment', value: 'comment' },
   ];
 
-  // Form fields
+
   platform       = 'whatsapp';
   from           = 'user_123456';
   to             = '';
@@ -53,16 +55,42 @@ export class WebhookTesterComponent {
   messageType    = 'text';
   useRawPayload  = false;
   rawPayloadJson = '';
+  selectedAsset  = '';
 
-  // State
+  
   sending    = signal(false);
   response   = signal<WebhookTestResponse | null>(null);
   hasResult  = signal(false);
+  assets     = signal<MetaConnection[]>([]);
+
+  readonly assetOptions = computed(() => {
+    const platform = this.platform;
+    const rows = this.assets();
+    const options: SelectOption[] = [];
+    for (const connection of rows) {
+      if (connection.channel?.toLowerCase() !== platform) continue;
+      for (const asset of connection.assets ?? []) {
+        options.push({
+          label: `${asset.externalName ?? 'Asset'} (${asset.assetType})`,
+          value: asset.externalId,
+        });
+      }
+    }
+    return options;
+  });
 
   constructor(
     private readonly service: WebhookTesterService,
+    private readonly integrations: MetaIntegrationService,
     private readonly toast: ToastService,
   ) {}
+
+  ngOnInit(): void {
+    this.integrations.listConnections().subscribe({
+      next: (rows) => this.assets.set(rows),
+      error: () => this.assets.set([]),
+    });
+  }
 
   send(): void {
     if (this.sending()) return;
@@ -106,6 +134,12 @@ export class WebhookTesterComponent {
   reset(): void {
     this.response.set(null);
     this.hasResult.set(false);
+  }
+
+  applySelectedAsset(): void {
+    if (this.selectedAsset) {
+      this.to = this.selectedAsset;
+    }
   }
 
   formatJson(raw: string | null | undefined): string {

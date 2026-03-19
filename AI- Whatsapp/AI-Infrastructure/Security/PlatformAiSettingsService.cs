@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using EcomAI.Platform.Business;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -57,6 +58,9 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
         SavePlatformAiConfigRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (!Enum.TryParse<AIProvider>(request.ActiveProvider, ignoreCase: true, out var provider))
+            throw new ArgumentException($"Unknown provider '{request.ActiveProvider}'. Allowed: OpenAI, Gemini, Ollama.");
+
         await ValidateCapabilitiesAsync(request, cancellationToken);
 
         var existing = await _repository.GetAsync(cancellationToken);
@@ -72,7 +76,7 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
         if (existing is null)
         {
             var created = PlatformAiConfig.Create(
-                activeProvider: request.ActiveProvider,
+                activeProvider: provider,
                 debugModeEnabled: request.DebugModeEnabled,
                 ollamaEndpoint: request.OllamaEndpoint,
                 ollamaModel: request.OllamaModel,
@@ -92,7 +96,7 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
         else
         {
             existing.Update(
-                activeProvider: request.ActiveProvider,
+                activeProvider: provider,
                 debugModeEnabled: request.DebugModeEnabled,
                 ollamaEndpoint: request.OllamaEndpoint,
                 ollamaModel: request.OllamaModel,
@@ -132,13 +136,14 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
                 return new AiModelListResult(provider, cached, IsCached: true);
         }
 
-        var models = provider.Trim().ToLowerInvariant() switch
+        if (!Enum.TryParse<AIProvider>(provider.Trim(), ignoreCase: true, out var parsedProvider))
+            return new AiModelListResult(provider, new List<AiModelInfoDto>(), IsCached: false);
+
+        var models = parsedProvider switch
         {
-            
-            "gemini" => await FetchGeminiModelsWithFallbackAsync(cancellationToken),
-            "ollama" => await FetchOllamaModelsAsync(cancellationToken),
-            "mock"   => [new AiModelInfoDto("mock-model", "Mock (Debug)", false, false, 0, false)],
-            _        => new List<AiModelInfoDto>(),
+            AIProvider.Gemini => await FetchGeminiModelsWithFallbackAsync(cancellationToken),
+            AIProvider.Ollama => await FetchOllamaModelsAsync(cancellationToken),
+            _                 => new List<AiModelInfoDto>(),
         };
 
         await _cache.SetAsync(cacheKey, models, CacheKeys.ModelsTtl, cancellationToken);
@@ -340,7 +345,7 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
 
         return new PlatformAiConfigResult(
             IsConfigured: true,
-            ActiveProvider: config.ActiveProvider,
+            ActiveProvider: config.ActiveProvider.ToString(),
             DebugModeEnabled: config.DebugModeEnabled,
             OllamaEndpoint: config.OllamaEndpoint,
             OllamaModel: config.OllamaModel,
@@ -361,7 +366,7 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
 
     private static PlatformAiConfigResult DefaultResult() => new(
         IsConfigured: false,
-        ActiveProvider: "Ollama",
+        ActiveProvider: AIProvider.Ollama.ToString(),
         DebugModeEnabled: true,
         OllamaEndpoint: "http://localhost:11434",
         OllamaModel: "llama3.1:8b",

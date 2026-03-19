@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,31 +8,31 @@ public interface IAIService
 {
     Task<IntentDetectionResult> DetectIntentAsync(
         IntentRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default);
 
     Task<ReplyGenerationResult> GenerateReplyAsync(
         ReplyRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default);
 
     Task<CaptionGenerationResult> GenerateCaptionAsync(
         CaptionRequest request,
-        bool simulateOnly = false,
         CancellationToken cancellationToken = default);
 
     Task<AdCopiesResult> GenerateAdCopiesAsync(
         AdRequest request,
-        bool simulateOnly = false,
         bool estimateTokensOnly = false,
         CancellationToken cancellationToken = default);
 
-    (string ProviderName, string ModelVersion) GetCurrentProviderInfo();
+    Task<(string ProviderName, string ModelVersion)> GetCurrentProviderInfoAsync(CancellationToken cancellationToken = default);
+
+
+    Task<AgentTurnResult> GenerateAgentTurnAsync(
+        AgentTurnRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 public record IntentRequest(
     string MessageContent,
-    string InventoryContext,
     string Platform,
     string? CustomerLanguageHint = null,
     string? SystemPrompt = null);
@@ -43,7 +44,6 @@ public record IntentDetectionResult(
     string RawResponseFromModel,
     int InputTokensUsed,
     int OutputTokensUsed,
-    bool WasSimulated,
     string? ErrorMessage = null);
 
 public record ReplyRequest(
@@ -61,7 +61,6 @@ public record ReplyGenerationResult(
     int InputTokensUsed,
     int OutputTokensUsed,
     bool WasModeratedAsUnsafe,
-    bool WasSimulated,
     string? ErrorMessage = null);
 
 public record CaptionRequest(
@@ -80,7 +79,6 @@ public record CaptionGenerationResult(
     string RawResponseFromModel,
     int InputTokensUsed,
     int OutputTokensUsed,
-    bool WasSimulated,
     string? ErrorMessage = null);
 
 public record AdRequest(
@@ -97,5 +95,4 @@ public record AdCopiesResult(
     int InputTokensUsed,
     int OutputTokensUsed,
     int EstimatedTokensBeforeCall,
-    bool WasSimulated,
     string? ErrorMessage = null);

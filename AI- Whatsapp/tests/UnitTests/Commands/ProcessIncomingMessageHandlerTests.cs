@@ -16,7 +16,6 @@ public class ProcessIncomingMessageHandlerTests
         FakeMetaMessagingService? meta = null) =>
         new(
             new FakeConversationThreadRepository(),
-            new FakeProductRepository(),
             ai ?? new FakeAiService(),
             new FakeAgentOrchestrator(),
             new FakeTenantPromptBuilder(),
@@ -95,37 +94,6 @@ public class ProcessIncomingMessageHandlerTests
             => Task.CompletedTask;
     }
 
-    private sealed class FakeProductRepository : IProductRepository
-    {
-        public Task<IReadOnlyList<ProductInventoryItem>> GetAvailableInventoryAsync(
-            Guid TenantId,
-            int? maxItems = 20,
-            string? searchTerm = null,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ProductInventoryItem>>(Array.Empty<ProductInventoryItem>());
-
-        public Task<Product?> GetByIdAsync(Guid TenantId, Guid productId, CancellationToken cancellationToken = default)
-            => Task.FromResult<Product?>(null);
-
-        public Task<IReadOnlyList<Product>> GetAvailableProductsAsync(
-            Guid TenantId,
-            int? maxItems = 20,
-            string? searchTerm = null,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<Product>>(Array.Empty<Product>());
-
-        public Task<IReadOnlyList<Product>> GetLowStockProductsAsync(Guid TenantId, int threshold = 5, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<Product>>(Array.Empty<Product>());
-
-        public Task AddAsync(Product product, CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task UpdateAsync(Product product, CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task DeleteAsync(Guid productId, CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task<bool> ExistsAsync(Guid TenantId, string skuOrName, CancellationToken cancellationToken = default)
-            => Task.FromResult(false);
-    }
 
     private sealed class FakeAiService : IAIService
     {
@@ -145,65 +113,47 @@ public class ProcessIncomingMessageHandlerTests
 
         public Task<IntentDetectionResult> DetectIntentAsync(
             IntentRequest request,
-            bool simulateOnly = false,
             CancellationToken cancellationToken = default)
         {
             if (_shouldDetectThrow)
-            {
                 throw new InvalidOperationException("ai-detect-failed");
-            }
 
             return Task.FromResult(new IntentDetectionResult(
-                _intent,
-                0.97,
-                "prompt",
-                $"{{\"intent\":\"{_intent}\"}}",
-                10,
-                4,
-                simulateOnly));
+                _intent, 0.97, "prompt", $"{{\"intent\":\"{_intent}\"}}", 10, 4));
         }
 
         public Task<ReplyGenerationResult> GenerateReplyAsync(
             ReplyRequest request,
-            bool simulateOnly = false,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_shouldReplyFail
-                ? new ReplyGenerationResult(false, null, "prompt", "{}", 8, 0, false, simulateOnly, "ai-reply-failed")
-                : new ReplyGenerationResult(true, "Auto reply", "prompt", "{\"reply\":\"Auto reply\"}", 8, 5, false, simulateOnly));
+                ? new ReplyGenerationResult(false, null, "prompt", "{}", 8, 0, false, "ai-reply-failed")
+                : new ReplyGenerationResult(true, "Auto reply", "prompt", "{\"reply\":\"Auto reply\"}", 8, 5, false));
         }
 
         public Task<CaptionGenerationResult> GenerateCaptionAsync(
             CaptionRequest request,
-            bool simulateOnly = false,
             CancellationToken cancellationToken = default)
             => Task.FromResult(new CaptionGenerationResult(
-                true,
-                "caption",
-                new List<string>(),
-                "prompt",
-                "{}",
-                7,
-                4,
-                simulateOnly));
+                true, "caption", new List<string>(), "prompt", "{}", 7, 4));
 
         public Task<AdCopiesResult> GenerateAdCopiesAsync(
             AdRequest request,
-            bool simulateOnly = false,
             bool estimateTokensOnly = false,
             CancellationToken cancellationToken = default)
             => Task.FromResult(new AdCopiesResult(
                 true,
                 estimateTokensOnly ? Array.Empty<string>() : new List<string> { "ad1" },
-                "prompt",
-                "{}",
-                6,
-                5,
-                11,
-                simulateOnly));
+                "prompt", "{}", 6, 5, 11));
 
-        public (string ProviderName, string ModelVersion) GetCurrentProviderInfo()
-            => ("FakeAI", "test-v1");
+        public Task<AgentTurnResult> GenerateAgentTurnAsync(
+            AgentTurnRequest request,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new AgentTurnResult(true, "agent reply", null, 10, 5));
+
+        public Task<(string ProviderName, string ModelVersion)> GetCurrentProviderInfoAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<(string, string)>(("FakeAI", "test-v1"));
     }
 
     private sealed class FakeMetaMessagingService : IMetaMessagingService

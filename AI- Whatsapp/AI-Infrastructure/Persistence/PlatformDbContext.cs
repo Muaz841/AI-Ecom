@@ -305,10 +305,14 @@ public class PlatformDbContext : DbContext
         });
 
         // Singleton platform-level AI provider config — no tenant filter, single row.
+        // NOTE: PlatformAiConfig inherits TenantId from the base entity and therefore
+        // receives the global EF query filter. The repository MUST call IgnoreQueryFilters()
+        // to bypass it — otherwise the row is invisible in tenant request contexts.
         modelBuilder.Entity<PlatformAiConfig>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.ActiveProvider).IsRequired().HasMaxLength(50);
+            // Store enum as its string name so the DB column stays human-readable ("Gemini", "OpenAI", "Ollama").
+            entity.Property(e => e.ActiveProvider).IsRequired().HasMaxLength(50).HasConversion<string>();
             entity.Property(e => e.OllamaEndpoint).IsRequired().HasMaxLength(500);
             entity.Property(e => e.OllamaModel).IsRequired().HasMaxLength(200);
             entity.Property(e => e.OpenAIModel).IsRequired().HasMaxLength(200);

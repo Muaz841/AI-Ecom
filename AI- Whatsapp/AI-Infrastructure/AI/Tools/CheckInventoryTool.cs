@@ -16,8 +16,8 @@ namespace EcomAI.Platform.Infrastructure.AI.Tools;
 public sealed class CheckInventoryTool : IToolHandler
 {
     public string ToolName => "check_inventory";
-    public string Description => "Check current stock availability for a specific product by name or product ID.";
-    public string ParametersSchema => """{"type":"object","properties":{"product_name":{"type":"string","description":"Product name to look up"}},"required":["product_name"]}""";
+    public string Description => "Use this tool ONLY when the customer explicitly asks whether a specific product is in stock, available, or how many units remain. Do NOT call unless the customer has named a product. Returns variant-level stock breakdown.";
+    public string ParametersSchema => """{"type":"object","properties":{"product_name":{"type":"string","description":"The exact product name or partial name the customer asked about"}},"required":["product_name"]}""";
 
     private readonly PlatformDbContext _db;
 
@@ -36,11 +36,15 @@ public sealed class CheckInventoryTool : IToolHandler
         }
         catch
         {
-            return new ToolResult(ToolName, false, "{}", "Invalid arguments: 'product_name' is required.");
+            return new ToolResult(ToolName, false,
+                JsonSerializer.Serialize(new { error = "Invalid arguments.", suggestion = "Provide 'product_name' with the product the customer asked about." }),
+                "Argument parsing failed.");
         }
 
         if (string.IsNullOrWhiteSpace(productName))
-            return new ToolResult(ToolName, false, "{}", "Product name cannot be empty.");
+            return new ToolResult(ToolName, false,
+                JsonSerializer.Serialize(new { error = "Product name is empty.", suggestion = "Ask the customer which specific product they want to check." }),
+                "Product name cannot be empty.");
 
         var product = await _db.Products
             .AsNoTracking()

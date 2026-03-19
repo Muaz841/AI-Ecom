@@ -5,25 +5,25 @@ using System.Threading.Tasks;
 
 namespace EcomAI.Platform.Business.Interfaces;
 
-// ── Tool primitive types ───────────────────────────────────────────────────────
 
-/// <summary>Describes a tool the AI agent can call.</summary>
+
+
 public sealed record ToolDefinition(
     string Name,
     string Description,
     string ParametersSchema);
 
-/// <summary>A tool invocation parsed from the AI's response.</summary>
+
 public sealed record ToolCall(string ToolName, string ArgumentsJson);
 
-/// <summary>Result returned after executing a tool.</summary>
+
 public sealed record ToolResult(
     string ToolName,
     bool Success,
     string ResultJson,
     string? ErrorMessage = null);
 
-// ── Tool handler (one per tool) ───────────────────────────────────────────────
+
 
 public interface IToolHandler
 {
@@ -37,7 +37,7 @@ public interface IToolHandler
         CancellationToken ct = default);
 }
 
-// ── Registry & executor ───────────────────────────────────────────────────────
+
 
 public interface IToolRegistry
 {
@@ -53,13 +53,34 @@ public interface IToolExecutor
         CancellationToken ct = default);
 }
 
-// ── Agent orchestrator ────────────────────────────────────────────────────────
+
+public sealed record AgentContentPart(
+    string Role,                         
+    string? Text = null,
+    ToolCall? FunctionCall = null,        
+    ToolResult? FunctionResponse = null); 
+
+
+public sealed record AgentTurnRequest(
+    string? SystemPrompt,
+    IReadOnlyList<AgentContentPart> Contents,
+    IReadOnlyList<ToolDefinition> Tools);
+
+
+public sealed record AgentTurnResult(
+    bool Success,
+    string? TextReply,
+    ToolCall? FunctionCall,
+    int InputTokens,
+    int OutputTokens,
+    string? ErrorMessage = null);
+
+
 
 public sealed record AgentRequest(
     Guid TenantId,
     string MessageContent,
     string DetectedIntent,
-    string InventoryContext,
     string MessageIdForAudit,
     string? SystemPrompt = null);
 

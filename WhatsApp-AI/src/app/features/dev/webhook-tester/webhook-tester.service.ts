@@ -22,6 +22,11 @@ export interface WebhookTestResponse {
   detectedIntent: string | null;
   replySent: string | null;
   errorMessage: string | null;
+  toolCallsMade: string[];
+  inputTokens: number;
+  outputTokens: number;
+  aiProvider: string;
+  aiModel: string;
 }
 
 @Injectable({ providedIn: 'root' })

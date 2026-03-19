@@ -15,7 +15,7 @@ namespace EcomAI.Platform.Infrastructure.AI.Tools;
 public sealed class GetReturnPolicyTool : IToolHandler
 {
     public string ToolName => "get_return_policy";
-    public string Description => "Retrieve the store's return and refund policy, including timeframes and conditions.";
+    public string Description => "Use this tool ONLY when the customer asks about returns, refunds, exchanges, or how to send an item back. Do NOT call for general questions. No parameters required.";
     public string ParametersSchema => """{"type":"object","properties":{}}""";
 
     private readonly PlatformDbContext _db;
