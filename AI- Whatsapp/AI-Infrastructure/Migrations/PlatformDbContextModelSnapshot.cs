@@ -77,7 +77,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "CreatedAt");
 
-                    b.ToTable("AppLogs");
+                    b.ToTable("AppLogs", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.ClientSecrets", b =>
@@ -189,7 +189,7 @@ namespace AI_Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[TenantId] IS NOT NULL");
 
-                    b.ToTable("ConversationThreads");
+                    b.ToTable("ConversationThreads", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.Message", b =>
@@ -253,6 +253,9 @@ namespace AI_Infrastructure.Migrations
                     b.Property<DateTime?>("SentAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("SentExternally")
+                        .HasColumnType("bit");
+
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -268,7 +271,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "ConversationThreadId", "ReceivedAt");
 
-                    b.ToTable("Messages");
+                    b.ToTable("Messages", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.MetaChannelAsset", b =>
@@ -391,7 +394,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "Status");
 
-                    b.ToTable("MetaChannelConnections");
+                    b.ToTable("MetaChannelConnections", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.MetaOAuthState", b =>
@@ -436,7 +439,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "Channel", "ExpiresAtUtc");
 
-                    b.ToTable("MetaOAuthStates");
+                    b.ToTable("MetaOAuthStates", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.Permission", b =>
@@ -540,6 +543,9 @@ namespace AI_Infrastructure.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("UseExternalMessaging")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
                     b.ToTable("PlatformAiConfigs", (string)null);
@@ -632,7 +638,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "Name");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.ProductImage", b =>
@@ -663,7 +669,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "ProductId");
 
-                    b.ToTable("ProductImages");
+                    b.ToTable("ProductImages", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.ProductVariant", b =>
@@ -698,7 +704,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "ProductId");
 
-                    b.ToTable("ProductVariants");
+                    b.ToTable("ProductVariants", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.Role", b =>
@@ -736,7 +742,7 @@ namespace AI_Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[TenantId] IS NOT NULL");
 
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.RolePermission", b =>
@@ -767,7 +773,7 @@ namespace AI_Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[TenantId] IS NOT NULL");
 
-                    b.ToTable("RolePermissions");
+                    b.ToTable("RolePermissions", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.ScheduledPost", b =>
@@ -821,7 +827,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "Status", "ScheduledFor");
 
-                    b.ToTable("ScheduledPosts");
+                    b.ToTable("ScheduledPosts", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.Tenant", b =>
@@ -979,7 +985,7 @@ namespace AI_Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[TenantId] IS NOT NULL");
 
-                    b.ToTable("UserAccounts");
+                    b.ToTable("UserAccounts", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.UserPasswordResetToken", b =>
@@ -1017,7 +1023,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "UserAccountId");
 
-                    b.ToTable("UserPasswordResetTokens");
+                    b.ToTable("UserPasswordResetTokens", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.UserRefreshToken", b =>
@@ -1059,7 +1065,7 @@ namespace AI_Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "UserAccountId");
 
-                    b.ToTable("UserRefreshTokens");
+                    b.ToTable("UserRefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.UserRole", b =>
@@ -1090,7 +1096,7 @@ namespace AI_Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[TenantId] IS NOT NULL");
 
-                    b.ToTable("UserRoles");
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.ClientSecrets", b =>
