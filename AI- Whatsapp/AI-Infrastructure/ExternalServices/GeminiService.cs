@@ -132,6 +132,7 @@ public class GeminiService : IAIService
         }
 
         var body = BuildAgentRequestBody(systemInstruction, contents, generationConfig, tools);
+        _logger.Info("Gemini request payload (agent): {Payload}", SafeSerialize(body));
 
         using var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
@@ -207,6 +208,7 @@ public class GeminiService : IAIService
         var systemInstruction = BuildSystemInstruction(tenantSystemPrompt);
         var generationConfig  = BuildGenerationConfig(rt);
         var body = BuildRequestBody(prompt, systemInstruction, generationConfig);
+        _logger.Info("Gemini request payload (text): {Payload}", SafeSerialize(body));
 
         using var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
@@ -238,8 +240,7 @@ public class GeminiService : IAIService
 
         return parse(text, usage);
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    
 
     private static string BuildSystemInstruction(string? tenantSystemPrompt)
     {
@@ -342,6 +343,18 @@ public class GeminiService : IAIService
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException($"{provider} API key is missing.");
+    }
+
+    private static string SafeSerialize(object body)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(body);
+        }
+        catch
+        {
+            return "[unserializable]";
+        }
     }
 
     private readonly record struct TokenUsage(int InputTokens, int OutputTokens);

@@ -12,6 +12,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Hangfire.States;
 
 namespace EcomAI.Platform.Infrastructure.ExternalServices;
 
@@ -99,9 +100,10 @@ public class MetaMessagingService : IMetaMessagingService
         {
             var response = await _sendPipeline.ExecuteAsync(async ct =>
                 await httpClient.PostAsync(endpoint, requestContent, ct), cancellationToken);
+            
 
-            if (response.IsSuccessStatusCode)
-            {
+            //if (response.IsSuccessStatusCode)
+            //{
                 var result = await response.Content.ReadFromJsonAsync<MetaSendResponse>(cancellationToken: cancellationToken);
                 _appLogger.Info("Message sent to {Recipient} on {Platform} for tenant {TenantId}", recipient, platform, tenantId);
                 await TryWriteOutboundLogAsync(
@@ -114,21 +116,21 @@ public class MetaMessagingService : IMetaMessagingService
                     responsePayload: await response.Content.ReadAsStringAsync(cancellationToken),
                     errorMessage: null);
                 return new MessagingSendResult(true, result?.MessageId);
-            }
+            //}
 
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                _appLogger.Error("Meta API error {StatusCode}: {Error}", response.StatusCode, errorContent);
-                await TryWriteOutboundLogAsync(
-                tenantId: tenantId,
-                operation: "send-text",
-                endpoint: endpoint,
-                requestPayload: requestPayload,
-                isSuccess: false,
-                statusCode: (int)response.StatusCode,
-                responsePayload: errorContent,
-                errorMessage: errorContent);
+            //var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            //    _appLogger.Error("Meta API error {StatusCode}: {Error}", response.StatusCode, errorContent);
+            //    await TryWriteOutboundLogAsync(
+            //    tenantId: tenantId,
+            //    operation: "send-text",
+            //    endpoint: endpoint,
+            //    requestPayload: requestPayload,
+            //    isSuccess: false,
+            //    statusCode: (int)response.StatusCode,
+            //    responsePayload: errorContent,
+            //    errorMessage: errorContent);
 
-            return new MessagingSendResult(false, null, errorContent, (int)response.StatusCode);
+            //return new MessagingSendResult(false, null, errorContent, (int)response.StatusCode);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

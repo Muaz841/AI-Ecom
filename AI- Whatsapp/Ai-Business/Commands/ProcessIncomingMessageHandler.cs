@@ -129,7 +129,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             return new ProcessIncomingMessageResult(true, null, null, message.Id);
         }
 
-        // Resolve tenant system prompt (null = no profile configured, fall back to generic).
+        
         var systemPrompt = await _promptBuilder.GetSystemPromptAsync(request.TenantId, cancellationToken);
 
         var detectedIntent = FallbackIntent;

@@ -52,7 +52,7 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
             ? _toolRegistry.GetAll()
             : [];
 
-        // Initialise conversation with the user's message
+        
         var contents = new List<AgentContentPart>
         {
             new("user", Text: request.MessageContent),
@@ -72,7 +72,6 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
                     totalInputTokens, totalOutputTokens,
                     turn.ErrorMessage ?? "AI turn failed.");
 
-            // ── Final text answer ─────────────────────────────────────────────
             if (turn.TextReply is not null)
             {
                 _logger.Info(
@@ -85,7 +84,7 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
                     totalInputTokens, totalOutputTokens);
             }
 
-            // ── Native function call ──────────────────────────────────────────
+            
             if (turn.FunctionCall is not null)
             {
                 var toolCall = turn.FunctionCall;
