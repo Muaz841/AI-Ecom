@@ -1,115 +1,138 @@
 <p-toast />
 
-<div class="container-fluid py-4">
+<div class="ai-profile-page container-fluid py-4">
 
-  <!-- Header toolbar -->
-  <p-toolbar styleClass="mb-4 surface-card border-round-lg border-1 surface-border">
-    <ng-template #start>
-      <div class="d-flex align-items-center gap-3">
-        <i class="pi pi-user-edit text-primary" style="font-size: 1.4rem"></i>
-        <div>
-          <h5 class="mb-0 fw-semibold">AI Persona Profile</h5>
-          <small class="text-secondary">
-            Define how the AI assistant behaves for every customer conversation.
-          </small>
-        </div>
+  <!-- Page Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="header-icon">
+        <i class="pi pi-user-edit"></i>
       </div>
-    </ng-template>
-    <ng-template #end>
+      <div>
+        <h4 class="mb-0 fw-semibold">AI Persona Profile</h4>
+        <p class="mb-0 text-secondary" style="font-size: 0.875rem">
+          Define how the AI assistant behaves across every customer conversation.
+        </p>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
       @if (profile()) {
-        <p-tag
-          value="v{{ profile()!.version }}"
-          severity="secondary"
-          class="me-2"
-          pTooltip="Profile version"
-        />
-        <p-tag
-          value="Configured"
-          severity="success"
-          icon="pi pi-check-circle"
-        />
+        <p-tag value="v{{ profile()!.version }}" severity="secondary" pTooltip="Profile version" />
+        <p-tag value="Active" severity="success" icon="pi pi-check-circle" />
       } @else if (!loading()) {
         <p-tag value="Not Configured" severity="warn" icon="pi pi-exclamation-triangle" />
       }
-    </ng-template>
-  </p-toolbar>
+    </div>
+  </div>
 
   <div class="row g-4">
 
-    <!-- Left: Main form -->
+    <!-- Left: Form -->
     <div class="col-lg-8">
-      <p-card>
-        <form [formGroup]="form" (ngSubmit)="save()">
+      <form [formGroup]="form" (ngSubmit)="save()">
+
+        <!-- Section 1: Identity & Behavior -->
+        <p-card class="section-card mb-4 d-block">
+          <ng-template #header>
+            <div class="section-header">
+              <div class="section-icon bg-primary-soft">
+                <i class="pi pi-id-card text-primary"></i>
+              </div>
+              <div>
+                <span class="section-title">Identity &amp; Behavior</span>
+                <span class="section-subtitle">Core instructions and communication style</span>
+              </div>
+            </div>
+          </ng-template>
 
           <!-- System Prompt -->
-          <div class="mb-4">
-            <label class="form-label fw-semibold mb-1">
+          <div class="field mb-4">
+            <label class="field-label">
               System Prompt <span class="text-danger">*</span>
-            </label>
-            <small class="d-block text-secondary mb-2">
-              Core instructions defining the AI assistant's role, identity, and primary purpose.
-              This is injected into every AI call for your store.
-            </small>
+            </label>         
             <textarea
               pTextarea
               formControlName="systemPrompt"
-              rows="8"
-              placeholder="You are a helpful customer support assistant for [Store Name], an online fashion store. Your role is to help customers find products, answer questions about orders, shipping, and returns, and provide a friendly shopping experience..."
+              rows="7"
               class="w-100"
-              [autoResize]="true"
+              [autoResize]="false"
             ></textarea>
             @if (systemPromptControl?.invalid && systemPromptControl?.touched) {
-              <small class="text-danger">System prompt is required (min 10 characters).</small>
+              <small class="field-error">
+                <i class="pi pi-exclamation-circle me-1"></i>
+                System prompt is required (min 10 characters).
+              </small>
             }
           </div>
 
-          <!-- Tone + Language row -->
-          <div class="row g-3 mb-4">
+          <p-divider />
+
+          <!-- Tone + Language -->
+          <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label fw-semibold mb-1">Tone</label>
-              <small class="d-block text-secondary mb-2">Communication style used in all responses.</small>
-              <input
-                pInputText
-                formControlName="tone"
-                placeholder="e.g. friendly, professional, casual, formal"
-                class="w-100"
-              />
+              <div class="field">
+                <label class="field-label">Tone</label>
+                <p class="field-hint">Communication style for all responses.</p>
+                <input
+                  pInputText
+                  formControlName="tone"
+                  placeholder="e.g. friendly, professional, casual"
+                  class="w-100"
+                />
+              </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-semibold mb-1">Language</label>
-              <small class="d-block text-secondary mb-2">Default response language (leave blank for auto-detect).</small>
-              <input
-                pInputText
-                formControlName="language"
-                placeholder="e.g. en, ur, ar"
-                class="w-100"
-              />
+              <div class="field">
+                <label class="field-label">Language</label>
+                <p class="field-hint">Default language (blank = auto-detect).</p>
+                <input
+                  pInputText
+                  formControlName="language"
+                  placeholder="e.g. en, ur, ar"
+                  class="w-100"
+                />
+              </div>
             </div>
           </div>
+        </p-card>
+
+        <!-- Section 2: Brand & Guardrails -->
+        <p-card class="section-card mb-4 d-block">
+          <ng-template #header>
+            <div class="section-header">
+              <div class="section-icon bg-warning-soft">
+                <i class="pi pi-shield text-warning"></i>
+              </div>
+              <div>
+                <span class="section-title">Brand &amp; Guardrails</span>
+                <span class="section-subtitle">Voice guidelines, policies, and topic restrictions</span>
+              </div>
+            </div>
+          </ng-template>
 
           <!-- Brand Rules -->
-          <div class="mb-4">
-            <label class="form-label fw-semibold mb-1">Brand Rules</label>
-            <small class="d-block text-secondary mb-2">
-              Brand voice guidelines, specific phrases to use or avoid, style standards,
-              shipping and return policy text.
-            </small>
+          <div class="field mb-4">
+            <label class="field-label">Brand Rules</label>
+            <p class="field-hint">
+              Voice standards, phrases to use or avoid, and policy text (shipping, returns, discounts).
+            </p>
             <textarea
               pTextarea
               formControlName="brandRules"
               rows="4"
-              placeholder="Always address customers by name if known. Never offer discounts without manager approval. Shipping is free above PKR 2000. Returns accepted within 30 days..."
               class="w-100"
-              [autoResize]="true"
+              [autoResize]="false"
             ></textarea>
           </div>
 
+          <p-divider />
+
           <!-- Forbidden Topics -->
-          <div class="mb-4">
-            <label class="form-label fw-semibold mb-1">Forbidden Topics</label>
-            <small class="d-block text-secondary mb-2">
-              Comma-separated topics the AI must decline to discuss (safety guardrail).
-            </small>
+          <div class="field mb-4">
+            <label class="field-label">Forbidden Topics</label>
+            <p class="field-hint">
+              Comma-separated. The AI will firmly decline any conversation on these subjects.
+            </p>
             <input
               pInputText
               formControlName="forbiddenTopics"
@@ -118,113 +141,185 @@
             />
           </div>
 
+          <p-divider />
+
           <!-- Response Style -->
-          <div class="mb-4">
-            <label class="form-label fw-semibold mb-1">Default Response Style</label>
-            <small class="d-block text-secondary mb-2">
-              Template or structure for how responses should be formatted.
-            </small>
+          <div class="field">
+            <label class="field-label">Default Response Style</label>
+            <p class="field-hint">
+              Template or structure guiding how the AI formats and structures replies.
+            </p>
             <textarea
               pTextarea
               formControlName="defaultResponseStyle"
               rows="3"
-              placeholder="Start with a greeting, address the question directly, end with an offer to help further."
               class="w-100"
-              [autoResize]="true"
+              [autoResize]="false"
             ></textarea>
           </div>
+        </p-card>
 
-          <!-- Rate limit -->
-          <div class="mb-4">
-            <label class="form-label fw-semibold mb-1">AI Calls Per Hour Limit</label>
-            <small class="d-block text-secondary mb-2">
-              Maximum AI calls allowed per hour for this tenant. Set to 0 for unlimited.
-            </small>
-            <input
-              pInputText
-              type="number"
-              formControlName="aiCallsPerHourLimit"
-              min="0"
-              max="10000"
-              class="w-100"
-              style="max-width: 200px"
-            />
-            @if (aiCallsControl?.invalid && aiCallsControl?.touched) {
-              <small class="text-danger d-block mt-1">Value must be between 0 and 10,000.</small>
-            }
+        <!-- Section 3: Rate Limiting -->
+        <p-card class="section-card mb-4 d-block">
+          <ng-template #header>
+            <div class="section-header">
+              <div class="section-icon bg-info-soft">
+                <i class="pi pi-gauge text-info"></i>
+              </div>
+              <div>
+                <span class="section-title">Rate Limiting</span>
+                <span class="section-subtitle">Control AI usage to manage costs and stability</span>
+              </div>
+            </div>
+          </ng-template>
+
+          <div class="row align-items-start">
+            <div class="col-md-5">
+              <div class="field">
+                <label class="field-label">AI Calls Per Hour</label>
+                <p class="field-hint">Set 0 for unlimited.</p>
+                <p-inputNumber
+                  formControlName="aiCallsPerHourLimit"
+                  [min]="0"
+                  [max]="10000"
+                  [showButtons]="true"
+                  buttonLayout="horizontal"
+                  decrementButtonIcon="pi pi-minus"
+                  incrementButtonIcon="pi pi-plus"
+                  styleClass="w-100"
+                />
+                @if (aiCallsControl?.invalid && aiCallsControl?.touched) {
+                  <small class="field-error">
+                    <i class="pi pi-exclamation-circle me-1"></i>
+                    Value must be between 0 and 10,000.
+                  </small>
+                }
+              </div>
+            </div>
+            <div class="col-md-7">
+              <div class="rate-info-box">
+                <i class="pi pi-info-circle text-info me-2"></i>
+                <span>Applies per tenant. Protects against unexpected LLM cost spikes during high-traffic periods.</span>
+              </div>
+            </div>
           </div>
+        </p-card>
 
-          <!-- Submit -->
-          <div class="d-flex justify-content-end">
-            <p-button
-              type="submit"
-              label="Save Profile"
-              icon="pi pi-save"
-              [loading]="saving()"
-              [disabled]="form.invalid"
-            />
-          </div>
+        <!-- Save -->
+        <div class="d-flex justify-content-end gap-2">
+          <p-button
+            type="submit"
+            label="Save Profile"
+            icon="pi pi-save"
+            [loading]="saving()"
+            [disabled]="form.invalid"
+            size="large"
+          />
+        </div>
 
-        </form>
-      </p-card>
+      </form>
     </div>
 
     <!-- Right: Info panel -->
     <div class="col-lg-4">
 
       <!-- How it works -->
-      <p-card styleClass="mb-4">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <i class="pi pi-info-circle text-primary"></i>
-          <span class="fw-semibold">How it works</span>
+      <p-card class="info-card mb-3 d-block">
+        <div class="info-card-header mb-3">
+          <i class="pi pi-bolt text-primary"></i>
+          <span>How it works</span>
         </div>
-        <ul class="ps-3 text-secondary" style="font-size: 0.875rem; line-height: 1.7">
-          <li>The system prompt is injected into <strong>every</strong> AI request for your tenant.</li>
-          <li>Tone and language guide the model's response style.</li>
-          <li>Brand rules and policies are included in tool-assisted responses.</li>
-          <li>Forbidden topics are enforced as hard refusals.</li>
-          <li>Safety policies are always appended and cannot be overridden.</li>
+        <ul class="info-list">
+          <li>
+            <i class="pi pi-check-circle text-success"></i>
+            <span>System prompt is injected into <strong>every</strong> AI request for your tenant.</span>
+          </li>
+          <li>
+            <i class="pi pi-check-circle text-success"></i>
+            <span>Tone and language guide the model's response style.</span>
+          </li>
+          <li>
+            <i class="pi pi-check-circle text-success"></i>
+            <span>Brand rules and policies are appended for tool-assisted responses.</span>
+          </li>
+          <li>
+            <i class="pi pi-check-circle text-success"></i>
+            <span>Forbidden topics are enforced as hard refusals.</span>
+          </li>
+          <li>
+            <i class="pi pi-lock text-secondary"></i>
+            <span>Safety policies are always appended and cannot be overridden.</span>
+          </li>
         </ul>
       </p-card>
 
-      <!-- Available tools -->
-      <p-card styleClass="mb-4">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <i class="pi pi-wrench text-primary"></i>
-          <span class="fw-semibold">Agent Tools Available</span>
+      <!-- Agent Tools -->
+      <p-card class="info-card mb-3 d-block">
+        <div class="info-card-header mb-3">
+          <i class="pi pi-wrench text-warning"></i>
+          <span>Agent Tools Available</span>
         </div>
-        <div class="d-flex flex-column gap-2" style="font-size: 0.875rem">
-          <div class="d-flex align-items-start gap-2">
-            <i class="pi pi-search text-success mt-1"></i>
-            <div><strong>search_products</strong><br><span class="text-secondary">Search product catalog by keyword</span></div>
+        <div class="tool-list">
+          <div class="tool-item">
+            <div class="tool-icon bg-success-soft">
+              <i class="pi pi-search text-success"></i>
+            </div>
+            <div>
+              <div class="tool-name">search_products</div>
+              <div class="tool-desc">Search product catalog by keyword</div>
+            </div>
           </div>
-          <div class="d-flex align-items-start gap-2">
-            <i class="pi pi-box text-info mt-1"></i>
-            <div><strong>check_inventory</strong><br><span class="text-secondary">Check stock for a specific product</span></div>
+          <div class="tool-item">
+            <div class="tool-icon bg-info-soft">
+              <i class="pi pi-box text-info"></i>
+            </div>
+            <div>
+              <div class="tool-name">check_inventory</div>
+              <div class="tool-desc">Check stock for a specific product</div>
+            </div>
           </div>
-          <div class="d-flex align-items-start gap-2">
-            <i class="pi pi-truck text-warning mt-1"></i>
-            <div><strong>get_shipping_policy</strong><br><span class="text-secondary">Retrieve shipping timeframes and costs</span></div>
+          <div class="tool-item">
+            <div class="tool-icon bg-warning-soft">
+              <i class="pi pi-truck text-warning"></i>
+            </div>
+            <div>
+              <div class="tool-name">get_shipping_policy</div>
+              <div class="tool-desc">Retrieve shipping timeframes and costs</div>
+            </div>
           </div>
-          <div class="d-flex align-items-start gap-2">
-            <i class="pi pi-refresh text-danger mt-1"></i>
-            <div><strong>get_return_policy</strong><br><span class="text-secondary">Retrieve return and refund conditions</span></div>
+          <div class="tool-item">
+            <div class="tool-icon bg-danger-soft">
+              <i class="pi pi-refresh text-danger"></i>
+            </div>
+            <div>
+              <div class="tool-name">get_return_policy</div>
+              <div class="tool-desc">Retrieve return and refund conditions</div>
+            </div>
           </div>
         </div>
       </p-card>
 
-      <!-- Last updated -->
+      <!-- Profile metadata -->
       @if (profile()) {
-        <p-card>
-          <div class="d-flex align-items-center gap-2 mb-2">
+        <p-card class="info-card d-block">
+          <div class="info-card-header mb-3">
             <i class="pi pi-clock text-secondary"></i>
-            <span class="fw-semibold text-secondary" style="font-size: 0.875rem">Profile Info</span>
+            <span>Profile Info</span>
           </div>
-          <div style="font-size: 0.875rem" class="text-secondary">
-            <div class="mb-1">Version: <strong class="text-body">{{ profile()!.version }}</strong></div>
-            <div class="mb-1">Created: <strong class="text-body">{{ profile()!.createdAt | date:'mediumDate' }}</strong></div>
+          <div class="meta-list">
+            <div class="meta-item">
+              <span class="meta-label">Version</span>
+              <span class="meta-value">v{{ profile()!.version }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Created</span>
+              <span class="meta-value">{{ profile()!.createdAt | date:'mediumDate' }}</span>
+            </div>
             @if (profile()!.updatedAt) {
-              <div>Updated: <strong class="text-body">{{ profile()!.updatedAt | date:'mediumDate' }}</strong></div>
+              <div class="meta-item">
+                <span class="meta-label">Last Updated</span>
+                <span class="meta-value">{{ profile()!.updatedAt | date:'mediumDate' }}</span>
+              </div>
             }
           </div>
         </p-card>

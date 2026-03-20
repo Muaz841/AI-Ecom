@@ -12,6 +12,7 @@ import { WebhookTesterService, WebhookTestRequest, WebhookTestResponse } from '.
 import { MetaIntegrationService } from '../../../core/integrations/meta-integration.service';
 import { MetaConnection, MetaAsset } from '../../../core/integrations/meta-integration.models';
 import { ToastService } from '../../../core/ui/toast.service';
+import { MessageType } from '../../../shared/constants/message.constants';
 
 interface SelectOption {
   label: string;
@@ -43,8 +44,8 @@ export class WebhookTesterComponent {
   ];
 
   readonly messageTypeOptions: SelectOption[] = [
-    { label: 'Text Message', value: 'text' },
-    { label: 'Comment', value: 'comment' },
+    { label: 'Text Message', value: MessageType.Text },
+    { label: 'Comment',      value: MessageType.Comment },
   ];
 
 
@@ -52,7 +53,7 @@ export class WebhookTesterComponent {
   from           = 'user_123456';
   to             = '';
   message        = 'Hello! I need help with my order.';
-  messageType    = 'text';
+  messageType    = MessageType.Text;
   useRawPayload  = false;
   rawPayloadJson = '';
   selectedAsset  = '';

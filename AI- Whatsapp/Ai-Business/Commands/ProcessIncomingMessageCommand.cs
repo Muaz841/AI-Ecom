@@ -12,7 +12,7 @@ public record ProcessIncomingMessageCommand(
     string Content,
     string? RawPayloadJson = null,
     string? ExternalMessageId = null,
-    string MessageType = "text",
+    MessageType MessageType = MessageType.Text,
     bool AllowAutoReply = true
 ) : IRequest<ProcessIncomingMessageResult>;
 

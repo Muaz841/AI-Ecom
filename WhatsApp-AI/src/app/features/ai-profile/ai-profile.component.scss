@@ -2,8 +2,261 @@
   display: block;
 }
 
+// ── Page header icon ────────────────────────────────────────────────────────
+
+.header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--p-primary-50, #eff6ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 1.25rem;
+    color: var(--p-primary-500, #3b82f6);
+  }
+}
+
+// ── Section cards ────────────────────────────────────────────────────────────
+
+.section-card {
+  ::ng-deep .p-card-body {
+    padding: 0;
+  }
+
+  ::ng-deep .p-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--p-surface-200, #e5e7eb);
+  }
+
+  ::ng-deep .p-card-content {
+    padding: 1.5rem;
+  }
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.section-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i { font-size: 1rem; }
+}
+
+.section-title {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--p-surface-900, #111827);
+}
+
+.section-subtitle {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--p-surface-500, #6b7280);
+  margin-top: 1px;
+}
+
+// ── Soft background tints ────────────────────────────────────────────────────
+
+.bg-primary-soft  { background: var(--p-primary-50,  #eff6ff); }
+.bg-warning-soft  { background: #fffbeb; }
+.bg-success-soft  { background: #f0fdf4; }
+.bg-info-soft     { background: #eff8ff; }
+.bg-danger-soft   { background: #fff1f2; }
+
+// ── Form field helpers ───────────────────────────────────────────────────────
+
+.field-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--p-surface-800, #1f2937);
+  margin-bottom: 0.25rem;
+}
+
+.field-hint {
+  font-size: 0.8125rem;
+  color: var(--p-surface-500, #6b7280);
+  margin-bottom: 0.625rem;
+  line-height: 1.5;
+}
+
+.field-error {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--p-red-500, #ef4444);
+  margin-top: 0.375rem;
+}
+
+// ── Input & textarea borders ─────────────────────────────────────────────────
+
+.p-inputtext,
+input.p-inputtext,
+textarea.p-textarea {
+  border: 1.5px solid var(--p-surface-300, #d1d5db) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--p-surface-400, #9ca3af) !important;
+  }
+
+  &:focus {
+    border-color: var(--p-primary-500, #3b82f6) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+    outline: none !important;
+  }
+}
+
 textarea.p-textarea {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.85rem;
-  line-height: 1.6;
+  font-size: 0.825rem;
+  line-height: 1.65;
+  resize: vertical;
+}
+
+// InputNumber
+::ng-deep p-inputnumber .p-inputtext {
+  border: 1.5px solid var(--p-surface-300, #d1d5db) !important;
+  border-radius: 8px 0 0 8px !important;
+  background: #fff !important;
+
+  &:focus {
+    border-color: var(--p-primary-500, #3b82f6) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+  }
+}
+
+// ── Rate-limit info box ──────────────────────────────────────────────────────
+
+.rate-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: var(--p-surface-50, #f9fafb);
+  border: 1px solid var(--p-surface-200, #e5e7eb);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  color: var(--p-surface-600, #4b5563);
+  line-height: 1.5;
+  margin-top: 1.75rem;
+
+  i { flex-shrink: 0; margin-top: 1px; }
+}
+
+// ── Info cards (right column) ────────────────────────────────────────────────
+
+.info-card {
+  ::ng-deep .p-card-body {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--p-surface-800, #1f2937);
+}
+
+// How-it-works list
+
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    font-size: 0.8125rem;
+    color: var(--p-surface-600, #4b5563);
+    line-height: 1.55;
+
+    i { flex-shrink: 0; margin-top: 1px; font-size: 0.875rem; }
+    strong { color: var(--p-surface-800, #1f2937); }
+  }
+}
+
+// Agent tools list
+
+.tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tool-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tool-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i { font-size: 0.875rem; }
+}
+
+.tool-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--p-surface-800, #1f2937);
+}
+
+.tool-desc {
+  font-size: 0.75rem;
+  color: var(--p-surface-500, #6b7280);
+  margin-top: 1px;
+}
+
+// Profile metadata
+
+.meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.meta-label {
+  color: var(--p-surface-500, #6b7280);
+}
+
+.meta-value {
+  font-weight: 600;
+  color: var(--p-surface-800, #1f2937);
 }

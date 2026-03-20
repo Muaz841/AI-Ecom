@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using EcomAI.Platform.Business.Common;
+using EcomAI.Platform.Business.Constants;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
 
@@ -12,17 +13,11 @@ namespace EcomAI.Platform.Business.Commands;
 
 public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMessageCommand, ProcessIncomingMessageResult>
 {
-    private static readonly HashSet<string> AllowedIntents = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "greeting",
-        "order_start",
-        "inquiry",
-        "complaint",
-        "unhandled"
-    };
+    private static readonly HashSet<string> AllowedIntents =
+        new(AiIntentCodes.All, StringComparer.OrdinalIgnoreCase);
 
     private const int MaxAiCallsPerMessage = 2;
-    private const string FallbackIntent = "unhandled";
+    private const string FallbackIntent = AiIntentCodes.Unhandled;
     private const string FallbackReply = "Thanks for your message. Our team will get back to you shortly.";
     private const string ModelNotConfiguredReply = "⚠️ Our AI assistant is not fully set up yet. Please contact support.";
 
@@ -78,11 +73,11 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             externalMessageId: request.ExternalMessageId,
             messageType: request.MessageType);
 
-        if (string.Equals(request.MessageType, "comment", StringComparison.OrdinalIgnoreCase))
+        if (request.MessageType == MessageType.Comment)
         {
             await _realtimeNotifier.PublishAsync(
                 request.TenantId,
-                "comment.received",
+                RealtimeEventNames.CommentReceived,
                 new
                 {
                     message.Id,
@@ -99,7 +94,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
         {
             await _realtimeNotifier.PublishAsync(
                 request.TenantId,
-                "message.received",
+                RealtimeEventNames.MessageReceived,
                 new
                 {
                     message.Id,
@@ -247,7 +242,7 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             new[] { message, outgoing },
             cancellationToken);
 
-        if (detectedIntent == "order_start")
+        if (detectedIntent == AiIntentCodes.OrderStart)
         {
             // TODO: Dispatch CreateOrderCommand
         }

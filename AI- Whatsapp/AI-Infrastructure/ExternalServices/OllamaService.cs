@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using EcomAI.Platform.Business.Constants;
 using EcomAI.Platform.Business.Interfaces;
 using Microsoft.Extensions.Options;
 
@@ -33,7 +34,7 @@ public class OllamaService : IAIService
         IntentRequest request,
         CancellationToken cancellationToken = default)
     {
-        var prompt = $"Classify the customer intent. Return only one word: greeting, order_start, inquiry, complaint, unhandled.\nMessage: {request.MessageContent}";
+        var prompt = $"Classify the customer intent. Return only one word: {string.Join(", ", AiIntentCodes.All)}.\nMessage: {request.MessageContent}";
         return ExecutePromptAsync(
             prompt,
             request.SystemPrompt,
@@ -96,7 +97,7 @@ public class OllamaService : IAIService
         var userText = request.Contents
             .LastOrDefault(c => c.Role == "user" && c.Text is not null)?.Text ?? string.Empty;
 
-        var replyRequest = new ReplyRequest(userText, "inquiry", string.Empty, "agent", request.SystemPrompt);
+        var replyRequest = new ReplyRequest(userText, AiIntentCodes.Inquiry, string.Empty, "agent", request.SystemPrompt);
         return GenerateReplyAsync(replyRequest, cancellationToken)
             .ContinueWith(t =>
             {

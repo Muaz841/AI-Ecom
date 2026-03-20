@@ -13,6 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { ThreadStatusValues } from '../../shared/constants/message.constants';
 import {
   Message,
   MessageSender,
@@ -26,17 +27,17 @@ import {
 import { InboxService } from './inbox.service';
 
 const STATUS_LABELS: Record<ThreadStatus, string> = {
-  'ai-handled': 'AI',
-  pending: 'Pending',
-  human: 'Human',
-  resolved: 'Done',
+  [ThreadStatusValues.AiHandled]: 'AI',
+  [ThreadStatusValues.Pending]:   'Pending',
+  [ThreadStatusValues.Human]:     'Human',
+  [ThreadStatusValues.Resolved]: 'Done',
 };
 
 const STATUS_CLASSES: Record<ThreadStatus, string> = {
-  'ai-handled': 'status-ai',
-  pending: 'status-pending',
-  human: 'status-human',
-  resolved: 'status-resolved',
+  [ThreadStatusValues.AiHandled]: 'status-ai',
+  [ThreadStatusValues.Pending]:   'status-pending',
+  [ThreadStatusValues.Human]:     'status-human',
+  [ThreadStatusValues.Resolved]:  'status-resolved',
 };
 
 @Component({
@@ -58,8 +59,8 @@ export class InboxComponent implements OnInit, AfterViewChecked {
   readonly filters = [
     { id: 'all', label: 'All' },
     { id: 'unread', label: 'Unread' },
-    { id: 'ai-handled', label: 'AI Handled' },
-    { id: 'pending', label: 'Pending' },
+    { id: ThreadStatusValues.AiHandled, label: 'AI Handled' },
+    { id: ThreadStatusValues.Pending,   label: 'Pending' },
   ];
 
   readonly platformList = [
@@ -101,8 +102,8 @@ export class InboxComponent implements OnInit, AfterViewChecked {
         return false;
       }
       if (filter === 'unread' && t.unreadCount === 0) return false;
-      if (filter === 'ai-handled' && t.status !== 'ai-handled') return false;
-      if (filter === 'pending' && t.status !== 'pending') return false;
+      if (filter === ThreadStatusValues.AiHandled && t.status !== ThreadStatusValues.AiHandled) return false;
+      if (filter === ThreadStatusValues.Pending   && t.status !== ThreadStatusValues.Pending)   return false;
       if (platforms.length > 0 && !platforms.includes(t.platform)) return false;
       return true;
     });

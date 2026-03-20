@@ -9,10 +9,10 @@ public class Message : Entity<Guid>, ITenantEntity
     public string From { get; private set; } = null!;
     public string To { get; private set; } = null!;
     public string Content { get; private set; } = null!;
-    public string Direction { get; private set; } = null!;
-    public string MessageType { get; private set; } = "text";
+    public MessageDirection Direction { get; private set; }
+    public MessageType MessageType { get; private set; }
     public string? ExternalMessageId { get; private set; }
-    public string? DeliveryStatus { get; private set; }
+    public DeliveryStatus? DeliveryStatus { get; private set; }
     public DateTime ReceivedAt { get; private set; }
     public DateTime? SentAt { get; private set; }
     public bool IsFromCustomer { get; private set; }
@@ -34,49 +34,39 @@ public class Message : Entity<Guid>, ITenantEntity
         string? rawPayloadJson = null,
         Guid? conversationThreadId = null,
         string? externalMessageId = null,
-        string messageType = "text")
+        MessageType messageType = Business.MessageType.Text)
     {
         if (tenantId == Guid.Empty)
-        {
             throw new ArgumentException("TenantId is required", nameof(tenantId));
-        }
 
         if (string.IsNullOrWhiteSpace(platform) || !IsValidPlatform(platform))
-        {
             throw new ArgumentException("Valid platform required (whatsapp, instagram, or facebook)", nameof(platform));
-        }
 
         if (string.IsNullOrWhiteSpace(from))
-        {
             throw new ArgumentException("From is required", nameof(from));
-        }
 
         if (string.IsNullOrWhiteSpace(to))
-        {
             throw new ArgumentException("To is required", nameof(to));
-        }
 
         if (string.IsNullOrWhiteSpace(content))
-        {
             throw new ArgumentException("Content is required", nameof(content));
-        }
 
         return new Message
         {
-            Id = Guid.NewGuid(),
-            TenantId = tenantId,
+            Id                   = Guid.NewGuid(),
+            TenantId             = tenantId,
             ConversationThreadId = conversationThreadId,
-            Platform = platform.ToLowerInvariant().Trim(),
-            From = from.Trim(),
-            To = to.Trim(),
-            Content = content.Trim(),
-            Direction = "incoming",
-            MessageType = string.IsNullOrWhiteSpace(messageType) ? "text" : messageType.Trim().ToLowerInvariant(),
-            ExternalMessageId = externalMessageId?.Trim(),
-            ReceivedAt = DateTime.UtcNow,
-            IsFromCustomer = true,
-            IsHandledByAI = false,
-            RawPayloadJson = rawPayloadJson
+            Platform             = platform.ToLowerInvariant().Trim(),
+            From                 = from.Trim(),
+            To                   = to.Trim(),
+            Content              = content.Trim(),
+            Direction            = MessageDirection.Incoming,
+            MessageType          = messageType,
+            ExternalMessageId    = externalMessageId?.Trim(),
+            ReceivedAt           = DateTime.UtcNow,
+            IsFromCustomer       = true,
+            IsHandledByAI        = false,
+            RawPayloadJson       = rawPayloadJson
         };
     }
 
@@ -88,59 +78,47 @@ public class Message : Entity<Guid>, ITenantEntity
         string content,
         Guid? conversationThreadId = null,
         string? externalMessageId = null,
-        string messageType = "text",
+        MessageType messageType = Business.MessageType.Text,
         string? rawPayloadJson = null)
     {
         if (tenantId == Guid.Empty)
-        {
             throw new ArgumentException("TenantId is required", nameof(tenantId));
-        }
 
         if (string.IsNullOrWhiteSpace(platform) || !IsValidPlatform(platform))
-        {
             throw new ArgumentException("Valid platform required (whatsapp, instagram, or facebook)", nameof(platform));
-        }
 
         if (string.IsNullOrWhiteSpace(from))
-        {
             throw new ArgumentException("From is required", nameof(from));
-        }
 
         if (string.IsNullOrWhiteSpace(to))
-        {
             throw new ArgumentException("To is required", nameof(to));
-        }
 
         if (string.IsNullOrWhiteSpace(content))
-        {
             throw new ArgumentException("Content is required", nameof(content));
-        }
 
         return new Message
         {
-            Id = Guid.NewGuid(),
-            TenantId = tenantId,
+            Id                   = Guid.NewGuid(),
+            TenantId             = tenantId,
             ConversationThreadId = conversationThreadId,
-            Platform = platform.ToLowerInvariant().Trim(),
-            From = from.Trim(),
-            To = to.Trim(),
-            Content = content.Trim(),
-            Direction = "outgoing",
-            MessageType = string.IsNullOrWhiteSpace(messageType) ? "text" : messageType.Trim().ToLowerInvariant(),
-            ExternalMessageId = externalMessageId?.Trim(),
-            ReceivedAt = DateTime.UtcNow,
-            IsFromCustomer = false,
-            IsHandledByAI = true,
-            RawPayloadJson = rawPayloadJson
+            Platform             = platform.ToLowerInvariant().Trim(),
+            From                 = from.Trim(),
+            To                   = to.Trim(),
+            Content              = content.Trim(),
+            Direction            = MessageDirection.Outgoing,
+            MessageType          = messageType,
+            ExternalMessageId    = externalMessageId?.Trim(),
+            ReceivedAt           = DateTime.UtcNow,
+            IsFromCustomer       = false,
+            IsHandledByAI        = true,
+            RawPayloadJson       = rawPayloadJson
         };
     }
 
     public void MarkAsHandledByAI(string intent)
     {
         if (string.IsNullOrWhiteSpace(intent))
-        {
             throw new ArgumentException("Intent cannot be empty when marking as AI-handled");
-        }
 
         IsHandledByAI = true;
         AiIntent = intent.Trim();
@@ -149,9 +127,7 @@ public class Message : Entity<Guid>, ITenantEntity
     public void LinkToOrder(Guid orderId)
     {
         if (orderId == Guid.Empty)
-        {
             throw new ArgumentException("Valid OrderId required", nameof(orderId));
-        }
 
         OrderId = orderId;
     }
@@ -159,22 +135,15 @@ public class Message : Entity<Guid>, ITenantEntity
     public void MarkAsSent(DateTime sentAtUtc)
     {
         if (sentAtUtc == default)
-        {
             throw new ArgumentException("Sent timestamp is required", nameof(sentAtUtc));
-        }
 
         SentAt = sentAtUtc;
-        DeliveryStatus = "sent";
+        DeliveryStatus = Business.DeliveryStatus.Sent;
     }
 
-    public void SetDeliveryStatus(string status)
+    public void SetDeliveryStatus(DeliveryStatus status)
     {
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            throw new ArgumentException("Delivery status cannot be empty.", nameof(status));
-        }
-
-        DeliveryStatus = status.Trim().ToLowerInvariant();
+        DeliveryStatus = status;
     }
 
     private static bool IsValidPlatform(string platform)
@@ -183,5 +152,3 @@ public class Message : Entity<Guid>, ITenantEntity
         return lower == "whatsapp" || lower == "instagram" || lower == "facebook";
     }
 }
-
-

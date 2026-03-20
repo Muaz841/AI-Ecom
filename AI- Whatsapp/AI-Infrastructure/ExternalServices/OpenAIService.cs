@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using EcomAI.Platform.Business.Constants;
 using EcomAI.Platform.Business.Interfaces;
 using Microsoft.Extensions.Options;
 
@@ -98,7 +99,7 @@ public class OpenAIService : IAIService
         var userText = request.Contents
             .LastOrDefault(c => c.Role == "user" && c.Text is not null)?.Text ?? string.Empty;
 
-        var replyRequest = new ReplyRequest(userText, "inquiry", string.Empty, "agent", request.SystemPrompt);
+        var replyRequest = new ReplyRequest(userText, AiIntentCodes.Inquiry, string.Empty, "agent", request.SystemPrompt);
         return GenerateReplyAsync(replyRequest, cancellationToken)
             .ContinueWith(t =>
             {
@@ -182,7 +183,7 @@ public class OpenAIService : IAIService
     }
 
     private static string BuildIntentPrompt(IntentRequest r)
-        => $"Classify the customer intent from this {r.Platform} message. Return only one word: greeting, order_start, inquiry, complaint, unhandled.\nMessage: {r.MessageContent}";
+        => $"Classify the customer intent from this {r.Platform} message. Return only one word: {string.Join(", ", AiIntentCodes.All)}.\nMessage: {r.MessageContent}";
 
     private static string BuildReplyPrompt(ReplyRequest r)
         => $"You are a helpful fashion store assistant.\nCustomer message: {r.MessageContent}\nIntent: {r.DetectedIntent}\nInventory: {r.InventoryContext}\nReply in concise customer-care tone.";

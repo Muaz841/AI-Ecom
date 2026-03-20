@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Api.Webhooks;
+using EcomAI.Platform.Business;
 using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Business.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -42,7 +43,9 @@ public class WebhookTestController : ControllerBase
             return NotFound();
 
         var platform    = request.Platform.ToLowerInvariant();
-        var messageType = string.IsNullOrWhiteSpace(request.MessageType) ? "text" : request.MessageType.ToLowerInvariant();
+        var messageType = Enum.TryParse<MessageType>(request.MessageType, ignoreCase: true, out var parsedType)
+            ? parsedType
+            : MessageType.Text;
 
         string payloadJson;
         if (request.UseRawPayload && !string.IsNullOrWhiteSpace(request.RawPayloadJson))
@@ -95,7 +98,7 @@ public class WebhookTestController : ControllerBase
    
 
     private static string BuildPayload(
-        string platform, string from, string to, string message, string messageType)
+        string platform, string from, string to, string message, MessageType messageType)
     {
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var fakeId    = $"test_{Guid.NewGuid():N}";
@@ -104,12 +107,12 @@ public class WebhookTestController : ControllerBase
         {
             "whatsapp" => BuildWhatsAppPayload(from, to, message, fakeId, timestamp),
 
-            "instagram" when messageType == "comment" =>
+            "instagram" when messageType == MessageType.Comment =>
                 BuildCommentPayload("instagram", from, to, message, fakeId),
 
             "instagram" => BuildDmPayload("instagram", from, to, message, fakeId, timestamp),
 
-            "facebook" when messageType == "comment" =>
+            "facebook" when messageType == MessageType.Comment =>
                 BuildCommentPayload("page", from, to, message, fakeId),
 
             "facebook" => BuildDmPayload("page", from, to, message, fakeId, timestamp),

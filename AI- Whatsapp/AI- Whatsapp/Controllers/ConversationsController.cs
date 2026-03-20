@@ -77,11 +77,11 @@ public class ConversationsController : ControllerBase
             thread.BusinessIdentifier,
             thread.CustomerDisplayName,
             thread.LastMessagePreview,
-            thread.LastMessageDirection,
+            thread.LastMessageDirection?.ToString().ToLowerInvariant(),
             thread.LastMessageAt,
             thread.MessageCount,
             thread.IsOpen,
-            thread.AssignmentMode);
+            thread.AssignmentMode.ToString().ToLowerInvariant());
     }
 
     private static ConversationMessageDto ToDto(Message message)
@@ -90,13 +90,13 @@ public class ConversationsController : ControllerBase
             message.Id,
             message.ConversationThreadId,
             message.Platform,
-            message.Direction,
-            message.MessageType,
+            message.Direction.ToString().ToLowerInvariant(),
+            message.MessageType.ToString().ToLowerInvariant(),
             message.From,
             message.To,
             message.Content,
             message.ExternalMessageId,
-            message.DeliveryStatus,
+            message.DeliveryStatus?.ToString().ToLowerInvariant(),
             message.ReceivedAt,
             message.SentAt);
     }

@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Common;
+using EcomAI.Platform.Business.Constants;
 using EcomAI.Platform.Business.Interfaces;
 using Microsoft.Extensions.Options;
 
@@ -40,7 +41,7 @@ public class GeminiService : IAIService
         IntentRequest request,
         CancellationToken cancellationToken = default)
     {
-        var prompt = $"Classify the customer intent from this message. Return only one word: greeting | order_start | inquiry | complaint | unhandled.\nMessage: {request.MessageContent}";
+        var prompt = $"Classify the customer intent from this message. Return only one word: {string.Join(" | ", AiIntentCodes.All)}.\nMessage: {request.MessageContent}";
         return ExecutePromptAsync(
             prompt,
             request.SystemPrompt,

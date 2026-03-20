@@ -1,3 +1,5 @@
+import { AssignmentMode, MessageDirection } from '../../shared/constants/message.constants';
+
 // ─── Backend DTOs (mirror ConversationsController records) ──────────────────
 
 export interface ConversationThreadDto {
@@ -8,18 +10,18 @@ export interface ConversationThreadDto {
   businessIdentifier: string;
   customerDisplayName: string | null;
   lastMessagePreview: string | null;
-  lastMessageDirection: string | null;
+  lastMessageDirection: MessageDirection | null;
   lastMessageAt: string | null;
   messageCount: number;
   isOpen: boolean;
-  assignmentMode: string;
+  assignmentMode: AssignmentMode;
 }
 
 export interface ConversationMessageDto {
   id: string;
   conversationThreadId: string | null;
   platform: string;
-  direction: string;
+  direction: MessageDirection;
   messageType: string;
   from: string;
   to: string;
@@ -63,9 +65,9 @@ export interface Thread {
 // ─── Mapping helpers ─────────────────────────────────────────────────────────
 
 const PLATFORM_COLORS: Record<Platform, string> = {
-  WhatsApp: '#25D366',
+  WhatsApp:  '#25D366',
   Instagram: '#E1306C',
-  Facebook: '#1877F2',
+  Facebook:  '#1877F2',
 };
 
 const AVATAR_PALETTE = [
@@ -98,14 +100,14 @@ function avatarColor(id: string): string {
 
 function threadStatus(dto: ConversationThreadDto): ThreadStatus {
   if (!dto.isOpen) return 'resolved';
-  if (dto.assignmentMode === 'human') return 'human';
-  if (dto.lastMessageDirection === 'incoming') return 'pending';
+  if (dto.assignmentMode === AssignmentMode.Human) return 'human';
+  if (dto.lastMessageDirection === MessageDirection.Incoming) return 'pending';
   return 'ai-handled';
 }
 
 export function relativeTime(isoDate: string | null): string {
   if (!isoDate) return '';
-  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMs   = Date.now() - new Date(isoDate).getTime();
   const diffMins = Math.floor(diffMs / 60_000);
   if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins}m ago`;
@@ -116,32 +118,32 @@ export function relativeTime(isoDate: string | null): string {
 
 export function mapThreadDto(dto: ConversationThreadDto): Thread {
   const displayName = dto.customerDisplayName ?? dto.customerIdentifier;
-  const platform = normalizePlatform(dto.platform);
+  const platform    = normalizePlatform(dto.platform);
   return {
-    id: dto.id,
-    name: displayName,
-    initials: toInitials(displayName),
-    avatarColor: avatarColor(dto.id),
+    id:           dto.id,
+    name:         displayName,
+    initials:     toInitials(displayName),
+    avatarColor:  avatarColor(dto.id),
     platform,
     platformColor: PLATFORM_COLORS[platform],
-    lastMessage: dto.lastMessagePreview ?? '',
+    lastMessage:  dto.lastMessagePreview ?? '',
     relativeTime: relativeTime(dto.lastMessageAt),
-    unreadCount: 0,
-    isOnline: false,
-    lastSeen: '',
-    status: threadStatus(dto),
-    messages: [],
+    unreadCount:  0,
+    isOnline:     false,
+    lastSeen:     '',
+    status:       threadStatus(dto),
+    messages:     [],
     messagesLoaded: false,
   };
 }
 
 export function mapMessageDto(dto: ConversationMessageDto): Message {
-  const sender: MessageSender = dto.direction === 'incoming' ? 'customer' : 'bot';
+  const sender: MessageSender = dto.direction === MessageDirection.Incoming ? 'customer' : 'bot';
   const ts = dto.sentAt ?? dto.receivedAt;
   return {
-    id: dto.id,
+    id:      dto.id,
     sender,
     content: dto.content,
-    time: new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    time:    new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
   };
 }

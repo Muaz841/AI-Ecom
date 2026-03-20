@@ -11,6 +11,8 @@ import { ToolbarModule } from 'primeng/toolbar';
 import { BadgeModule } from 'primeng/badge';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { DividerModule } from 'primeng/divider';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { AiProfileService, TenantAIProfileResult } from './ai-profile.service';
 import { HttpErrorResponse } from '@angular/common/http';
 
@@ -29,6 +31,8 @@ import { HttpErrorResponse } from '@angular/common/http';
     BadgeModule,
     TagModule,
     TooltipModule,
+    DividerModule,
+    InputNumberModule,
   ],
   providers: [MessageService],
   templateUrl: './ai-profile.component.html',

@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using EcomAI.Platform.Business;
 using EcomAI.Platform.Business.Commands;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
@@ -236,7 +237,7 @@ public sealed class WebhookProcessor : IWebhookProcessor
                     Content:           text,
                     RawPayloadJson:    JsonSerializer.Serialize(messaging),
                     ExternalMessageId: messaging.Message?.Mid,
-                    MessageType:       "text",
+                    MessageType:       MessageType.Text,
                     AllowAutoReply:    true);
 
                 var result = await _mediator.Send(command, ct);
@@ -293,7 +294,7 @@ public sealed class WebhookProcessor : IWebhookProcessor
                 Content:           comment.Content,
                 RawPayloadJson:    comment.RawJson,
                 ExternalMessageId: comment.ExternalId,
-                MessageType:       "comment",
+                MessageType:       MessageType.Comment,
                 AllowAutoReply:    false);
 
             var result = await _mediator.Send(command, ct);

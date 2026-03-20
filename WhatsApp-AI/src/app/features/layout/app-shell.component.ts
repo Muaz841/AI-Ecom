@@ -7,6 +7,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { resolveVisibleSidebarModules, SIDEBAR_PIPELINE, SidebarModule } from '../../core/navigation/nav-pipeline';
 import { ThemeService } from '../../core/theme/theme.service';
 import { SignalrRealtimeService } from '../../core/realtime/signalr-realtime.service';
+import { RealtimeEventNames } from '../../shared/constants/message.constants';
 
 type NotificationItem = {
   id: string;
@@ -128,7 +129,7 @@ export class AppShellComponent implements OnInit {
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     switch (envelope.eventType) {
-      case 'comment.received': {
+      case RealtimeEventNames.CommentReceived: {
         const platform = (envelope.payload?.['platform'] as string) ?? 'instagram';
         const content = (envelope.payload?.['content'] as string) ?? 'New comment received.';
         return {
@@ -138,7 +139,7 @@ export class AppShellComponent implements OnInit {
           receivedAt: createdAt,
         };
       }
-      case 'message.received': {
+      case RealtimeEventNames.MessageReceived: {
         const platform = (envelope.payload?.['platform'] as string) ?? 'whatsapp';
         const content = (envelope.payload?.['content'] as string) ?? 'New message received.';
         return {
