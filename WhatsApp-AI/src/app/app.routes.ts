@@ -16,6 +16,7 @@ import { RbacComponent } from './features/rbac/rbac.component';
 import { WebhookTesterComponent } from './features/dev/webhook-tester/webhook-tester.component';
 import { AiSettingsComponent } from './features/ai-settings/ai-settings.component';
 import { AiProfileComponent } from './features/ai-profile/ai-profile.component';
+import { ProductsComponent } from './features/products/products.component';
 
 const messagingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'messaging');
 const contentModule = SIDEBAR_PIPELINE.find((module) => module.id === 'content');
@@ -70,7 +71,7 @@ export const routes: Routes = [
         path: 'products',
         canActivate: [permissionGuard],
         data: { permissions: productsModule?.requiredPermissions ?? [], title: productsModule?.label ?? 'Products', subtitle: productsModule?.subtitle ?? '' },
-        component: DashboardPlaceholderComponent,
+        component: ProductsComponent,
       },
       {
         path: 'scheduling',

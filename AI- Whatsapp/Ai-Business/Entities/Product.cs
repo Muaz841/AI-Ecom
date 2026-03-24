@@ -109,6 +109,70 @@ public class Product : Entity<Guid>, ITenantEntity
         }
     }
 
+    public void Update(
+        string name,
+        string? description,
+        decimal basePrice,
+        string currency,
+        string? sku)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Product name is required", nameof(name));
+
+        if (basePrice <= 0)
+            throw new ArgumentException("Base price must be positive", nameof(basePrice));
+
+        if (!string.IsNullOrWhiteSpace(currency) && currency.Length != 3)
+            throw new ArgumentException("Currency must be 3-letter ISO code", nameof(currency));
+
+        Name        = name.Trim();
+        Description = description?.Trim();
+        BasePrice   = basePrice;
+        Currency    = string.IsNullOrWhiteSpace(currency) ? "PKR" : currency.Trim().ToUpperInvariant();
+        Sku         = sku?.Trim();
+        UpdatedAt   = DateTime.UtcNow;
+    }
+
+    public bool RemoveVariant(Guid variantId)
+    {
+        var variant = Variants.FirstOrDefault(v => v.Id == variantId);
+        if (variant is null) return false;
+        Variants.Remove(variant);
+        UpdateTotalStock();
+        return true;
+    }
+
+    public bool SetVariantStock(Guid variantId, int newStock)
+    {
+        if (newStock < 0)
+            throw new ArgumentException("Stock cannot be negative");
+
+        var variant = Variants.FirstOrDefault(v => v.Id == variantId);
+        if (variant is null) return false;
+        variant.SetStock(newStock);
+        UpdateTotalStock();
+        return true;
+    }
+
+    public bool RemoveImage(Guid imageId)
+    {
+        var image = Images.FirstOrDefault(i => i.Id == imageId);
+        if (image is null) return false;
+        Images.Remove(image);
+        UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    public bool MarkImageAsPrimary(Guid imageId)
+    {
+        var target = Images.FirstOrDefault(i => i.Id == imageId);
+        if (target is null) return false;
+        foreach (var img in Images) img.MarkAsNonPrimary();
+        target.MarkAsPrimary();
+        UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
     private void UpdateTotalStock()
     {
         TotalStock = Variants.Sum(v => v.Stock);
@@ -162,9 +226,15 @@ public class ProductVariant : Entity<Guid>, ITenantEntity
     {
         var newStock = Stock + delta;
         if (newStock < 0)
-        {
             throw new ArgumentException("Stock cannot go negative");
-        }
+
+        Stock = newStock;
+    }
+
+    public void SetStock(int newStock)
+    {
+        if (newStock < 0)
+            throw new ArgumentException("Stock cannot be negative");
 
         Stock = newStock;
     }
@@ -194,10 +264,9 @@ public class ProductImage : Entity<Guid>, ITenantEntity
         };
     }
 
-    public void MarkAsNonPrimary()
-    {
-        IsPrimary = false;
-    }
+    public void MarkAsNonPrimary() => IsPrimary = false;
+
+    public void MarkAsPrimary() => IsPrimary = true;
 }
 
 

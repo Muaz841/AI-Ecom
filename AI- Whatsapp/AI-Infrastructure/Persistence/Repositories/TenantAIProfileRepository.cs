@@ -30,7 +30,7 @@ public sealed class TenantAIProfileRepository : ITenantAIProfileRepository
         if (existing is null)
             await _db.TenantAIProfiles.AddAsync(profile, ct);
         else
-            _db.TenantAIProfiles.Update(profile);
+            _db.Entry(existing).CurrentValues.SetValues(profile);
 
         await _db.SaveChangesAsync(ct);
     }

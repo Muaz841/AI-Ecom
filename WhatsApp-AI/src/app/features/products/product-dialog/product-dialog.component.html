@@ -1,0 +1,103 @@
+<form [formGroup]="form" (ngSubmit)="save()" class="product-dialog-form">
+
+  <!-- Basic info -->
+  <div class="row g-3 mb-3">
+    <div class="col-md-8">
+      <label class="dialog-label">Name <span class="text-danger">*</span></label>
+      <input pInputText formControlName="name" placeholder="Product name" class="w-100" />
+      @if (form.get('name')?.invalid && form.get('name')?.touched) {
+        <small class="text-danger">Name is required (max 300 chars).</small>
+      }
+    </div>
+    <div class="col-md-4">
+      <label class="dialog-label">SKU</label>
+      <input pInputText formControlName="sku" placeholder="e.g. SHIRT-RED-L" class="w-100" />
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="dialog-label">Description</label>
+    <textarea pTextarea formControlName="description" rows="3" class="w-100"
+      placeholder="Short product description..."></textarea>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-5">
+      <label class="dialog-label">Base Price <span class="text-danger">*</span></label>
+      <p-inputNumber formControlName="basePrice" [minFractionDigits]="2" [maxFractionDigits]="2"
+        placeholder="0.00" styleClass="w-100" />
+      @if (form.get('basePrice')?.invalid && form.get('basePrice')?.touched) {
+        <small class="text-danger">Price is required and must be > 0.</small>
+      }
+    </div>
+    <div class="col-md-3">
+      <label class="dialog-label">Currency</label>
+      <input pInputText formControlName="currency" placeholder="PKR" class="w-100" maxlength="3" />
+    </div>
+  </div>
+
+  @if (!isEdit) {
+    <div class="mb-3">
+      <label class="dialog-label">Image URLs</label>
+      <small class="d-block text-secondary mb-1" style="font-size: 0.8rem">One URL per line. First image will be set as primary.</small>
+      <textarea pTextarea formControlName="imageUrls" rows="3" class="w-100"
+        placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"></textarea>
+    </div>
+  }
+
+  <p-divider />
+
+  <!-- Variants -->
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="dialog-section-title">
+      <i class="pi pi-list me-2 text-primary"></i>Variants
+    </span>
+    <p-button type="button" label="Add Variant" icon="pi pi-plus" size="small"
+      severity="secondary" (onClick)="addVariant()" />
+  </div>
+
+  <div formArrayName="variants">
+    @for (variant of variantsArray.controls; track $index) {
+      <div [formGroupName]="$index" class="variant-row">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="dialog-label-sm">Size *</label>
+            <input pInputText formControlName="size" placeholder="S / M / L / XL" class="w-100" />
+          </div>
+          <div class="col-md-3">
+            <label class="dialog-label-sm">Color</label>
+            <input pInputText formControlName="color" placeholder="e.g. Red" class="w-100" />
+          </div>
+          <div class="col-md-2">
+            <label class="dialog-label-sm">Stock</label>
+            <p-inputNumber formControlName="stock" [min]="0" [showButtons]="true"
+              decrementButtonIcon="pi pi-minus" incrementButtonIcon="pi pi-plus" styleClass="w-100" />
+          </div>
+          <div class="col-md-3">
+            <label class="dialog-label-sm">Price Override</label>
+            <p-inputNumber formControlName="priceOverride" [minFractionDigits]="2"
+              placeholder="optional" styleClass="w-100" />
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            <p-button type="button" icon="pi pi-trash" severity="danger" [text]="true"
+              size="small" pTooltip="Remove" (onClick)="removeVariant($index)" />
+          </div>
+        </div>
+      </div>
+    }
+    @if (variantsArray.length === 0) {
+      <p class="text-secondary text-center py-2" style="font-size: 0.825rem">
+        No variants added. Add a variant to track sizes, colors, and individual stock levels.
+      </p>
+    }
+  </div>
+
+  <!-- Actions -->
+  <p-divider />
+  <div class="d-flex justify-content-end gap-2 pt-1">
+    <p-button type="button" label="Cancel" severity="secondary" [text]="true" (onClick)="cancel.emit()" />
+    <p-button type="submit" [label]="isEdit ? 'Update Product' : 'Create Product'"
+      icon="pi pi-save" [loading]="saving" [disabled]="form.invalid" />
+  </div>
+
+</form>

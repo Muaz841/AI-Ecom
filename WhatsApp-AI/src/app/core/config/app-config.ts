@@ -47,6 +47,16 @@ export interface AppConfig {
     get: string;
     save: string;
   };
+  products: {
+    list: string;
+    getById: (id: string) => string;
+    upload: string;
+    update: (id: string) => string;
+    delete: (id: string) => string;
+    addImage: (id: string) => string;
+    removeImage: (id: string, imageId: string) => string;
+    setPrimaryImage: (id: string, imageId: string) => string;
+  };
   dev: {
     webhookTest: string;
   };
@@ -99,6 +109,16 @@ export const APP_CONFIG: AppConfig = {
   aiProfile: {
     get: '/api/v1/tenant/ai-profile',
     save: '/api/v1/tenant/ai-profile',
+  },
+  products: {
+    list:           '/api/products',
+    getById:        (id: string) => `/api/products/${id}`,
+    upload:         '/api/products/upload',
+    update:         (id: string) => `/api/products/${id}`,
+    delete:         (id: string) => `/api/products/${id}`,
+    addImage:       (id: string) => `/api/products/${id}/images`,
+    removeImage:    (id: string, imageId: string) => `/api/products/${id}/images/${imageId}`,
+    setPrimaryImage:(id: string, imageId: string) => `/api/products/${id}/images/${imageId}/primary`,
   },
   dev: {
     webhookTest: '/api/dev/webhooks/test',
