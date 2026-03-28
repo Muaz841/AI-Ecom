@@ -2,9 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using EcomAI.Platform.Business.Commands;
+using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Business.Security;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -16,10 +18,12 @@ namespace EcomAI.Platform.Api.Controllers;
 public class ProductsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IFileStorageService _fileStorage;
 
-    public ProductsController(IMediator mediator)
+    public ProductsController(IMediator mediator, IFileStorageService fileStorage)
     {
-        _mediator = mediator;
+        _mediator    = mediator;
+        _fileStorage = fileStorage;
     }
 
     // ─── List ─────────────────────────────────────────────────────────────────
@@ -65,7 +69,7 @@ public class ProductsController : ControllerBase
     // ─── Create ───────────────────────────────────────────────────────────────
 
     [HttpPost("upload")]
-    [SwaggerOperation(Summary = "Create product", Description = "Creates a product with variants and image URLs.")]
+    [SwaggerOperation(Summary = "Create product", Description = "Creates a product with variants.")]
     [ProducesResponseType(typeof(ProductUploadResult), 200)]
     [ProducesResponseType(400)]
     public async Task<IActionResult> Upload(
@@ -82,8 +86,7 @@ public class ProductsController : ControllerBase
             request.BasePrice,
             request.Currency ?? "PKR",
             request.Sku,
-            request.Variants,
-            request.ImageUrls);
+            request.Variants);
 
         var result = await _mediator.Send(command, cancellationToken);
         return result.Success ? Ok(result) : BadRequest(result.ErrorMessage);
@@ -142,18 +145,36 @@ public class ProductsController : ControllerBase
     // ─── Images ───────────────────────────────────────────────────────────────
 
     [HttpPost("{id:guid}/images")]
-    [SwaggerOperation(Summary = "Add image", Description = "Adds a URL-based image to a product.")]
+    [Consumes("multipart/form-data")]
+    [SwaggerOperation(Summary = "Upload image", Description = "Uploads an image file and attaches it to the product.")]
     [ProducesResponseType(typeof(ProductMutationResult), 200)]
     [ProducesResponseType(400)]
-    public async Task<ActionResult<ProductMutationResult>> AddImage(
+    public async Task<ActionResult<ProductMutationResult>> UploadImage(
         Guid id,
-        [FromBody] AddImageRequest request,
+        IFormFile file,
+        [FromForm] string? altText  = null,
+        [FromForm] bool   isPrimary = false,
         CancellationToken cancellationToken = default)
     {
         var tenantId = GetTenantId();
         if (tenantId == Guid.Empty) return Unauthorized();
 
-        var command = new AddProductImageCommand(tenantId, id, request.Url, request.AltText, request.IsPrimary);
+        if (file is null || file.Length == 0)
+            return BadRequest("No file uploaded.");
+
+        string url;
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            url = await _fileStorage.SaveProductImageAsync(
+                tenantId, stream, file.FileName, file.ContentType, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+
+        var command = new AddProductImageCommand(tenantId, id, url, altText, isPrimary);
         var result  = await _mediator.Send(command, cancellationToken);
 
         return result.Success ? Ok(result) : BadRequest(result.ErrorMessage);
@@ -214,8 +235,7 @@ public record ProductUploadRequest(
     decimal BasePrice,
     string? Currency,
     string? Sku,
-    System.Collections.Generic.List<ProductVariantDto>? Variants,
-    System.Collections.Generic.List<string>? ImageUrls);
+    System.Collections.Generic.List<ProductVariantDto>? Variants);
 
 public record UpdateProductRequest(
     string Name,
@@ -224,5 +244,3 @@ public record UpdateProductRequest(
     string? Currency,
     string? Sku,
     System.Collections.Generic.List<ProductVariantUpdateDto>? Variants);
-
-public record AddImageRequest(string Url, string? AltText = null, bool IsPrimary = false);

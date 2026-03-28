@@ -34,10 +34,10 @@ public class ProductUploadCommandValidator : AbstractValidator<ProductUploadComm
                     .GreaterThanOrEqualTo(0).WithMessage("Stock cannot be negative.");
             });
 
-        RuleFor(x => x.ImageUrls)
-            .NotNull().WithMessage("ImageUrls collection cannot be null.")
-            .Must(urls => urls!.Count <= 20)
-            .WithMessage("Maximum 20 images per product.");
+        //RuleFor(x => x.ImageUrls)
+        //    .NotNull().WithMessage("ImageUrls collection cannot be null.")
+        //    .Must(urls => urls!.Count <= 20)
+        //    .WithMessage("Maximum 20 images per product.");
 
         RuleForEach(x => x.ImageUrls!)
             .NotEmpty().WithMessage("Image URL cannot be empty.")

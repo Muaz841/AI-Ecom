@@ -7,4 +7,5 @@ public static class RealtimeEventNames
 {
     public const string MessageReceived = "message.received";
     public const string CommentReceived = "comment.received";
+    public const string AiReplySent     = "ai.reply.sent";
 }

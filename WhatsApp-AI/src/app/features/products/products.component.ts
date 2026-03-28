@@ -21,7 +21,6 @@ import {
   ProductSummary,
   ProductDetail,
   ProductImageDetail,
-  AddImageRequest,
 } from './products.service';
 import { ProductDialogComponent } from './product-dialog/product-dialog.component';
 
@@ -71,9 +70,9 @@ export class ProductsComponent implements OnInit {
   showImagesDialog  = false;
   editingProduct    = signal<ProductDetail | null>(null);
   imagesProduct     = signal<ProductDetail | null>(null);
-  newImageUrl       = '';
-  newImageAlt       = '';
-  newImagePrimary   = false;
+  selectedImageFile: File | null = null;
+  selectedImageAlt  = '';
+  selectedImageName = '';
   addingImage       = false;
 
   ngOnInit(): void {
@@ -191,29 +190,30 @@ export class ProductsComponent implements OnInit {
     });
   }
 
+  onImageFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file  = input.files?.[0] ?? null;
+    this.selectedImageFile = file;
+    this.selectedImageName = file?.name ?? '';
+  }
+
   addImage(): void {
     const productId = this.imagesProduct()?.id;
-    if (!productId || !this.newImageUrl.trim()) return;
+    if (!productId || !this.selectedImageFile) return;
 
     this.addingImage = true;
-    const req: AddImageRequest = {
-      url:       this.newImageUrl.trim(),
-      altText:   this.newImageAlt.trim() || null,
-      isPrimary: this.newImagePrimary,
-    };
-
-    this.service.addImage(productId, req).subscribe({
+    this.service.uploadImage(productId, this.selectedImageFile, this.selectedImageAlt || null).subscribe({
       next: () => {
-        this.newImageUrl     = '';
-        this.newImageAlt     = '';
-        this.newImagePrimary = false;
-        this.addingImage     = false;
+        this.selectedImageFile = null;
+        this.selectedImageAlt  = '';
+        this.selectedImageName = '';
+        this.addingImage       = false;
         this.refreshImagesDialog(productId);
-        this.toast.add({ severity: 'success', summary: 'Added', detail: 'Image added.' });
+        this.toast.add({ severity: 'success', summary: 'Added', detail: 'Image uploaded.' });
       },
       error: () => {
         this.addingImage = false;
-        this.toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to add image.' });
+        this.toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload image.' });
       },
     });
   }

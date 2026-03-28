@@ -62,7 +62,6 @@ export interface CreateProductRequest {
   currency?: string;
   sku?: string | null;
   variants?: ProductVariantRequest[];
-  imageUrls?: string[];
 }
 
 export interface UpdateProductRequest {
@@ -72,12 +71,6 @@ export interface UpdateProductRequest {
   currency?: string;
   sku?: string | null;
   variants?: ProductVariantRequest[];
-}
-
-export interface AddImageRequest {
-  url: string;
-  altText?: string | null;
-  isPrimary?: boolean;
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -126,10 +119,21 @@ export class ProductsService {
     );
   }
 
-  addImage(productId: string, request: AddImageRequest): Observable<{ success: boolean }> {
+  /** Upload an image file to the product. Sends multipart/form-data. */
+  uploadImage(
+    productId: string,
+    file: File,
+    altText?: string | null,
+    isPrimary = false
+  ): Observable<{ success: boolean }> {
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    if (altText?.trim()) fd.append('altText', altText.trim());
+    fd.append('isPrimary', String(isPrimary));
+
     return this.http.post<{ success: boolean }>(
       `${this.cfg.apiBaseUrl}${this.cfg.products.addImage(productId)}`,
-      request
+      fd
     );
   }
 

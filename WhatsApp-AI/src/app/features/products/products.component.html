@@ -244,26 +244,33 @@
         }
       </div>
 
-      <!-- Add image form -->
+      <!-- Upload image form -->
       <p-divider align="left">
-        <span style="font-size: 0.8rem; color: var(--p-surface-500)">Add Image URL</span>
+        <span style="font-size: 0.8rem; color: var(--p-surface-500)">Upload Image</span>
       </p-divider>
 
       <div class="row g-2 align-items-end mt-1">
-        <div class="col-md-7">
-          <label class="dialog-label">Image URL</label>
-          <input pInputText [(ngModel)]="newImageUrl" placeholder="https://..." class="w-100" />
+        <div class="col-md-6">
+          <label class="dialog-label">Image File <span class="text-danger">*</span></label>
+          <label class="file-pick-label w-100">
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+                   class="d-none" (change)="onImageFileSelected($event)" />
+            <span class="file-pick-text">
+              <i class="pi pi-upload me-2"></i>
+              {{ selectedImageName || 'Choose file…' }}
+            </span>
+          </label>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label class="dialog-label">Alt Text</label>
-          <input pInputText [(ngModel)]="newImageAlt" placeholder="optional" class="w-100" />
+          <input pInputText [(ngModel)]="selectedImageAlt" placeholder="optional" class="w-100" />
         </div>
         <div class="col-md-2 d-flex align-items-end">
           <p-button
-            label="Add"
-            icon="pi pi-plus"
+            label="Upload"
+            icon="pi pi-upload"
             [loading]="addingImage"
-            [disabled]="!newImageUrl.trim()"
+            [disabled]="!selectedImageFile"
             class="w-100"
             (onClick)="addImage()"
           />

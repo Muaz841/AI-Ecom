@@ -34,6 +34,7 @@ using Microsoft.AspNetCore.Mvc;
 using EcomAI.Platform.Infrastructure.AI;
 using EcomAI.Platform.Infrastructure.AI.Tools;
 using EcomAI.Platform.Infrastructure.Caching;
+using EcomAI.Platform.Infrastructure.Storage;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -186,6 +187,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApplicationLogger, ApplicationLogger>();
         services.AddScoped<IWebhookProcessor, WebhookProcessor>();
         services.AddScoped<IRealtimeNotifier, SignalRNotifier>();
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddSignalR();
         services.Configure<AISettings>(configuration.GetSection("AI"));
         services.AddSingleton<TenantEnricher>();

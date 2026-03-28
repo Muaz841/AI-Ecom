@@ -242,6 +242,21 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             new[] { message, outgoing },
             cancellationToken);
 
+        await _realtimeNotifier.PublishAsync(
+            request.TenantId,
+            RealtimeEventNames.AiReplySent,
+            new
+            {
+                OutgoingMessageId = outgoing.Id,
+                request.Platform,
+                request.From,
+                Reply    = generatedReply,
+                Intent   = detectedIntent,
+                ThreadId = thread.Id,
+                SentAtUtc = outgoing.SentAt
+            },
+            cancellationToken);
+
         if (detectedIntent == AiIntentCodes.OrderStart)
         {
             // TODO: Dispatch CreateOrderCommand

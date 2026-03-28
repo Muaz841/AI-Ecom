@@ -21,6 +21,7 @@ public static class ApplicationBuilderExtensions
         }
 
         //app.UseHttpsRedirection();
+        app.UseStaticFiles();
         app.UseSerilogRequestLogging();
         app.UseCors("AllowDevelopment");
         app.UseAuthentication();

@@ -61,6 +61,7 @@ export type AiIntentCode = (typeof AiIntentCodes)[keyof typeof AiIntentCodes];
 export const RealtimeEventNames = {
   MessageReceived: 'message.received',
   CommentReceived: 'comment.received',
+  AiReplySent:     'ai.reply.sent',
 } as const;
 
 /**

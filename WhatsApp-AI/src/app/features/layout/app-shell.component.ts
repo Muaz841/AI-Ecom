@@ -149,6 +149,17 @@ export class AppShellComponent implements OnInit {
           receivedAt: createdAt,
         };
       }
+      case RealtimeEventNames.AiReplySent: {
+        const platform = (envelope.payload?.['platform'] as string) ?? 'whatsapp';
+        const reply    = (envelope.payload?.['reply']    as string) ?? 'AI replied to a message.';
+        const intent   = (envelope.payload?.['intent']   as string) ?? '';
+        return {
+          id,
+          title: `AI replied on ${platform}`,
+          detail: intent ? `[${intent}] ${reply}` : reply,
+          receivedAt: createdAt,
+        };
+      }
       default:
         return null;
     }

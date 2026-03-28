@@ -104,7 +104,7 @@ public class GeminiService : IAIService
         CancellationToken cancellationToken = default)
     {
         var rt      = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
-                      ?? throw new InvalidOperationException("AI provider is not configured. Configure it in Host > AI Settings.");
+                      ?? throw new InvalidOperationException("AI provider is not configured. Configure it in Host > AI Settings."); 
         var apiKey  = rt.GeminiApiKey;
         var model   = rt.GeminiModel;
         var timeout = rt.RequestTimeoutSeconds;

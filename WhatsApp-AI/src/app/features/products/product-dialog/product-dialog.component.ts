@@ -54,7 +54,6 @@ export class ProductDialogComponent implements OnInit {
       basePrice:   [p?.basePrice ?? null, [Validators.required, Validators.min(0.01)]],
       currency:    [p?.currency ?? 'PKR', [Validators.required, Validators.minLength(3), Validators.maxLength(3)]],
       sku:         [p?.sku ?? ''],
-      imageUrls:   [p?.images?.map(i => i.url).join('\n') ?? ''],
       variants:    this.fb.array(
         (p?.variants ?? []).map(v => this.buildVariantGroup(v))
       ),
@@ -108,12 +107,7 @@ export class ProductDialogComponent implements OnInit {
 
     const req$ = p
       ? this.service.update(p.id, payload)
-      : this.service.create({
-          ...payload,
-          imageUrls: v.imageUrls
-            ? v.imageUrls.split('\n').map((u: string) => u.trim()).filter((u: string) => u)
-            : undefined,
-        });
+      : this.service.create(payload);
 
     req$.subscribe({
       next: () => {
