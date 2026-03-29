@@ -25,6 +25,7 @@ export interface AppConfig {
   };
   conversations: {
     list: string;
+    getThread: (id: string) => string;
     messages: (threadId: string) => string;
   };
   platformSettings: {
@@ -88,6 +89,7 @@ export const APP_CONFIG: AppConfig = {
   },
   conversations: {
     list: '/api/conversations',
+    getThread: (id: string) => `/api/conversations/${id}`,
     messages: (threadId: string) => `/api/conversations/${threadId}/messages`,
   },
   platformSettings: {

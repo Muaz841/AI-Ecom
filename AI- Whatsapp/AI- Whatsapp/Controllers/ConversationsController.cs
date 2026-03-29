@@ -43,6 +43,19 @@ public class ConversationsController : ControllerBase
         return Ok(threads.Select(ToDto).ToList());
     }
 
+    [HttpGet("{conversationThreadId:guid}")]
+    [SwaggerOperation(Summary = "Get conversation thread", Description = "Returns a single conversation thread by ID.")]
+    [ProducesResponseType(typeof(ConversationThreadDto), 200)]
+    [ProducesResponseType(404)]
+    public async Task<ActionResult<ConversationThreadDto>> GetById(
+        Guid conversationThreadId,
+        [FromQuery] Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var thread = await _conversationThreadRepository.GetByIdAsync(tenantId, conversationThreadId, cancellationToken);
+        return thread is null ? NotFound() : Ok(ToDto(thread));
+    }
+
     [HttpGet("{conversationThreadId:guid}/messages")]
     [SwaggerOperation(Summary = "Get conversation messages", Description = "Returns message timeline for a conversation thread.")]
     [ProducesResponseType(typeof(IReadOnlyList<ConversationMessageDto>), 200)]

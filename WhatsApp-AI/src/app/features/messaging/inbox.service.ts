@@ -8,6 +8,11 @@ import { ConversationMessageDto, ConversationThreadDto } from './conversation.mo
 export class InboxService {
   private readonly apiClient = inject(ApiClientService);
 
+  getThread(tenantId: string, threadId: string): Observable<ConversationThreadDto> {
+    return this.apiClient.get<ConversationThreadDto>(
+      APP_CONFIG.conversations.getThread(threadId), { tenantId });
+  }
+
   listThreads(tenantId: string, pageIndex = 0, pageSize = 50): Observable<ConversationThreadDto[]> {
     return this.apiClient.get<ConversationThreadDto[]>(APP_CONFIG.conversations.list, {
       tenantId,

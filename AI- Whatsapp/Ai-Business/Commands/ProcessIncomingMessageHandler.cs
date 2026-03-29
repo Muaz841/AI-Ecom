@@ -8,6 +8,7 @@ using EcomAI.Platform.Business.Common;
 using EcomAI.Platform.Business.Constants;
 using EcomAI.Platform.Business.Entities;
 using EcomAI.Platform.Business.Interfaces;
+using EcomAI.Platform.Business.Realtime;
 
 namespace EcomAI.Platform.Business.Commands;
 
@@ -73,40 +74,23 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             externalMessageId: request.ExternalMessageId,
             messageType: request.MessageType);
 
-        if (request.MessageType == MessageType.Comment)
-        {
-            await _realtimeNotifier.PublishAsync(
-                request.TenantId,
-                RealtimeEventNames.CommentReceived,
-                new
-                {
-                    message.Id,
-                    request.Platform,
-                    request.From,
-                    request.To,
-                    request.Content,
-                    ThreadId = thread.Id,
-                    ReceivedAtUtc = message.ReceivedAt
-                },
-                cancellationToken);
-        }
-        else
-        {
-            await _realtimeNotifier.PublishAsync(
-                request.TenantId,
-                RealtimeEventNames.MessageReceived,
-                new
-                {
-                    message.Id,
-                    request.Platform,
-                    request.From,
-                    request.To,
-                    request.Content,
-                    ThreadId = thread.Id,
-                    ReceivedAtUtc = message.ReceivedAt
-                },
-                cancellationToken);
-        }
+        var incomingPayload = new MessageReceivedPayload(
+            MessageId:    message.Id.ToString(),
+            ThreadId:     thread.Id.ToString(),
+            TenantId:     request.TenantId.ToString(),
+            Platform:     request.Platform,
+            From:         request.From,
+            To:           request.To,
+            Content:      request.Content,
+            CreatedAtUtc: message.ReceivedAt.ToString("O"));
+
+        await _realtimeNotifier.PublishToMessagingAsync(
+            request.TenantId,
+            request.MessageType == MessageType.Comment
+                ? RealtimeEventNames.CommentReceived
+                : RealtimeEventNames.MessageReceived,
+            incomingPayload,
+            cancellationToken);
 
         if (!request.AllowAutoReply)
         {
@@ -242,19 +226,18 @@ public class ProcessIncomingMessageHandler : IRequestHandler<ProcessIncomingMess
             new[] { message, outgoing },
             cancellationToken);
 
-        await _realtimeNotifier.PublishAsync(
+        await _realtimeNotifier.PublishToMessagingAsync(
             request.TenantId,
             RealtimeEventNames.AiReplySent,
-            new
-            {
-                OutgoingMessageId = outgoing.Id,
-                request.Platform,
-                request.From,
-                Reply    = generatedReply,
-                Intent   = detectedIntent,
-                ThreadId = thread.Id,
-                SentAtUtc = outgoing.SentAt
-            },
+            new AiReplySentPayload(
+                OutgoingMessageId: outgoing.Id.ToString(),
+                ThreadId:          thread.Id.ToString(),
+                TenantId:          request.TenantId.ToString(),
+                Platform:          request.Platform,
+                From:              request.From,
+                Reply:             generatedReply,
+                Intent:            detectedIntent,
+                SentAtUtc:         (outgoing.SentAt ?? DateTime.UtcNow).ToString("O")),
             cancellationToken);
 
         if (detectedIntent == AiIntentCodes.OrderStart)

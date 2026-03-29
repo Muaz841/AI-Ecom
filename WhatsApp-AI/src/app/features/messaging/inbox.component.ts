@@ -12,8 +12,18 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { take } from 'rxjs';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 import { AuthService } from '../../core/auth/auth.service';
-import { ThreadStatusValues } from '../../shared/constants/message.constants';
+import { SignalrRealtimeService } from '../../core/realtime/signalr-realtime.service';
+import {
+  AiReplySentEvent,
+  MessageReceivedEvent,
+  parseEnvelope,
+  toAiReplySentEvent,
+  toMessageReceivedEvent,
+} from '../../core/realtime/realtime-events';
+import { RealtimeEventNames, ThreadStatusValues } from '../../shared/constants/message.constants';
 import {
   Message,
   MessageSender,
@@ -43,7 +53,8 @@ const STATUS_CLASSES: Record<ThreadStatus, string> = {
 @Component({
   selector: 'app-inbox',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ToastModule],
+  providers: [MessageService],
   templateUrl: './inbox.component.html',
   styleUrl: './inbox.component.scss',
 })
@@ -51,8 +62,10 @@ export class InboxComponent implements OnInit, AfterViewChecked {
   @ViewChild('messagesArea') private readonly messagesArea?: ElementRef<HTMLElement>;
 
   private readonly inboxService = inject(InboxService);
-  private readonly authService = inject(AuthService);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly authService  = inject(AuthService);
+  private readonly realtime     = inject(SignalrRealtimeService);
+  private readonly toast        = inject(MessageService);
+  private readonly destroyRef   = inject(DestroyRef);
 
   private tenantId: string | null = null;
 
@@ -121,6 +134,42 @@ export class InboxComponent implements OnInit, AfterViewChecked {
         this.loadThreads();
       }
     });
+
+    this.realtime.events$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ event, payload }) => {
+        if (event !== 'notification') return;
+
+        const envelope = parseEnvelope(payload);
+        if (!envelope) {
+          console.warn('[Realtime/Inbox] Dropped: invalid envelope or unknown schema version', payload);
+          return;
+        }
+
+        switch (envelope.eventType) {
+          case RealtimeEventNames.MessageReceived:
+          case RealtimeEventNames.CommentReceived: {
+            const evt = toMessageReceivedEvent(envelope.payload);
+            if (!evt) {
+              console.warn('[Realtime/Inbox] Dropped message.received: missing required fields', envelope.payload);
+              return;
+            }
+            this.onRealtimeMessageReceived(evt);
+            break;
+          }
+          case RealtimeEventNames.AiReplySent: {
+            const evt = toAiReplySentEvent(envelope.payload);
+            if (!evt) {
+              console.warn('[Realtime/Inbox] Dropped ai.reply.sent: missing required fields', envelope.payload);
+              return;
+            }
+            this.onRealtimeAiReplySent(evt);
+            break;
+          }
+          default:
+            console.warn('[Realtime/Inbox] Unknown event type:', envelope.eventType);
+        }
+      });
   }
 
   // ─── Data loading ────────────────────────────────────────────────────────────
@@ -265,6 +314,92 @@ export class InboxComponent implements OnInit, AfterViewChecked {
       const el = this.messagesArea.nativeElement;
       el.scrollTop = el.scrollHeight;
       this.shouldScrollToBottom = false;
+    }
+  }
+
+  // ─── Real-time handlers ───────────────────────────────────────────────────
+
+  private onRealtimeMessageReceived(evt: MessageReceivedEvent): void {
+    const isActive = this.selectedThread()?.id === evt.threadId;
+    const idx      = this.threads().findIndex((t) => t.id === evt.threadId);
+
+    if (idx !== -1) {
+      // Thread is in the loaded list — update preview, badge, and order.
+      this.threads.update((prev) => {
+        const existing = prev[idx];
+        const updated: Thread = {
+          ...existing,
+          lastMessage:  evt.content,
+          relativeTime: relativeTime(evt.createdAtUtc),
+          unreadCount:  isActive ? existing.unreadCount : existing.unreadCount + 1,
+          status:       isActive ? existing.status      : 'pending',
+        };
+        return [updated, ...prev.filter((_, i) => i !== idx)];
+      });
+
+      // Append bubble if this thread is currently open and messages are loaded.
+      if (isActive && this.selectedThread()?.messagesLoaded) {
+        const newMsg: Message = {
+          id:      evt.messageId,
+          sender:  'customer' as MessageSender,
+          content: evt.content,
+          time:    new Date(evt.createdAtUtc).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        };
+        this.selectedThread.update((t) => t ? { ...t, messages: [...t.messages, newMsg] } : t);
+        this.shouldScrollToBottom = true;
+      }
+    } else if (this.tenantId) {
+      // Thread is not in the list — fetch it individually and prepend.
+      this.inboxService.getThread(this.tenantId, evt.threadId)
+        .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (dto) => {
+            const thread = mapThreadDto(dto);
+            this.threads.update((prev) => [
+              { ...thread, lastMessage: evt.content, relativeTime: relativeTime(evt.createdAtUtc), unreadCount: 1, status: 'pending' as const },
+              ...prev,
+            ]);
+          },
+          error: () => console.warn('[Realtime/Inbox] Could not fetch unknown thread for upsert', evt.threadId),
+        });
+    }
+
+    // Show toast only when the user is NOT already viewing this thread.
+    if (!isActive) {
+      const preview = evt.content.length > 70 ? evt.content.slice(0, 70) + '…' : evt.content;
+      this.toast.add({
+        severity: 'info',
+        summary:  `New message from ${evt.from || 'Customer'}`,
+        detail:   preview,
+        life:     5000,
+      });
+    }
+  }
+
+  private onRealtimeAiReplySent(evt: AiReplySentEvent): void {
+    const isActive = this.selectedThread()?.id === evt.threadId;
+
+    this.threads.update((prev) => {
+      const idx = prev.findIndex((t) => t.id === evt.threadId);
+      if (idx === -1) return prev;
+      const updated: Thread = {
+        ...prev[idx],
+        lastMessage:  evt.reply,
+        relativeTime: relativeTime(evt.sentAtUtc),
+        status:       'ai-handled',
+      };
+      return [updated, ...prev.filter((_, i) => i !== idx)];
+    });
+
+    if (isActive && this.selectedThread()?.messagesLoaded) {
+      const newMsg: Message = {
+        id:      evt.outgoingMessageId,
+        sender:  'bot' as MessageSender,
+        content: evt.reply,
+        time:    new Date(evt.sentAtUtc).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      };
+      this.selectedThread.update((t) => t ? { ...t, messages: [...t.messages, newMsg] } : t);
+      this.shouldScrollToBottom = true;
     }
   }
 }

@@ -73,7 +73,7 @@ public static class ServiceCollectionExtensions
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.RequireHttpsMetadata = true;
+                options.RequireHttpsMetadata = false;
                 options.SaveToken = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -85,6 +85,21 @@ public static class ServiceCollectionExtensions
                     ValidAudience = jwt.Audience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
                     ClockSkew = TimeSpan.FromSeconds(30)
+                };
+                // SignalR WebSocket upgrades cannot carry the Authorization header.
+                // The JS client sends the JWT as ?access_token= instead.
+                options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var token = context.Request.Query["access_token"];
+                        if (!string.IsNullOrEmpty(token) &&
+                            context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = token;
+                        }
+                        return Task.CompletedTask;
+                    }
                 };
             });
         services.AddAuthorization(options =>
@@ -101,9 +116,13 @@ public static class ServiceCollectionExtensions
         {
             options.AddPolicy("AllowDevelopment", policy =>
             {
-                policy.AllowAnyOrigin()
+                // AllowAnyOrigin() is incompatible with AllowCredentials().
+                // SignalR's JS client uses credentials:'include' on the negotiate
+                // request, so we must specify origins explicitly.
+                policy.SetIsOriginAllowed(origin => new Uri(origin).IsLoopback)
                       .AllowAnyMethod()
-                      .AllowAnyHeader();
+                      .AllowAnyHeader()
+                      .AllowCredentials();
             });
         });
 
@@ -188,7 +207,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWebhookProcessor, WebhookProcessor>();
         services.AddScoped<IRealtimeNotifier, SignalRNotifier>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
-        services.AddSignalR();
+        services.AddSignalR()
+            .AddJsonProtocol(options =>
+            {
+                // Default is PascalCase; force camelCase so Angular reads
+                // eventType / payload / createdAtUtc without custom mapping.
+                options.PayloadSerializerOptions.PropertyNamingPolicy =
+                    System.Text.Json.JsonNamingPolicy.CamelCase;
+            });
         services.Configure<AISettings>(configuration.GetSection("AI"));
         services.AddSingleton<TenantEnricher>();
         services.AddScoped<OpenAIService>();
