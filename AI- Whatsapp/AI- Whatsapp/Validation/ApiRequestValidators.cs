@@ -34,7 +34,9 @@ public sealed class ForgotPasswordRequestValidator : AbstractValidator<ForgotPas
 {
     public ForgotPasswordRequestValidator()
     {
-        RuleFor(x => x.TenantId).NotEmpty();
+        RuleFor(x => x)
+            .Must(x => x.TenantId != Guid.Empty || !string.IsNullOrWhiteSpace(x.TenantName))
+            .WithMessage("TenantId or tenantName is required.");
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(320);
     }
 }
@@ -47,11 +49,25 @@ public sealed class RefreshRequestValidator : AbstractValidator<RefreshRequest>
     }
 }
 
+public sealed class VerifyOtpApiRequestValidator : AbstractValidator<VerifyOtpApiRequest>
+{
+    public VerifyOtpApiRequestValidator()
+    {
+        RuleFor(x => x)
+            .Must(x => x.TenantId != Guid.Empty || !string.IsNullOrWhiteSpace(x.TenantName))
+            .WithMessage("TenantId or tenantName is required.");
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(320);
+        RuleFor(x => x.Otp).NotEmpty().Matches(@"^\d{6}$").WithMessage("OTP must be a 6-digit code.");
+    }
+}
+
 public sealed class ResetPasswordApiRequestValidator : AbstractValidator<ResetPasswordApiRequest>
 {
     public ResetPasswordApiRequestValidator()
     {
-        RuleFor(x => x.TenantId).NotEmpty();
+        RuleFor(x => x)
+            .Must(x => x.TenantId != Guid.Empty || !string.IsNullOrWhiteSpace(x.TenantName))
+            .WithMessage("TenantId or tenantName is required.");
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(320);
         RuleFor(x => x.ResetToken).NotEmpty().MaximumLength(2000);
         RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8);

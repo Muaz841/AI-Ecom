@@ -227,12 +227,10 @@ public sealed class JwtAuthService : IAuthService
             .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (user is null || !user.IsActive)
-        {
-            // Silently return — never reveal whether the email exists.
+        {            
             return;
         }
-
-        // Rate-limit: max OtpRateLimitMax requests per user within the lookback window.
+        
         var windowStart = DateTime.UtcNow.AddMinutes(-OtpRateLimitWindowMinutes);
         var recentCount = await _dbContext.UserPasswordResetTokens
             .CountAsync(x => x.UserAccountId == user.Id && x.CreatedAt > windowStart, cancellationToken);
@@ -244,10 +242,7 @@ public sealed class JwtAuthService : IAuthService
                 user.Id, recentCount, OtpRateLimitWindowMinutes);
             return;
         }
-
-        // Generate a 6-digit cryptographically random OTP.
-        // Salt the hash with the user's ID to prevent cross-user hash collisions in the
-        // unique TokenHash index (two users could otherwise produce the same 6-digit OTP).
+      
         var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100_000, 1_000_000).ToString();
         var otpHash = ComputeSha256($"{user.Id}:{otp}");
         var expiresAt = DateTime.UtcNow.AddMinutes(_settings.OtpLifetimeMinutes);
@@ -256,16 +251,23 @@ public sealed class JwtAuthService : IAuthService
         await _dbContext.UserPasswordResetTokens.AddAsync(otpEntity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await _emailService.SendOtpEmailAsync(
-            user.Email,
-            $"{user.FirstName} {user.LastName}".Trim(),
-            otp,
-            _settings.OtpLifetimeMinutes,
-            cancellationToken);
+        try
+        {
+            await _emailService.SendOtpEmailAsync(
+                user.Email,
+                $"{user.FirstName} {user.LastName}".Trim(),
+                otp,
+                _settings.OtpLifetimeMinutes,
+                cancellationToken);
 
-        _logger.Info(
-            "OTP issued and emailed for user {UserId}, tenant {TenantId}, expires {ExpiresAt}.",
-            user.Id, user.TenantId, expiresAt);
+            _logger.Info(
+                "OTP issued and emailed for user {UserId}, tenant {TenantId}, expires {ExpiresAt}.",
+                user.Id, user.TenantId, expiresAt);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "OTP email delivery failed for user {UserId}. OTP stored in DB but not delivered.", user.Id);            
+        }
     }
 
     public async Task<VerifyOtpResult> VerifyOtpAsync(VerifyOtpRequest request, CancellationToken cancellationToken = default)

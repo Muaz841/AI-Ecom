@@ -144,11 +144,16 @@ public class AuthController : ControllerBase
     [HttpPost("password/forgot")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
-        await _authService.RequestPasswordResetAsync(
-            new RequestPasswordResetRequest(request.TenantId, request.Email),
-            cancellationToken);
+        var tenantId = await ResolveTenantIdAsync(request.TenantId, request.TenantName, cancellationToken);
 
-        // Always return the same response — never reveal whether the email exists.
+        if (tenantId.HasValue)
+        {
+            await _authService.RequestPasswordResetAsync(
+                new RequestPasswordResetRequest(tenantId.Value, request.Email),
+                cancellationToken);
+        }
+
+        // Always return the same response — never reveal whether the tenant or email exists.
         return Ok(new { message = "If the email is registered, a reset code has been sent." });
     }
 
@@ -156,8 +161,15 @@ public class AuthController : ControllerBase
     [HttpPost("password/verify-otp")]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpApiRequest request, CancellationToken cancellationToken)
     {
+        var tenantId = await ResolveTenantIdAsync(request.TenantId, request.TenantName, cancellationToken);
+
+        if (!tenantId.HasValue)
+        {
+            return BadRequest(new { message = "OTP is invalid or has expired." });
+        }
+
         var result = await _authService.VerifyOtpAsync(
-            new VerifyOtpRequest(request.TenantId, request.Email, request.Otp),
+            new VerifyOtpRequest(tenantId.Value, request.Email, request.Otp),
             cancellationToken);
 
         if (!result.Success)
@@ -172,10 +184,17 @@ public class AuthController : ControllerBase
     [HttpPost("password/reset")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordApiRequest request, CancellationToken cancellationToken)
     {
+        var tenantId = await ResolveTenantIdAsync(request.TenantId, request.TenantName, cancellationToken);
+
+        if (!tenantId.HasValue)
+        {
+            return BadRequest("Reset token is invalid or expired.");
+        }
+
         try
         {
             await _authService.ResetPasswordAsync(
-                new ResetPasswordRequest(request.TenantId, request.Email, request.ResetToken, request.NewPassword),
+                new ResetPasswordRequest(tenantId.Value, request.Email, request.ResetToken, request.NewPassword),
                 cancellationToken);
 
             return NoContent();
@@ -184,6 +203,23 @@ public class AuthController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Resolves a tenant GUID from either an explicit ID or a name/businessName lookup.
+    /// Returns null if neither can be resolved (caller decides how to handle silently).
+    /// </summary>
+    private async Task<Guid?> ResolveTenantIdAsync(Guid tenantId, string? tenantName, CancellationToken cancellationToken)
+    {
+        if (tenantId != Guid.Empty) return tenantId;
+
+        if (string.IsNullOrWhiteSpace(tenantName)) return null;
+
+        var name = tenantName.Trim();
+        var tenant = await _tenantRepository.FirstOrDefaultAsync(
+            x => x.Name.ToLower() == name.ToLower() || x.BusinessName.ToLower() == name.ToLower());
+
+        return tenant?.Id;
     }
 }
 
@@ -204,16 +240,19 @@ public sealed record LoginApiRequest(
 public sealed record RefreshRequest(string RefreshToken);
 
 public sealed record ForgotPasswordRequest(
-    Guid TenantId,
-    string Email);
+    string Email,
+    string? TenantName = null,
+    Guid TenantId = default);
 
 public sealed record VerifyOtpApiRequest(
-    Guid TenantId,
     string Email,
-    string Otp);
+    string Otp,
+    string? TenantName = null,
+    Guid TenantId = default);
 
 public sealed record ResetPasswordApiRequest(
-    Guid TenantId,
     string Email,
     string ResetToken,
-    string NewPassword);
+    string NewPassword,
+    string? TenantName = null,
+    Guid TenantId = default);

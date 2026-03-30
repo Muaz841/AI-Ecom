@@ -277,6 +277,65 @@ button:disabled {
   font-size: 0.85rem;
 }
 
+/* ─── Back button ──────────────────────────────────────── */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1.5rem;
+  transition: color 150ms ease;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+/* ─── Inline link-style button ─────────────────────────── */
+.link-btn {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+/* ─── OTP input ─────────────────────────────────────────── */
+.otp-input {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5rem;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  padding: 0.9rem 1rem;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-primary);
+  transition: border-color 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  &::placeholder {
+    color: var(--text-muted);
+    letter-spacing: 0.4rem;
+  }
+}
+
 @media (max-width: 960px) {
   .login-page {
     grid-template-columns: 1fr;

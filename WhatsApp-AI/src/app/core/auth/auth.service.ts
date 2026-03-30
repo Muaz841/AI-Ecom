@@ -24,8 +24,20 @@ export class AuthService {
     private readonly tokenStore: TokenStore,
   ) {}
 
+  forgotPassword(tenantName: string, email: string): Observable<void> {
+    return this.apiClient.post<void>(APP_CONFIG.auth.forgotPassword, { tenantName, email });
+  }
+
+  verifyOtp(tenantName: string, email: string, otp: string): Observable<{ resetToken: string }> {
+    return this.apiClient.post<{ resetToken: string }>(APP_CONFIG.auth.verifyOtp, { tenantName, email, otp });
+  }
+
+  resetPassword(tenantName: string, email: string, resetToken: string, newPassword: string): Observable<void> {
+    return this.apiClient.post<void>(APP_CONFIG.auth.resetPassword, { tenantName, email, resetToken, newPassword });
+  }
+
   login(request: LoginRequest): Observable<AuthSession> {
-    return this.apiClient.post<AuthResponse>(APP_CONFIG.auth.login, request).pipe(      
+    return this.apiClient.post<AuthResponse>(APP_CONFIG.auth.login, request).pipe(
       map((response) => this.mapAuthResponse(response)),
       tap((session) => this.setSession(session)),
     );

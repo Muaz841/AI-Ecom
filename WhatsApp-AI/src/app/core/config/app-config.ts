@@ -4,6 +4,7 @@ export interface AuthEndpointConfig {
   refresh: string;
   logout: string;
   forgotPassword: string;
+  verifyOtp: string;
   resetPassword: string;
   me: string;
 }
@@ -72,6 +73,7 @@ export const APP_CONFIG: AppConfig = {
     refresh: '/api/auth/refresh',
     logout: '/api/auth/logout',
     forgotPassword: '/api/auth/password/forgot',
+    verifyOtp: '/api/auth/password/verify-otp',
     resetPassword: '/api/auth/password/reset',
     me: '/api/auth/me',
   },
