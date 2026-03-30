@@ -235,6 +235,9 @@ public class ProcessIncomingMessageHandlerTests
     {
         public Task PublishAsync(Guid tenantId, string eventType, object payload, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task PublishToMessagingAsync(Guid tenantId, string eventType, object payload, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class FakeApplicationLogger : IApplicationLogger

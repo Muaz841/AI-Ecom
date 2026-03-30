@@ -148,7 +148,24 @@ public class AuthController : ControllerBase
             new RequestPasswordResetRequest(request.TenantId, request.Email),
             cancellationToken);
 
-        return Ok(new { message = "If user exists, reset instructions were generated." });
+        // Always return the same response — never reveal whether the email exists.
+        return Ok(new { message = "If the email is registered, a reset code has been sent." });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("password/verify-otp")]
+    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpApiRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _authService.VerifyOtpAsync(
+            new VerifyOtpRequest(request.TenantId, request.Email, request.Otp),
+            cancellationToken);
+
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.ErrorMessage });
+        }
+
+        return Ok(new { resetToken = result.ResetToken });
     }
 
     [AllowAnonymous]
@@ -189,6 +206,11 @@ public sealed record RefreshRequest(string RefreshToken);
 public sealed record ForgotPasswordRequest(
     Guid TenantId,
     string Email);
+
+public sealed record VerifyOtpApiRequest(
+    Guid TenantId,
+    string Email,
+    string Otp);
 
 public sealed record ResetPasswordApiRequest(
     Guid TenantId,

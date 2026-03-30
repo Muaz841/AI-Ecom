@@ -19,7 +19,7 @@ public sealed class SearchProductsTool : IToolHandler
     public string Description => "Use this tool ONLY when the customer asks to browse, find, or search for products by name or category. Do NOT call this tool unless a search keyword has been mentioned. Returns up to 10 matching products with name, price, stock, and currency.";
     public string ParametersSchema => """{"type":"object","properties":{"query":{"type":"string","description":"The search keyword or product name the customer mentioned"},"sort_by":{"type":"string","description":"Optional sort order for results","enum":["name","price_asc","price_desc","in_stock_first"]}},"required":["query"]}""";
 
-    private readonly PlatformDbContext _db;
+    private readonly PlatformDbContext _db;   
 
     public SearchProductsTool(PlatformDbContext db)
     {

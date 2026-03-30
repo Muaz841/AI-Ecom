@@ -13,6 +13,7 @@ public interface IAuthService
     Task<AuthProfileResult?> GetProfileAsync(Guid? tenantId, Guid userId, CancellationToken cancellationToken = default);
     Task LogoutAsync(LogoutRequest request, CancellationToken cancellationToken = default);
     Task RequestPasswordResetAsync(RequestPasswordResetRequest request, CancellationToken cancellationToken = default);
+    Task<VerifyOtpResult> VerifyOtpAsync(VerifyOtpRequest request, CancellationToken cancellationToken = default);
     Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default);
 }
 
@@ -41,6 +42,16 @@ public sealed record ResetPasswordRequest(
     string Email,
     string ResetToken,
     string NewPassword);
+
+public sealed record VerifyOtpRequest(
+    Guid TenantId,
+    string Email,
+    string Otp);
+
+public sealed record VerifyOtpResult(
+    bool Success,
+    string? ResetToken = null,
+    string? ErrorMessage = null);
 
 public sealed record AuthResult(
     bool Success,

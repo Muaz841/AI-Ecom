@@ -35,6 +35,7 @@ using EcomAI.Platform.Infrastructure.AI;
 using EcomAI.Platform.Infrastructure.AI.Tools;
 using EcomAI.Platform.Infrastructure.Caching;
 using EcomAI.Platform.Infrastructure.Storage;
+using EcomAI.Platform.Infrastructure.Email;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -179,6 +180,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ScheduledPostRepository>();
         services.AddScoped<IMetaMessagingService, MetaMessagingService>();
+        services.Configure<MailtrapSettings>(configuration.GetSection("Mailtrap"));
+        services.AddScoped<IEmailService, MailtrapEmailService>();
         services.AddScoped<IAuthService, JwtAuthService>();
         services.AddScoped<IRbacService, RbacService>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();

@@ -22,17 +22,24 @@ public sealed class JwtAuthService : IAuthService
     private readonly PlatformDbContext _dbContext;
     private readonly IPasswordHasher<UserAccount> _passwordHasher;
     private readonly IApplicationLogger _logger;
+    private readonly IEmailService _emailService;
     private readonly JwtAuthSettings _settings;
+
+    // Maximum OTP requests allowed per user within the lookback window.
+    private const int OtpRateLimitMax = 3;
+    private const int OtpRateLimitWindowMinutes = 60;
 
     public JwtAuthService(
         PlatformDbContext dbContext,
         IPasswordHasher<UserAccount> passwordHasher,
         IApplicationLogger logger,
+        IEmailService emailService,
         IOptions<JwtAuthSettings> settings)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _emailService = emailService;
         _settings = settings.Value;
 
         if (string.IsNullOrWhiteSpace(_settings.SigningKey) || _settings.SigningKey.Length < 32)
@@ -221,20 +228,94 @@ public sealed class JwtAuthService : IAuthService
 
         if (user is null || !user.IsActive)
         {
+            // Silently return — never reveal whether the email exists.
             return;
         }
 
+        // Rate-limit: max OtpRateLimitMax requests per user within the lookback window.
+        var windowStart = DateTime.UtcNow.AddMinutes(-OtpRateLimitWindowMinutes);
+        var recentCount = await _dbContext.UserPasswordResetTokens
+            .CountAsync(x => x.UserAccountId == user.Id && x.CreatedAt > windowStart, cancellationToken);
+
+        if (recentCount >= OtpRateLimitMax)
+        {
+            _logger.Warning(
+                "OTP rate limit exceeded for user {UserId} — {Count} requests in last {Window} minutes.",
+                user.Id, recentCount, OtpRateLimitWindowMinutes);
+            return;
+        }
+
+        // Generate a 6-digit cryptographically random OTP.
+        // Salt the hash with the user's ID to prevent cross-user hash collisions in the
+        // unique TokenHash index (two users could otherwise produce the same 6-digit OTP).
+        var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100_000, 1_000_000).ToString();
+        var otpHash = ComputeSha256($"{user.Id}:{otp}");
+        var expiresAt = DateTime.UtcNow.AddMinutes(_settings.OtpLifetimeMinutes);
+
+        var otpEntity = UserPasswordResetToken.Create(user.TenantId, user.Id, otpHash, expiresAt);
+        await _dbContext.UserPasswordResetTokens.AddAsync(otpEntity, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _emailService.SendOtpEmailAsync(
+            user.Email,
+            $"{user.FirstName} {user.LastName}".Trim(),
+            otp,
+            _settings.OtpLifetimeMinutes,
+            cancellationToken);
+
+        _logger.Info(
+            "OTP issued and emailed for user {UserId}, tenant {TenantId}, expires {ExpiresAt}.",
+            user.Id, user.TenantId, expiresAt);
+    }
+
+    public async Task<VerifyOtpResult> VerifyOtpAsync(VerifyOtpRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.TenantId == Guid.Empty ||
+            string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Otp))
+        {
+            return new VerifyOtpResult(false, ErrorMessage: "Invalid request.");
+        }
+
+        var normalizedEmail = NormalizeEmail(request.Email);
+        var user = await _dbContext.UserAccounts
+            .FirstOrDefaultAsync(x => x.TenantId == request.TenantId && x.NormalizedEmail == normalizedEmail, cancellationToken);
+
+        if (user is null || !user.IsActive)
+        {
+            return new VerifyOtpResult(false, ErrorMessage: "Invalid OTP or email.");
+        }
+
+        var otpHash = ComputeSha256($"{user.Id}:{request.Otp.Trim()}");
+        var stored = await _dbContext.UserPasswordResetTokens
+            .Where(x => x.UserAccountId == user.Id && x.TokenHash == otpHash)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (stored is null || !stored.IsUsable(DateTime.UtcNow))
+        {
+            _logger.Warning("OTP verification failed for user {UserId} — token invalid or expired.", user.Id);
+            return new VerifyOtpResult(false, ErrorMessage: "OTP is invalid or has expired.");
+        }
+
+        // Consume the OTP — it is single-use.
+        stored.MarkUsed();
+
+        // Issue a short-lived reset token the client will use in the final reset step.
         var resetToken = GenerateSecureToken();
-        var tokenHash = ComputeSha256(resetToken);
-        var resetEntity = UserPasswordResetToken.Create(user.TenantId, user.Id, tokenHash, DateTime.UtcNow.AddMinutes(_settings.PasswordResetTokenLifetimeMinutes));
+        var resetHash = ComputeSha256(resetToken);
+        var resetEntity = UserPasswordResetToken.Create(
+            user.TenantId,
+            user.Id,
+            resetHash,
+            DateTime.UtcNow.AddMinutes(_settings.PasswordResetTokenLifetimeMinutes));
+
         await _dbContext.UserPasswordResetTokens.AddAsync(resetEntity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.Info(
-            "Password reset token issued for user {UserId} and tenant {TenantId}. Token (dev-only): {ResetToken}",
-            user.Id,
-            user.TenantId,
-            resetToken);
+        _logger.Info("OTP verified for user {UserId}; reset token issued.", user.Id);
+
+        return new VerifyOtpResult(true, ResetToken: resetToken);
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default)
@@ -404,5 +485,8 @@ public sealed class JwtAuthSettings
     public string SigningKey { get; set; } = "CHANGE_ME_AT_LEAST_32_CHARS_LONG_SIGNING_KEY";
     public int AccessTokenLifetimeMinutes { get; set; } = 30;
     public int RefreshTokenLifetimeDays { get; set; } = 14;
+    /// <summary>Lifetime of the verified reset token issued after OTP confirmation.</summary>
     public int PasswordResetTokenLifetimeMinutes { get; set; } = 30;
+    /// <summary>Lifetime of the OTP code sent to the user's email.</summary>
+    public int OtpLifetimeMinutes { get; set; } = 10;
 }
