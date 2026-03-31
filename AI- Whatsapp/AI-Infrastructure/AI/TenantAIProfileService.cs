@@ -41,7 +41,9 @@ public sealed class TenantAIProfileService : ITenantAIProfileService
                 request.BrandRules,
                 request.ForbiddenTopics,
                 request.DefaultResponseStyle,
-                request.AiCallsPerHourLimit);
+                request.AiCallsPerHourLimit,
+                request.PoseExtractionPrompt,
+                request.ImageGenerationPrompt);
         }
         else
         {
@@ -52,13 +54,14 @@ public sealed class TenantAIProfileService : ITenantAIProfileService
                 request.BrandRules,
                 request.ForbiddenTopics,
                 request.DefaultResponseStyle,
-                request.AiCallsPerHourLimit);
+                request.AiCallsPerHourLimit,
+                request.PoseExtractionPrompt,
+                request.ImageGenerationPrompt);
             profile = existing;
         }
 
         await _repository.SaveAsync(profile, ct);
-
-        // Invalidate cached system prompt so the next AI call picks up the new profile.
+        var tesstprofile = await _repository.GetByTenantIdAsync(tenantId, ct);
         await _cache.RemoveAsync(CacheKeys.AiSettingsTenant(tenantId), ct);
 
         return MapToResult(profile);
@@ -76,5 +79,7 @@ public sealed class TenantAIProfileService : ITenantAIProfileService
         p.AiCallsPerHourLimit,
         p.Version,
         p.CreatedAt.ToString("o"),
-        p.UpdatedAt?.ToString("o"));
+        p.UpdatedAt?.ToString("o"),
+        p.PoseExtractionPrompt,
+        p.ImageGenerationPrompt);
 }

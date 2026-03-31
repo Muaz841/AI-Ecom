@@ -31,7 +31,10 @@ public sealed class RbacSeedHostedService : IHostedService
         ("Manage Integrations", PermissionCodes.IntegrationsManage, "Connect/disconnect Meta channel integrations"),
         ("Manage Tenants", PermissionCodes.TenantsManage, "Create/suspend/manage platform tenants"),
         ("Manage Subscriptions", PermissionCodes.SubscriptionsManage, "Manage tenant subscriptions and billing"),
-        ("Platform Settings", PermissionCodes.PlatformSettings, "Manage global platform configuration")
+        ("Platform Settings", PermissionCodes.PlatformSettings, "Manage global platform configuration"),
+        ("Generate Images", PermissionCodes.ImagesGenerate, "Run AI image pipeline and pose generation"),
+        ("View Images", PermissionCodes.ImagesRead, "View pose library and generated images"),
+        ("Manage Images", PermissionCodes.ImagesManage, "Delete poses and manage image library")
     };
 
     private readonly IServiceScopeFactory _scopeFactory;

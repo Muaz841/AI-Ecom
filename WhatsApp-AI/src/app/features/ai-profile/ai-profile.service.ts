@@ -16,6 +16,8 @@ export interface TenantAIProfileResult {
   version: number;
   createdAt: string;
   updatedAt: string | null;
+  poseExtractionPrompt: string | null;
+  imageGenerationPrompt: string | null;
 }
 
 export interface SaveAIProfileRequest {
@@ -26,6 +28,8 @@ export interface SaveAIProfileRequest {
   forbiddenTopics: string | null;
   defaultResponseStyle: string | null;
   aiCallsPerHourLimit: number;
+  poseExtractionPrompt: string | null;
+  imageGenerationPrompt: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

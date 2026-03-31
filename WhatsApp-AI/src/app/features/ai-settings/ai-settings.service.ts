@@ -37,19 +37,18 @@ export interface AiConfigResult {
   topP: number | null;
   maxTokens: number | null;
   updatedAt: string | null;
+  visionModelName: string | null;
+  imageGenerationModelName: string | null;
+  messagingModelName: string | null;
 }
 
 export interface SaveAiConfigRequest {
   activeProvider: string;
   debugModeEnabled: boolean;
-  /** null when Ollama is not the active provider — backend preserves existing value */
   ollamaEndpoint: string | null;
-  /** null when Ollama is not the active provider — backend preserves existing value */
   ollamaModel: string | null;
-  /** null when OpenAI is not the active provider — backend preserves existing value */
   openAIModel: string | null;
   openAIApiKey: string | null;
-  /** null when Gemini is not the active provider — backend preserves existing value */
   geminiModel: string | null;
   geminiApiKey: string | null;
   requestTimeoutSeconds: number;
@@ -58,6 +57,9 @@ export interface SaveAiConfigRequest {
   temperature: number | null;
   topP: number | null;
   maxTokens: number | null;
+  visionModelName: string | null;
+  imageGenerationModelName: string | null;
+  messagingModelName: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

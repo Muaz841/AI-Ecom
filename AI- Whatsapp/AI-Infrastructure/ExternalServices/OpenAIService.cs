@@ -188,5 +188,129 @@ public class OpenAIService : IAIService
     private static string BuildReplyPrompt(ReplyRequest r)
         => $"You are a helpful fashion store assistant.\nCustomer message: {r.MessageContent}\nIntent: {r.DetectedIntent}\nInventory: {r.InventoryContext}\nReply in concise customer-care tone.";
 
+    // -- Pose extraction (vision) -----------------------------------------------
+
+    public async Task<PoseExtractionResult> ExtractPoseAsync(
+        PoseExtractionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var rt = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
+                 ?? throw new InvalidOperationException("AI provider is not configured.");
+
+        EnsureApiKey(rt.OpenAIApiKey, "OpenAI");
+
+        var model = !string.IsNullOrWhiteSpace(request.VisionModelOverride) ? request.VisionModelOverride
+                  : !string.IsNullOrWhiteSpace(rt.VisionModelName)          ? rt.VisionModelName
+                  : "gpt-4o";
+
+        var timeout     = rt.RequestTimeoutSeconds;
+        var imageBase64 = Convert.ToBase64String(request.ImageBytes);
+        var dataUrl     = $"data:{request.MimeType};base64,{imageBase64}";
+
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+            throw new InvalidOperationException("PoseExtractionPrompt is not configured. Please set it in AI Profile settings.");
+
+        var posePrompt = request.Prompt;
+
+        using var client = _httpClientFactory.CreateClient();
+        client.BaseAddress = new Uri("https://api.openai.com/");
+        client.Timeout = TimeSpan.FromSeconds(timeout);
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", rt.OpenAIApiKey);
+
+        var body = new
+        {
+            model,
+            messages = new object[]
+            {
+                new
+                {
+                    role = "user",
+                    content = new object[]
+                    {
+                        new { type = "text", text = posePrompt },
+                        new { type = "image_url", image_url = new { url = dataUrl } }
+                    }
+                }
+            },
+            max_tokens = 1000
+        };
+
+        using var response = await client.PostAsJsonAsync("v1/chat/completions", body, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.Error("OpenAI pose extraction failed. Status={Status} Body={Body}", response.StatusCode, raw);
+            return new PoseExtractionResult(false, null, 0, 0, $"Pose extraction failed ({response.StatusCode}).");
+        }
+
+        using var doc = JsonDocument.Parse(raw);
+        var text  = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? string.Empty;
+        var usage = ReadUsage(doc.RootElement);
+
+        _logger.Info("OpenAI pose extraction complete. Model={Model} InputTokens={In} OutputTokens={Out}",
+            model, usage.InputTokens, usage.OutputTokens);
+
+        return new PoseExtractionResult(true, text.Trim(), usage.InputTokens, usage.OutputTokens);
+    }
+
+    // -- Model image generation --------------------------------------------------
+
+    public async Task<ImageGenerationResult> GenerateModelImageAsync(
+        ImageGenerationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var rt = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
+                 ?? throw new InvalidOperationException("AI provider is not configured.");
+
+        EnsureApiKey(rt.OpenAIApiKey, "OpenAI");
+
+        var model = !string.IsNullOrWhiteSpace(request.ImageModelOverride)         ? request.ImageModelOverride
+                  : !string.IsNullOrWhiteSpace(rt.ImageGenerationModelName)         ? rt.ImageGenerationModelName
+                  : "dall-e-3";
+
+        var timeout  = rt.RequestTimeoutSeconds;
+
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+            throw new InvalidOperationException("ImageGenerationPrompt is not configured. Please set it in AI Profile settings.");
+
+        var prompt = request.Prompt;
+
+        using var client = _httpClientFactory.CreateClient();
+        client.BaseAddress = new Uri("https://api.openai.com/");
+        client.Timeout = TimeSpan.FromSeconds(Math.Max(timeout, 120));
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", rt.OpenAIApiKey);
+
+        var body = new
+        {
+            model,
+            prompt,
+            n = 1,
+            size = "1024x1024",
+            response_format = "b64_json"
+        };
+
+        using var response = await client.PostAsJsonAsync("v1/images/generations", body, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.Error("OpenAI image generation failed. Status={Status} Body={Body}", response.StatusCode, raw);
+            return new ImageGenerationResult(false, null, null, $"Image generation failed ({response.StatusCode}).");
+        }
+
+        using var doc = JsonDocument.Parse(raw);
+        var b64 = doc.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetString() ?? string.Empty;
+
+        if (string.IsNullOrEmpty(b64))
+            return new ImageGenerationResult(false, null, null, "No image data returned.");
+
+        var bytes = Convert.FromBase64String(b64);
+        _logger.Info("OpenAI image generation complete. Model={Model} Size={Size}bytes", model, bytes.Length);
+        return new ImageGenerationResult(true, bytes, "image/png");
+    }
+
     private readonly record struct TokenUsage(int InputTokens, int OutputTokens);
 }

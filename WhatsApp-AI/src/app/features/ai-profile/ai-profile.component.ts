@@ -51,13 +51,15 @@ export class AiProfileComponent implements OnInit {
 
   ngOnInit(): void {
     this.form = this.fb.group({
-      systemPrompt: ['', [Validators.required, Validators.minLength(10)]],
-      tone: [''],
-      language: [''],
-      brandRules: [''],
-      forbiddenTopics: [''],
-      defaultResponseStyle: [''],
-      aiCallsPerHourLimit: [200, [Validators.required, Validators.min(0), Validators.max(10000)]],
+      systemPrompt:          ['', [Validators.required, Validators.minLength(10)]],
+      tone:                  [''],
+      language:              [''],
+      brandRules:            [''],
+      forbiddenTopics:       [''],
+      defaultResponseStyle:  [''],
+      aiCallsPerHourLimit:   [200, [Validators.required, Validators.min(0), Validators.max(10000)]],
+      poseExtractionPrompt:  [''],
+      imageGenerationPrompt: [''],
     });
 
     this.load();
@@ -83,13 +85,15 @@ export class AiProfileComponent implements OnInit {
 
   private patchForm(p: TenantAIProfileResult): void {
     this.form.patchValue({
-      systemPrompt: p.systemPrompt,
-      tone: p.tone ?? '',
-      language: p.language ?? '',
-      brandRules: p.brandRules ?? '',
-      forbiddenTopics: p.forbiddenTopics ?? '',
-      defaultResponseStyle: p.defaultResponseStyle ?? '',
-      aiCallsPerHourLimit: p.aiCallsPerHourLimit,
+      systemPrompt:          p.systemPrompt,
+      tone:                  p.tone ?? '',
+      language:              p.language ?? '',
+      brandRules:            p.brandRules ?? '',
+      forbiddenTopics:       p.forbiddenTopics ?? '',
+      defaultResponseStyle:  p.defaultResponseStyle ?? '',
+      aiCallsPerHourLimit:   p.aiCallsPerHourLimit,
+      poseExtractionPrompt:  p.poseExtractionPrompt ?? '',
+      imageGenerationPrompt: p.imageGenerationPrompt ?? '',
     });
   }
 
@@ -102,13 +106,15 @@ export class AiProfileComponent implements OnInit {
     this.saving.set(true);
     this.service
       .saveProfile({
-        systemPrompt: v.systemPrompt,
-        tone: v.tone || null,
-        language: v.language || null,
-        brandRules: v.brandRules || null,
-        forbiddenTopics: v.forbiddenTopics || null,
-        defaultResponseStyle: v.defaultResponseStyle || null,
-        aiCallsPerHourLimit: v.aiCallsPerHourLimit,
+        systemPrompt:          v.systemPrompt,
+        tone:                  v.tone || null,
+        language:              v.language || null,
+        brandRules:            v.brandRules || null,
+        forbiddenTopics:       v.forbiddenTopics || null,
+        defaultResponseStyle:  v.defaultResponseStyle || null,
+        aiCallsPerHourLimit:   v.aiCallsPerHourLimit,
+        poseExtractionPrompt:  v.poseExtractionPrompt || null,
+        imageGenerationPrompt: v.imageGenerationPrompt || null,
       })
       .subscribe({
         next: (result) => {

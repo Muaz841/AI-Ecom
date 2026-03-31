@@ -104,9 +104,9 @@ public class GeminiService : IAIService
         CancellationToken cancellationToken = default)
     {
         var rt      = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
-                      ?? throw new InvalidOperationException("AI provider is not configured. Configure it in Host > AI Settings."); 
+                      ?? throw new InvalidOperationException("AI provider is not configured. Configure it in Host > AI Settings.");
         var apiKey  = rt.GeminiApiKey;
-        var model   = rt.GeminiModel;
+        var model   = !string.IsNullOrWhiteSpace(rt.MessagingModelName) ? rt.MessagingModelName : rt.GeminiModel;
         var timeout = rt.RequestTimeoutSeconds;
 
         if (string.IsNullOrWhiteSpace(model))
@@ -198,7 +198,7 @@ public class GeminiService : IAIService
         var rt      = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
                       ?? throw new InvalidOperationException("AI provider is not configured. Configure it in Host > AI Settings.");
         var apiKey  = rt.GeminiApiKey;
-        var model   = rt.GeminiModel;
+        var model   = !string.IsNullOrWhiteSpace(rt.MessagingModelName) ? rt.MessagingModelName : rt.GeminiModel;
         var timeout = rt.RequestTimeoutSeconds;
 
         if (string.IsNullOrWhiteSpace(model))
@@ -356,6 +356,156 @@ public class GeminiService : IAIService
         {
             return "[unserializable]";
         }
+    }
+
+    // -- Pose extraction (vision) -----------------------------------------------
+
+    public async Task<PoseExtractionResult> ExtractPoseAsync(
+        PoseExtractionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var rt = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
+                 ?? throw new InvalidOperationException("AI provider is not configured.");
+
+        EnsureApiKey(rt.GeminiApiKey, "Gemini");
+
+        var model = !string.IsNullOrWhiteSpace(request.VisionModelOverride)  ? request.VisionModelOverride
+                  : !string.IsNullOrWhiteSpace(rt.VisionModelName)           ? rt.VisionModelName
+                  : rt.GeminiModel;
+
+        if (string.IsNullOrWhiteSpace(model))
+            throw new AiModelNotConfiguredException();
+
+        var timeout      = rt.RequestTimeoutSeconds;
+        var imageBase64  = Convert.ToBase64String(request.ImageBytes);
+        var apiKey       = rt.GeminiApiKey!;
+
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+            throw new InvalidOperationException("PoseExtractionPrompt is not configured. Please set it in AI Profile settings.");
+
+        var posePrompt = request.Prompt;
+
+        var body = new
+        {
+            contents = new[]
+            {
+                new
+                {
+                    role = "user",
+                    parts = new object[]
+                    {
+                        new { text = posePrompt },
+                        new { inlineData = new { mimeType = request.MimeType, data = imageBase64 } }
+                    }
+                }
+            }
+        };
+
+        using var client = _httpClientFactory.CreateClient();
+        client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+        client.Timeout = TimeSpan.FromSeconds(timeout);
+
+        var apiPath = $"v1beta/models/{model}:generateContent?key={Uri.EscapeDataString(apiKey)}";
+        using var response = await client.PostAsJsonAsync(apiPath, body, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.Error("Gemini pose extraction failed. Model={Model} Status={Status} Body={Body}",
+                model, response.StatusCode, raw);
+            return new PoseExtractionResult(false, null, 0, 0, $"Pose extraction failed ({response.StatusCode}).");
+        }
+
+        using var doc = JsonDocument.Parse(raw);
+        var usage = ReadUsage(doc.RootElement, posePrompt);
+        var text  = doc.RootElement
+            .GetProperty("candidates")[0]
+            .GetProperty("content")
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString() ?? string.Empty;
+
+        _logger.Info("Gemini pose extraction complete. Model={Model} InputTokens={In} OutputTokens={Out}",
+            model, usage.InputTokens, usage.OutputTokens);
+
+        return new PoseExtractionResult(true, text.Trim(), usage.InputTokens, usage.OutputTokens);
+    }
+
+    // -- Model image generation --------------------------------------------------
+
+    public async Task<ImageGenerationResult> GenerateModelImageAsync(
+        ImageGenerationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var rt = await _runtimeConfig.GetRuntimeConfigAsync(cancellationToken)
+                 ?? throw new InvalidOperationException("AI provider is not configured.");
+
+        EnsureApiKey(rt.GeminiApiKey, "Gemini");
+
+        var model = !string.IsNullOrWhiteSpace(request.ImageModelOverride)        ? request.ImageModelOverride
+                  : !string.IsNullOrWhiteSpace(rt.ImageGenerationModelName)        ? rt.ImageGenerationModelName
+                  : "gemini-2.0-flash-preview-image-generation";
+
+        var timeout     = rt.RequestTimeoutSeconds;
+        var apiKey      = rt.GeminiApiKey!;
+        var dressBase64 = Convert.ToBase64String(request.DressImageBytes);
+
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+            throw new InvalidOperationException("ImageGenerationPrompt is not configured. Please set it in AI Profile settings.");
+
+        var prompt = request.Prompt;
+
+        var body = new
+        {
+            contents = new[]
+            {
+                new
+                {
+                    role = "user",
+                    parts = new object[]
+                    {
+                        new { text = prompt },
+                        new { inlineData = new { mimeType = request.DressImageMimeType, data = dressBase64 } }
+                    }
+                }
+            },
+            generationConfig = new { responseModalities = new[] { "IMAGE", "TEXT" } }
+        };
+
+        using var client = _httpClientFactory.CreateClient();
+        client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+        client.Timeout = TimeSpan.FromSeconds(Math.Max(timeout, 120));
+
+        var apiPath = $"v1beta/models/{model}:generateContent?key={Uri.EscapeDataString(apiKey)}";
+        using var response = await client.PostAsJsonAsync(apiPath, body, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.Error("Gemini image generation failed. Model={Model} Status={Status} Body={Body}",
+                model, response.StatusCode, raw);
+            return new ImageGenerationResult(false, null, null, $"Image generation failed ({response.StatusCode}).");
+        }
+
+        using var doc = JsonDocument.Parse(raw);
+        var candidates = doc.RootElement.GetProperty("candidates");
+        if (candidates.GetArrayLength() == 0)
+            return new ImageGenerationResult(false, null, null, "No candidates returned.");
+
+        var parts = candidates[0].GetProperty("content").GetProperty("parts");
+        foreach (var part in parts.EnumerateArray())
+        {
+            if (part.TryGetProperty("inlineData", out var inlineData))
+            {
+                var mimeType = inlineData.GetProperty("mimeType").GetString() ?? "image/png";
+                var b64      = inlineData.GetProperty("data").GetString() ?? string.Empty;
+                var bytes    = Convert.FromBase64String(b64);
+                _logger.Info("Gemini image generation complete. Model={Model} Size={Size}bytes", model, bytes.Length);
+                return new ImageGenerationResult(true, bytes, mimeType);
+            }
+        }
+
+        return new ImageGenerationResult(false, null, null, "No image part returned in response.");
     }
 
     private readonly record struct TokenUsage(int InputTokens, int OutputTokens);

@@ -19,7 +19,9 @@ public sealed record TenantAIProfileResult(
     int AiCallsPerHourLimit,
     int Version,
     string CreatedAt,
-    string? UpdatedAt);
+    string? UpdatedAt,
+    string? PoseExtractionPrompt = null,
+    string? ImageGenerationPrompt = null);
 
 // ── Save request ──────────────────────────────────────────────────────────────
 
@@ -30,7 +32,9 @@ public sealed record SaveTenantAIProfileRequest(
     string? BrandRules = null,
     string? ForbiddenTopics = null,
     string? DefaultResponseStyle = null,
-    int AiCallsPerHourLimit = 200);
+    int AiCallsPerHourLimit = 200,
+    string? PoseExtractionPrompt = null,
+    string? ImageGenerationPrompt = null);
 
 // ── Repository ────────────────────────────────────────────────────────────────
 

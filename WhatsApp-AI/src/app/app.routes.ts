@@ -17,6 +17,7 @@ import { WebhookTesterComponent } from './features/dev/webhook-tester/webhook-te
 import { AiSettingsComponent } from './features/ai-settings/ai-settings.component';
 import { AiProfileComponent } from './features/ai-profile/ai-profile.component';
 import { ProductsComponent } from './features/products/products.component';
+import { ContentAiComponent } from './features/content-ai/content-ai.component';
 
 const messagingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'messaging');
 const contentModule = SIDEBAR_PIPELINE.find((module) => module.id === 'content');
@@ -65,7 +66,7 @@ export const routes: Routes = [
         path: 'content',
         canActivate: [permissionGuard],
         data: { permissions: contentModule?.requiredPermissions ?? [], title: contentModule?.label ?? 'Content AI', subtitle: contentModule?.subtitle ?? '' },
-        component: DashboardPlaceholderComponent,
+        component: ContentAiComponent,
       },
       {
         path: 'products',

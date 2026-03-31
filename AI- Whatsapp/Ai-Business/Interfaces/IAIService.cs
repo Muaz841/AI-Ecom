@@ -25,9 +25,16 @@ public interface IAIService
 
     Task<(string ProviderName, string ModelVersion)> GetCurrentProviderInfoAsync(CancellationToken cancellationToken = default);
 
-
     Task<AgentTurnResult> GenerateAgentTurnAsync(
         AgentTurnRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<PoseExtractionResult> ExtractPoseAsync(
+        PoseExtractionRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ImageGenerationResult> GenerateModelImageAsync(
+        ImageGenerationRequest request,
         CancellationToken cancellationToken = default);
 }
 
@@ -95,4 +102,40 @@ public record AdCopiesResult(
     int InputTokensUsed,
     int OutputTokensUsed,
     int EstimatedTokensBeforeCall,
+    string? ErrorMessage = null);
+
+// ── Image pipeline request / result records ───────────────────────────────────
+
+/// <summary>
+/// Request to extract a textual pose script from a reference image via a vision model.
+/// VisionModelOverride selects a different model from the default chat model.
+/// </summary>
+public sealed record PoseExtractionRequest(
+    byte[]  ImageBytes,
+    string  MimeType,
+    string? Prompt = null,
+    string? VisionModelOverride = null);
+
+public sealed record PoseExtractionResult(
+    bool    Success,
+    string? PoseScript,
+    int     InputTokensUsed,
+    int     OutputTokensUsed,
+    string? ErrorMessage = null);
+
+/// <summary>
+/// Request to generate a model-wearing-dress image from a pose script and dress image.
+/// ImageModelOverride selects the image generation model (e.g. dall-e-3, gemini-2.0-flash-exp).
+/// </summary>
+public sealed record ImageGenerationRequest(
+    string  PoseScript,
+    byte[]  DressImageBytes,
+    string  DressImageMimeType,
+    string? Prompt = null,
+    string? ImageModelOverride = null);
+
+public sealed record ImageGenerationResult(
+    bool    Success,
+    byte[]? GeneratedImageBytes,
+    string? MimeType,
     string? ErrorMessage = null);

@@ -8,6 +8,8 @@ namespace EcomAI.Platform.Business.Interfaces;
 
 /// <summary>
 /// Decrypted runtime config read from the DB. Single source of truth — never falls back to appsettings.
+/// VisionModelName and ImageGenerationModelName are per-task overrides that allow different models
+/// for pose extraction and image generation vs. the default chat model.
 /// </summary>
 public sealed record AiRuntimeConfig(
     AIProvider ActiveProvider,
@@ -23,7 +25,10 @@ public sealed record AiRuntimeConfig(
     bool EnableStructuredOutput,
     double? Temperature,
     double? TopP,
-    int? MaxTokens);
+    int? MaxTokens,
+    string? VisionModelName         = null,  // override for pose extraction (vision tasks)
+    string? ImageGenerationModelName = null, // override for image generation
+    string? MessagingModelName       = null); // override for chat/messaging; falls back to GeminiModel
 
 /// <summary>
 /// Resolves the current AI provider config from the database at runtime.
@@ -79,7 +84,10 @@ public sealed record PlatformAiConfigResult(
     double? Temperature,
     double? TopP,
     int? MaxTokens,
-    string? UpdatedAt);
+    string? UpdatedAt,
+    string? VisionModelName          = null,
+    string? ImageGenerationModelName = null,
+    string? MessagingModelName       = null);
 
 /// <summary>Save request — ActiveProvider arrives as string from Angular, parsed to AIProvider enum in the service.</summary>
 public sealed record SavePlatformAiConfigRequest(
@@ -96,7 +104,10 @@ public sealed record SavePlatformAiConfigRequest(
     bool EnableStructuredOutput = false,
     double? Temperature = null,
     double? TopP = null,
-    int? MaxTokens = null);
+    int? MaxTokens = null,
+    string? VisionModelName = null,
+    string? ImageGenerationModelName = null,
+    string? MessagingModelName = null);
 
 // ── Service ────────────────────────────────────────────────────────────────────
 

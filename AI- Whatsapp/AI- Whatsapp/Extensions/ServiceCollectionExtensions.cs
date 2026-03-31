@@ -179,6 +179,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IConversationThreadRepository, ConversationThreadRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ScheduledPostRepository>();
+        services.AddScoped<IPosePrescriptRepository, PosePrescriptRepository>();
         services.AddScoped<IMetaMessagingService, MetaMessagingService>();
         services.Configure<MailtrapSettings>(configuration.GetSection("Mailtrap"));
         services.AddScoped<IEmailService, MailtrapEmailService>();

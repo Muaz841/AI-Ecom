@@ -49,6 +49,7 @@ public class PlatformDbContext : DbContext
     public DbSet<PlatformMetaConfig> PlatformMetaConfigs { get; set; } = null!;
     public DbSet<PlatformAiConfig> PlatformAiConfigs { get; set; } = null!;
     public DbSet<TenantAIProfile> TenantAIProfiles { get; set; } = null!;
+    public DbSet<PosePrescript> PosePrescripts { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -342,7 +343,28 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.OpenAIApiKeyProtected).HasColumnType("nvarchar(max)");
             entity.Property(e => e.GeminiModel).IsRequired().HasMaxLength(200);
             entity.Property(e => e.GeminiApiKeyProtected).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.VisionModelName).HasMaxLength(200);
+            entity.Property(e => e.ImageGenerationModelName).HasMaxLength(200);
+            entity.Property(e => e.MessagingModelName).HasMaxLength(200);
             entity.ToTable("PlatformAiConfigs");
+        });
+
+        // Per-tenant pose library — tenant-scoped, soft-delete via IsActive.
+        modelBuilder.Entity<PosePrescript>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.PoseScript).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ReferenceImagePath).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.CreatedByUserId).IsRequired();
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasOne<TenantEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable("PosePrescripts");
         });
 
         // Per-tenant AI persona profile — one row per tenant, subject to EF tenant filter.
@@ -356,6 +378,8 @@ public class PlatformDbContext : DbContext
             entity.Property(e => e.BrandRules).HasColumnType("nvarchar(max)");
             entity.Property(e => e.ForbiddenTopics).HasColumnType("nvarchar(max)");
             entity.Property(e => e.DefaultResponseStyle).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.PoseExtractionPrompt).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ImageGenerationPrompt).HasColumnType("nvarchar(max)");
             entity.Property(e => e.AiCallsPerHourLimit).HasDefaultValue(200);
             entity.Property(e => e.Version).HasDefaultValue(1);
             // One profile per tenant

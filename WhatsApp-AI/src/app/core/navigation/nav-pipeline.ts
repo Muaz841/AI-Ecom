@@ -112,15 +112,6 @@ export const SIDEBAR_PIPELINE: SidebarModule[] = [
     subtitle: 'Configure platform-level Meta OAuth credentials and global settings.',
   },
   {
-    id: 'ai-settings',
-    label: 'AI Provider',
-    route: '/host/ai-settings',
-    icon: 'pi pi-microchip-ai',
-    order: 92,
-    requiredPermissions: ['platform.settings'],
-    subtitle: 'Configure AI provider, model selection, and API keys for the platform.',
-  },
-  {
     id: 'ai-profile',
     label: 'AI Persona',
     route: '/settings/ai-profile',

@@ -1,14 +1,15 @@
+<p-toast />
+
 <div class="ps-page">
 
   <!-- ── Header ──────────────────────────────────────────── -->
   <div class="ps-header">
     <div>
       <h1 class="ps-title">Platform Settings</h1>
-      <p class="ps-subtitle">Host-level configuration applied across all tenants. Changes take effect immediately for new OAuth flows.</p>
+      <p class="ps-subtitle">Host-level configuration applied across all tenants. Click a card to configure that section.</p>
     </div>
   </div>
 
-  <!-- ── Loading ─────────────────────────────────────────── -->
   @if (loading()) {
     <div class="ps-loading">
       <p-progressSpinner strokeWidth="3" styleClass="ps-spinner"></p-progressSpinner>
@@ -17,145 +18,407 @@
   }
 
   @if (!loading()) {
-    <!-- ── Status banner ─────────────────────────────────── -->
-    <div class="status-banner" [class.configured]="config()?.isConfigured" [class.unconfigured]="!config()?.isConfigured">
-      <div class="status-icon">
-        <i [class]="config()?.isConfigured ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'"></i>
-      </div>
-      <div class="status-body">
-        <strong>{{ config()?.isConfigured ? 'Meta App Configured' : 'Meta App Not Configured' }}</strong>
-        <span>
-          @if (config()?.isConfigured) {
-            App credentials are active. Tenant OAuth flows will use these settings.
-            @if (config()?.updatedAt) {
-              Last updated {{ formatDate(config()!.updatedAt!) }}.
-            }
-          } @else {
-            No credentials stored. OAuth flows will fall back to appsettings.json values.
-          }
-        </span>
-      </div>
-    </div>
 
-    <!-- ── Meta App Config card ──────────────────────────── -->
-    <div class="ps-card">
-      <div class="card-header">
-        <div class="card-title-row">
-          <div class="card-icon"><i class="pi pi-meta"></i></div>
-          <div>
-            <h2 class="card-title">Meta App Credentials</h2>
-            <p class="card-sub">Used for WhatsApp, Instagram, and Facebook OAuth token exchange and API calls.</p>
+    <!-- ── Settings Cards Grid ────────────────────────────── -->
+    <div class="settings-grid">
+
+      <!-- Card 1: AI Provider -->
+      <div class="settings-card" (click)="openAiDialog()" role="button" tabindex="0"
+        (keydown.enter)="openAiDialog()" (keydown.space)="openAiDialog()">
+        <div class="card-icon-wrap ai-provider-icon">
+          <i class="pi pi-microchip-ai"></i>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">AI Provider</h3>
+          <p class="card-desc">Configure the Gemini API key, base model, and runtime parameters for all AI calls.</p>
+          <div class="card-footer">
+            <span class="card-status" [class.status-ok]="aiConfigured" [class.status-warn]="!aiConfigured">
+              <i [class]="aiConfigured ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
+              {{ aiStatusLabel }}
+            </span>
+            <span class="card-action">Configure <i class="pi pi-arrow-right"></i></span>
           </div>
         </div>
       </div>
 
-      <form [formGroup]="form" (ngSubmit)="save()" class="ps-form">
+      <!-- Card 2: Messaging -->
+      <div class="settings-card" (click)="openMessagingDialog()" role="button" tabindex="0"
+        (keydown.enter)="openMessagingDialog()" (keydown.space)="openMessagingDialog()">
+        <div class="card-icon-wrap messaging-icon">
+          <i class="pi pi-comments"></i>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">Messaging Model</h3>
+          <p class="card-desc">Select the Gemini model used for customer chat replies and intent detection.</p>
+          <div class="card-footer">
+            <span class="card-status" [class.status-ok]="messagingConfigured" [class.status-info]="!messagingConfigured">
+              <i [class]="messagingConfigured ? 'pi pi-check-circle' : 'pi pi-info-circle'"></i>
+              {{ messagingModelLabel }}
+            </span>
+            <span class="card-action">Configure <i class="pi pi-arrow-right"></i></span>
+          </div>
+        </div>
+      </div>
 
-        <!-- App ID -->
-        <div class="form-field">
-          <label class="field-label">
-            App ID <span class="required">*</span>
-            <span class="field-badge">Public</span>
-          </label>
-          <input pInputText formControlName="appId" class="ps-input" autocomplete="off" />
-          <span class="field-hint">Your Meta App ID from the Meta Developer Portal.</span>
-          @if (form.get('appId')?.touched && form.get('appId')?.invalid) {
-            <span class="field-error"><i class="pi pi-exclamation-circle"></i> App ID is required</span>
+      <!-- Card 3: Image Pipeline -->
+      <div class="settings-card" (click)="openImagePipelineDialog()" role="button" tabindex="0"
+        (keydown.enter)="openImagePipelineDialog()" (keydown.space)="openImagePipelineDialog()">
+        <div class="card-icon-wrap pipeline-icon">
+          <i class="pi pi-images"></i>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">Image Pipeline Models</h3>
+          <p class="card-desc">Choose dedicated models for pose extraction (vision) and final image generation.</p>
+          <div class="card-footer">
+            <span class="card-status" [class.status-ok]="imagePipelineConfigured" [class.status-info]="!imagePipelineConfigured">
+              <i [class]="imagePipelineConfigured ? 'pi pi-check-circle' : 'pi pi-info-circle'"></i>
+              {{ imagePipelineLabel }}
+            </span>
+            <span class="card-action">Configure <i class="pi pi-arrow-right"></i></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Meta App -->
+      <div class="settings-card" (click)="openMetaDialog()" role="button" tabindex="0"
+        (keydown.enter)="openMetaDialog()" (keydown.space)="openMetaDialog()">
+        <div class="card-icon-wrap meta-icon">
+          <i class="pi pi-meta"></i>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">Meta App Credentials</h3>
+          <p class="card-desc">WhatsApp, Instagram, and Facebook OAuth credentials for tenant channel connections.</p>
+          <div class="card-footer">
+            <span class="card-status" [class.status-ok]="metaConfigured" [class.status-warn]="!metaConfigured">
+              <i [class]="metaConfigured ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
+              {{ metaStatusLabel }}
+            </span>
+            <span class="card-action">Configure <i class="pi pi-arrow-right"></i></span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.settings-grid -->
+
+  }<!-- /.!loading -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- DIALOG 1 — AI Provider                                                -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <p-dialog
+    header="AI Provider Settings"
+    [visible]="showAiDialog()"
+    (visibleChange)="showAiDialog.set($event)"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="ps-dialog"
+    [style]="{ width: '640px' }">
+
+    <div class="dialog-body">
+
+      <!-- Gemini badge -->
+      <div class="provider-banner">
+        <div class="provider-banner-icon"><i class="pi pi-star"></i></div>
+        <div>
+          <strong>Gemini (Google)</strong>
+          <span>Active provider — all AI pipelines route through Gemini.</span>
+        </div>
+      </div>
+
+      <form [formGroup]="aiForm" class="dialog-form">
+
+        <!-- Base model -->
+        <div class="dialog-field">
+          <label class="field-label">Base Model</label>
+          @if (loadingModels()) {
+            <div class="field-loading"><p-progressSpinner strokeWidth="4" styleClass="field-spinner"></p-progressSpinner><span>Loading models…</span></div>
+          } @else {
+            <p-select formControlName="geminiModel" [options]="modelOptions()" optionLabel="label" optionValue="value"
+              placeholder="Select base model" styleClass="w-full"></p-select>
           }
+          <span class="field-hint">Fallback for all AI calls unless a task-specific model is configured.</span>
+          <button type="button" pButton severity="secondary" [outlined]="true" size="small"
+            icon="pi pi-refresh" label="Refresh" (click)="refreshModels()" [loading]="loadingModels()"></button>
         </div>
 
-        <!-- Login Configuration ID -->
-        <div class="form-field">
+        <!-- API Key -->
+        <div class="dialog-field">
           <label class="field-label">
-            Login Configuration ID
-            <span class="field-badge">Optional</span>
-          </label>
-          <input pInputText formControlName="loginConfigurationId" class="ps-input" autocomplete="off" />
-          <span class="field-hint">
-            Use this only if your app uses Facebook Login for Business. Found in Meta → Login for Business → Configurations.
-          </span>
-        </div>
-
-        <!-- App Secret -->
-        <div class="form-field">
-          <label class="field-label">
-            App Secret <span class="required">*</span>
-            <span class="field-badge field-badge-secret">Encrypted at rest</span>
+            API Key
+            <span class="field-badge-secret">Encrypted at rest</span>
           </label>
           <div class="secret-wrap">
-            <input
-              [type]="showSecret() ? 'text' : 'password'"
-              pInputText
-              formControlName="appSecret"
-              class="ps-input secret-input"
-              autocomplete="new-password"
-            />
-            <button type="button" class="secret-toggle" (click)="showSecret.set(!showSecret())"
-              [pTooltip]="showSecret() ? 'Hide' : 'Show'" tooltipPosition="top">
-              <i [class]="showSecret() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            <input [type]="showGeminiKey() ? 'text' : 'password'" pInputText formControlName="geminiApiKey"
+              class="ps-input secret-input" autocomplete="new-password" />
+            <button type="button" class="secret-toggle" (click)="showGeminiKey.set(!showGeminiKey())"
+              [pTooltip]="showGeminiKey() ? 'Hide' : 'Show'" tooltipPosition="top">
+              <i [class]="showGeminiKey() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
             </button>
           </div>
-          <span class="field-hint">
-            @if (config()?.isConfigured) {
-              <i class="pi pi-lock"></i> Currently set. Leave blank to keep unchanged. Enter a new value to rotate the secret.
-            } @else {
-              Find this in Meta Developer Portal → Your App → App Settings → Basic.
-            }
-          </span>
-          @if (form.get('appSecret')?.touched && form.get('appSecret')?.invalid) {
-            <span class="field-error"><i class="pi pi-exclamation-circle"></i> App Secret is required for initial setup</span>
+          @if (aiConfig()?.geminiApiKeySet) {
+            <span class="field-hint"><i class="pi pi-lock"></i> Key saved. Leave blank to keep unchanged.</span>
+          } @else {
+            <span class="field-hint">Required for live Gemini API calls.</span>
           }
         </div>
 
-        <!-- Graph API Version + Callback URL -->
-        <div class="form-row two-col">
-          <div class="form-field">
-            <label class="field-label">Graph API Version <span class="required">*</span></label>
-            <div class="version-wrap">
-              <span class="version-prefix">v</span>
-              <select formControlName="graphVersion" class="ps-select">
-                @for (v of graphVersions; track v) {
-                  <option [value]="v">{{ v }}</option>
-                }
-              </select>
-            </div>
-            <span class="field-hint">Use the latest stable version supported by your app.</span>
-          </div>
+        <p-divider></p-divider>
 
-          <div class="form-field">
-            <label class="field-label">Callback Base URL <span class="required">*</span></label>
-            <input pInputText formControlName="callbackBaseUrl" class="ps-input" autocomplete="off" />
-            @if (callbackPreview()) {
-              <span class="field-hint"><i class="pi pi-link"></i> {{ callbackPreview() }}</span>
-            }
-            @if (form.get('callbackBaseUrl')?.touched && form.get('callbackBaseUrl')?.invalid) {
-              <span class="field-error"><i class="pi pi-exclamation-circle"></i> Callback URL is required</span>
-            }
+        <!-- Debug + Timeout row -->
+        <div class="dialog-row two-col">
+          <div class="dialog-field">
+            <label class="field-label">Debug Mode</label>
+            <div class="toggle-row">
+              <p-toggleSwitch formControlName="debugModeEnabled"></p-toggleSwitch>
+              <span class="field-hint">Returns simulated responses — disables real API calls.</span>
+            </div>
+          </div>
+          <div class="dialog-field">
+            <label class="field-label">Request Timeout (s)</label>
+            <input pInputText type="number" formControlName="requestTimeoutSeconds" class="ps-input" />
+            <span class="field-hint">Range: 10–300 seconds.</span>
           </div>
         </div>
 
-        <!-- Save -->
-        <div class="form-actions">
-          <button type="submit" pButton label="Save Configuration" icon="pi pi-check"
-            [loading]="saving()" [disabled]="form.invalid && !isPartialUpdateValid()"></button>
-          <button type="button" pButton label="Reset" severity="secondary" outlined (click)="resetForm()"></button>
+        <p-divider></p-divider>
+
+        <!-- Sampling -->
+        <div class="dialog-field">
+          <label class="field-label">Sampling Parameters <span class="field-optional">optional</span></label>
+          <div class="sampling-grid">
+            <div class="sampling-field">
+              <label class="sampling-label">Temperature</label>
+              <p-inputNumber formControlName="temperature" [min]="0" [max]="2" [step]="0.1" [maxFractionDigits]="2" placeholder="0.7" styleClass="w-full"></p-inputNumber>
+            </div>
+            <div class="sampling-field">
+              <label class="sampling-label">Top-P</label>
+              <p-inputNumber formControlName="topP" [min]="0" [max]="1" [step]="0.05" [maxFractionDigits]="2" placeholder="0.9" styleClass="w-full"></p-inputNumber>
+            </div>
+            <div class="sampling-field">
+              <label class="sampling-label">Max Tokens</label>
+              <p-inputNumber formControlName="maxTokens" [min]="1" [max]="128000" [step]="100" [useGrouping]="false" placeholder="2048" styleClass="w-full"></p-inputNumber>
+            </div>
+          </div>
+        </div>
+
+        <!-- Capabilities -->
+        <div class="dialog-field">
+          <label class="field-label">Capabilities</label>
+          <div class="capability-list">
+            <div class="capability-row">
+              <div class="capability-info">
+                <span class="capability-name">Tool Calling</span>
+                <span class="capability-desc">Allow the AI agent to invoke registered tools.</span>
+              </div>
+              <p-toggleSwitch formControlName="enableToolCalling"></p-toggleSwitch>
+            </div>
+            <div class="capability-row">
+              <div class="capability-info">
+                <span class="capability-name">Structured Output</span>
+                <span class="capability-desc">Enforce JSON schema on AI responses.</span>
+              </div>
+              <p-toggleSwitch formControlName="enableStructuredOutput"></p-toggleSwitch>
+            </div>
+          </div>
         </div>
 
       </form>
     </div>
 
-    <!-- ── Info card ─────────────────────────────────────── -->
-    <div class="info-card">
-      <div class="info-row"><i class="pi pi-info-circle"></i>
-        <span>The App Secret is <strong>never returned to the UI</strong> after saving. Only a masked placeholder is shown. A new value must be entered to rotate it.</span>
-      </div>
-      <div class="info-row"><i class="pi pi-info-circle"></i>
-        <span>If no DB config exists, the system falls back to <code>MetaOAuth</code> values in <code>appsettings.json</code> automatically.</span>
-      </div>
-      <div class="info-row"><i class="pi pi-info-circle"></i>
-        <span>The <strong>Callback Base URL</strong> must match the redirect URI registered in your Meta App Dashboard exactly.</span>
-      </div>
-    </div>
-  }
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" severity="secondary" [outlined]="true" (click)="showAiDialog.set(false)"></p-button>
+      <p-button label="Save" icon="pi pi-check" [loading]="savingAi()" (click)="saveAiProvider()"></p-button>
+    </ng-template>
+  </p-dialog>
 
-</div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- DIALOG 2 — Messaging Model                                            -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <p-dialog
+    header="Messaging Model"
+    [visible]="showMessagingDialog()"
+    (visibleChange)="showMessagingDialog.set($event)"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="ps-dialog"
+    [style]="{ width: '520px' }">
+
+    <div class="dialog-body">
+      <div class="dialog-info-banner">
+        <i class="pi pi-info-circle"></i>
+        <span>This model handles customer conversation replies, intent detection, and ad copy generation. Leave blank to use the base model.</span>
+      </div>
+
+      <form [formGroup]="messagingForm" class="dialog-form">
+        <div class="dialog-field">
+          <label class="field-label">Messaging Model</label>
+          @if (loadingModels()) {
+            <div class="field-loading"><p-progressSpinner strokeWidth="4" styleClass="field-spinner"></p-progressSpinner><span>Loading models…</span></div>
+          } @else {
+            <p-select formControlName="messagingModelName" [options]="modelOptions()" optionLabel="label" optionValue="value"
+              placeholder="Use base model (default)" [showClear]="true" styleClass="w-full"></p-select>
+          }
+          <span class="field-hint">Recommended: <code>gemini-1.5-flash</code> or <code>gemini-2.0-flash</code> for fast responses.</span>
+        </div>
+      </form>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" severity="secondary" [outlined]="true" (click)="showMessagingDialog.set(false)"></p-button>
+      <p-button label="Save" icon="pi pi-check" [loading]="savingMessaging()" (click)="saveMessaging()"></p-button>
+    </ng-template>
+  </p-dialog>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- DIALOG 3 — Image Pipeline Models                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <p-dialog
+    header="Image Pipeline Models"
+    [visible]="showImagePipelineDialog()"
+    (visibleChange)="showImagePipelineDialog.set($event)"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="ps-dialog"
+    [style]="{ width: '560px' }">
+
+    <div class="dialog-body">
+      <form [formGroup]="imagePipelineForm" class="dialog-form">
+
+        <!-- Vision model -->
+        <div class="dialog-field">
+          <label class="field-label">
+            <span class="field-label-icon vision"><i class="pi pi-eye"></i></span>
+            Pose Extraction Model
+          </label>
+          @if (loadingModels()) {
+            <div class="field-loading"><p-progressSpinner strokeWidth="4" styleClass="field-spinner"></p-progressSpinner><span>Loading models…</span></div>
+          } @else {
+            <p-select formControlName="visionModelName" [options]="modelOptions()" optionLabel="label" optionValue="value"
+              placeholder="Use base model (default)" [showClear]="true" styleClass="w-full"></p-select>
+          }
+          <span class="field-hint">Analyzes reference images to extract pose descriptions. Needs vision capability. Recommended: <code>gemini-1.5-pro</code>.</span>
+        </div>
+
+        <p-divider></p-divider>
+
+        <!-- Image generation model -->
+        <div class="dialog-field">
+          <label class="field-label">
+            <span class="field-label-icon gen"><i class="pi pi-image"></i></span>
+            Image Generation Model
+          </label>
+          @if (loadingModels()) {
+            <div class="field-loading"><p-progressSpinner strokeWidth="4" styleClass="field-spinner"></p-progressSpinner><span>Loading models…</span></div>
+          } @else {
+            <p-select formControlName="imageGenerationModelName" [options]="modelOptions()" optionLabel="label" optionValue="value"
+              placeholder="gemini-2.0-flash-preview-image-generation" [showClear]="true" styleClass="w-full"></p-select>
+          }
+          <span class="field-hint">Generates the final model-wearing-dress output. Recommended: <code>gemini-2.0-flash-preview-image-generation</code>.</span>
+        </div>
+
+      </form>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" severity="secondary" [outlined]="true" (click)="showImagePipelineDialog.set(false)"></p-button>
+      <p-button label="Save" icon="pi pi-check" [loading]="savingImagePipeline()" (click)="saveImagePipeline()"></p-button>
+    </ng-template>
+  </p-dialog>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- DIALOG 4 — Meta App Credentials                                       -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <p-dialog
+    header="Meta App Credentials"
+    [visible]="showMetaDialog()"
+    (visibleChange)="showMetaDialog.set($event)"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="ps-dialog"
+    [style]="{ width: '600px' }">
+
+    <div class="dialog-body">
+      <form [formGroup]="metaForm" class="dialog-form">
+
+        <!-- App ID -->
+        <div class="dialog-field">
+          <label class="field-label">App ID <span class="required">*</span> <span class="field-badge">Public</span></label>
+          <input pInputText formControlName="appId" class="ps-input" autocomplete="off" />
+          <span class="field-hint">Your Meta App ID from the Meta Developer Portal.</span>
+          @if (metaForm.get('appId')?.touched && metaForm.get('appId')?.invalid) {
+            <span class="field-error"><i class="pi pi-exclamation-circle"></i> App ID is required</span>
+          }
+        </div>
+
+        <!-- Login Config ID -->
+        <div class="dialog-field">
+          <label class="field-label">Login Configuration ID <span class="field-badge">Optional</span></label>
+          <input pInputText formControlName="loginConfigurationId" class="ps-input" autocomplete="off" />
+          <span class="field-hint">Only for apps using Facebook Login for Business.</span>
+        </div>
+
+        <!-- App Secret -->
+        <div class="dialog-field">
+          <label class="field-label">App Secret <span class="required">*</span> <span class="field-badge-secret">Encrypted at rest</span></label>
+          <div class="secret-wrap">
+            <input [type]="showMetaSecret() ? 'text' : 'password'" pInputText formControlName="appSecret"
+              class="ps-input secret-input" autocomplete="new-password" />
+            <button type="button" class="secret-toggle" (click)="showMetaSecret.set(!showMetaSecret())"
+              [pTooltip]="showMetaSecret() ? 'Hide' : 'Show'" tooltipPosition="top">
+              <i [class]="showMetaSecret() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            </button>
+          </div>
+          @if (metaConfig()?.isConfigured) {
+            <span class="field-hint"><i class="pi pi-lock"></i> Key saved. Leave blank to keep unchanged.</span>
+          } @else {
+            <span class="field-hint">Found in Meta Developer Portal → App Settings → Basic.</span>
+          }
+          @if (metaForm.get('appSecret')?.touched && metaForm.get('appSecret')?.invalid) {
+            <span class="field-error"><i class="pi pi-exclamation-circle"></i> App Secret required for initial setup</span>
+          }
+        </div>
+
+        <!-- Graph Version + Callback URL -->
+        <div class="dialog-row two-col">
+          <div class="dialog-field">
+            <label class="field-label">Graph API Version <span class="required">*</span></label>
+            <div class="version-wrap">
+              <span class="version-prefix">v</span>
+              <select formControlName="graphVersion" class="ps-native-select">
+                @for (v of graphVersions; track v) {
+                  <option [value]="v">{{ v }}</option>
+                }
+              </select>
+            </div>
+            <span class="field-hint">Use the latest stable version.</span>
+          </div>
+          <div class="dialog-field">
+            <label class="field-label">Callback Base URL <span class="required">*</span></label>
+            <input pInputText formControlName="callbackBaseUrl" class="ps-input" autocomplete="off" />
+            @if (callbackPreview()) {
+              <span class="field-hint"><i class="pi pi-link"></i> {{ callbackPreview() }}</span>
+            }
+            @if (metaForm.get('callbackBaseUrl')?.touched && metaForm.get('callbackBaseUrl')?.invalid) {
+              <span class="field-error"><i class="pi pi-exclamation-circle"></i> Callback URL is required</span>
+            }
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" severity="secondary" [outlined]="true" (click)="showMetaDialog.set(false)"></p-button>
+      <p-button label="Save" icon="pi pi-check" [loading]="savingMeta()" (click)="saveMeta()"></p-button>
+    </ng-template>
+  </p-dialog>
+
+</div><!-- /.ps-page -->

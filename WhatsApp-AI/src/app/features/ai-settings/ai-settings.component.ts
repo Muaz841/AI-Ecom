@@ -205,6 +205,10 @@ export class AiSettingsComponent implements OnInit {
       temperature: v.temperature ?? null,
       topP: v.topP ?? null,
       maxTokens: v.maxTokens ?? null,
+      // preserve model overrides managed via Platform Settings
+      visionModelName: this.config()?.visionModelName ?? null,
+      imageGenerationModelName: this.config()?.imageGenerationModelName ?? null,
+      messagingModelName: this.config()?.messagingModelName ?? null,
     }).subscribe({
       next: (saved) => {
         this.config.set(saved);

@@ -51,7 +51,9 @@ public class TenantAiProfileController : ControllerBase
                 request.BrandRules,
                 request.ForbiddenTopics,
                 request.DefaultResponseStyle,
-                request.AiCallsPerHourLimit),
+                request.AiCallsPerHourLimit,
+                request.PoseExtractionPrompt,
+                request.ImageGenerationPrompt),
             ct);
 
         return Ok(result);
@@ -73,4 +75,6 @@ public sealed record SaveAiProfileApiRequest(
     string? BrandRules = null,
     string? ForbiddenTopics = null,
     string? DefaultResponseStyle = null,
-    [Range(0, 10000)] int AiCallsPerHourLimit = 200);
+    [Range(0, 10000)] int AiCallsPerHourLimit = 200,
+    string? PoseExtractionPrompt = null,
+    string? ImageGenerationPrompt = null);

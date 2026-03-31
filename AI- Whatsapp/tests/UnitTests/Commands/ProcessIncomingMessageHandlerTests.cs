@@ -154,6 +154,16 @@ public class ProcessIncomingMessageHandlerTests
         public Task<(string ProviderName, string ModelVersion)> GetCurrentProviderInfoAsync(
             CancellationToken cancellationToken = default)
             => Task.FromResult<(string, string)>(("FakeAI", "test-v1"));
+
+        public Task<PoseExtractionResult> ExtractPoseAsync(PoseExtractionRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ImageGenerationResult> GenerateModelImageAsync(ImageGenerationRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     private sealed class FakeMetaMessagingService : IMetaMessagingService

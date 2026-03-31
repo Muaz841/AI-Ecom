@@ -59,6 +59,12 @@ export interface AppConfig {
     removeImage: (id: string, imageId: string) => string;
     setPrimaryImage: (id: string, imageId: string) => string;
   };
+  imagePipeline: {
+    generate: string;
+    generateFromPose: string;
+    poses: string;
+    poseById: (id: string) => string;
+  };
   dev: {
     webhookTest: string;
   };
@@ -123,6 +129,12 @@ export const APP_CONFIG: AppConfig = {
     addImage:       (id: string) => `/api/products/${id}/images`,
     removeImage:    (id: string, imageId: string) => `/api/products/${id}/images/${imageId}`,
     setPrimaryImage:(id: string, imageId: string) => `/api/products/${id}/images/${imageId}/primary`,
+  },
+  imagePipeline: {
+    generate:         '/api/image-pipeline/generate',
+    generateFromPose: '/api/image-pipeline/generate-from-pose',
+    poses:            '/api/image-pipeline/poses',
+    poseById:         (id: string) => `/api/image-pipeline/poses/${id}`,
   },
   dev: {
     webhookTest: '/api/dev/webhooks/test',

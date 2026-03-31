@@ -89,7 +89,10 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
                 enableStructuredOutput: request.EnableStructuredOutput,
                 temperature: request.Temperature,
                 topP: request.TopP,
-                maxTokens: request.MaxTokens);
+                maxTokens: request.MaxTokens,
+                visionModelName: request.VisionModelName,
+                imageGenerationModelName: request.ImageGenerationModelName,
+                messagingModelName: request.MessagingModelName);
 
             await _repository.SaveAsync(created, cancellationToken);
         }
@@ -109,7 +112,10 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
                 enableStructuredOutput: request.EnableStructuredOutput,
                 temperature: request.Temperature,
                 topP: request.TopP,
-                maxTokens: request.MaxTokens);
+                maxTokens: request.MaxTokens,
+                visionModelName: request.VisionModelName,
+                imageGenerationModelName: request.ImageGenerationModelName,
+                messagingModelName: request.MessagingModelName);
 
             await _repository.SaveAsync(existing, cancellationToken);
         }
@@ -185,7 +191,10 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
             EnableStructuredOutput: config.EnableStructuredOutput,
             Temperature: config.Temperature,
             TopP: config.TopP,
-            MaxTokens: config.MaxTokens);
+            MaxTokens: config.MaxTokens,
+            VisionModelName: config.VisionModelName,
+            ImageGenerationModelName: config.ImageGenerationModelName,
+            MessagingModelName: config.MessagingModelName);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -361,7 +370,10 @@ public sealed class PlatformAiSettingsService : IPlatformAiSettingsService, IAiR
             Temperature: config.Temperature,
             TopP: config.TopP,
             MaxTokens: config.MaxTokens,
-            UpdatedAt: config.UpdatedAt.ToString("o"));
+            UpdatedAt: config.UpdatedAt.ToString("o"),
+            VisionModelName: string.IsNullOrWhiteSpace(config.VisionModelName) ? null : config.VisionModelName,
+            ImageGenerationModelName: string.IsNullOrWhiteSpace(config.ImageGenerationModelName) ? null : config.ImageGenerationModelName,
+            MessagingModelName: string.IsNullOrWhiteSpace(config.MessagingModelName) ? null : config.MessagingModelName);
     }
 
     private static PlatformAiConfigResult DefaultResult() => new(

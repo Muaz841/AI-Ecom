@@ -79,6 +79,22 @@ public class AIServiceFactory : IAIService
         return await provider.GenerateAgentTurnAsync(request, cancellationToken);
     }
 
+    public async Task<PoseExtractionResult> ExtractPoseAsync(
+        PoseExtractionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var provider = await GetActiveProviderAsync(cancellationToken);
+        return await provider.ExtractPoseAsync(request, cancellationToken);
+    }
+
+    public async Task<ImageGenerationResult> GenerateModelImageAsync(
+        ImageGenerationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var provider = await GetActiveProviderAsync(cancellationToken);
+        return await provider.GenerateModelImageAsync(request, cancellationToken);
+    }
+
     public async Task<(string ProviderName, string ModelVersion)> GetCurrentProviderInfoAsync(
         CancellationToken cancellationToken = default)
     {

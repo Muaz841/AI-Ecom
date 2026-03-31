@@ -20,12 +20,29 @@ public sealed class LocalFileStorageService : IFileStorageService
         _env = env;
     }
 
-    public async Task<string> SaveProductImageAsync(
+    public Task<string> SaveProductImageAsync(
         Guid tenantId,
         Stream fileStream,
         string fileName,
         string contentType,
         CancellationToken ct = default)
+        => SaveFileAsync(tenantId, fileStream, fileName, contentType, "products", ct);
+
+    public Task<string> SavePoseImageAsync(
+        Guid tenantId,
+        Stream fileStream,
+        string fileName,
+        string contentType,
+        CancellationToken ct = default)
+        => SaveFileAsync(tenantId, fileStream, fileName, contentType, "poses", ct);
+
+    private async Task<string> SaveFileAsync(
+        Guid tenantId,
+        Stream fileStream,
+        string fileName,
+        string contentType,
+        string category,
+        CancellationToken ct)
     {
         var ext = Path.GetExtension(fileName);
         if (string.IsNullOrWhiteSpace(ext) || !AllowedExtensions.Contains(ext))
@@ -35,7 +52,7 @@ public sealed class LocalFileStorageService : IFileStorageService
         var webRoot = _env.WebRootPath
             ?? Path.Combine(_env.ContentRootPath, "wwwroot");
 
-        var folder = Path.Combine(webRoot, "uploads", "products", tenantId.ToString());
+        var folder = Path.Combine(webRoot, "uploads", category, tenantId.ToString());
         Directory.CreateDirectory(folder);
 
         var uniqueName = $"{Guid.NewGuid()}{ext.ToLowerInvariant()}";
@@ -44,6 +61,6 @@ public sealed class LocalFileStorageService : IFileStorageService
         await using var fs = File.Create(fullPath);
         await fileStream.CopyToAsync(fs, ct);
 
-        return $"/uploads/products/{tenantId}/{uniqueName}";
+        return $"/uploads/{category}/{tenantId}/{uniqueName}";
     }
 }

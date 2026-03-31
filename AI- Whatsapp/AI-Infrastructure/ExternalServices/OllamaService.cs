@@ -162,6 +162,20 @@ public class OllamaService : IAIService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+    // -- Pose extraction / image generation -------------------------------------
+    // Ollama does not support image generation. Vision tasks may be supported
+    // by multimodal Ollama models (e.g. llava) but are not implemented in V1.
+
+    public Task<PoseExtractionResult> ExtractPoseAsync(
+        PoseExtractionRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new EcomAI.Platform.Business.Common.AiModelNotConfiguredException();
+
+    public Task<ImageGenerationResult> GenerateModelImageAsync(
+        ImageGenerationRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new EcomAI.Platform.Business.Common.AiModelNotConfiguredException();
+
     private static int EstimateTokens(string text) => Math.Max(1, text.Length / 4);
 
     private readonly record struct TokenUsage(int InputTokens, int OutputTokens);

@@ -29,6 +29,15 @@ public class TenantAIProfile : Entity<Guid>, ITenantEntity
     /// <summary>Template for structuring final responses (e.g. "greeting + answer + CTA").</summary>
     public string? DefaultResponseStyle { get; private set; }
 
+    /// <summary>Prompt sent to the vision model when extracting a pose from a reference image.</summary>
+    public string? PoseExtractionPrompt { get; private set; }
+
+    /// <summary>
+    /// Prompt template for the image generation model.
+    /// Use {poseScript} as a placeholder — it is replaced at runtime with the extracted pose description.
+    /// </summary>
+    public string? ImageGenerationPrompt { get; private set; }
+
     /// <summary>Per-tenant AI call rate limit per hour (0 = unlimited).</summary>
     public int AiCallsPerHourLimit { get; private set; } = 200;
 
@@ -48,7 +57,9 @@ public class TenantAIProfile : Entity<Guid>, ITenantEntity
         string? brandRules = null,
         string? forbiddenTopics = null,
         string? defaultResponseStyle = null,
-        int aiCallsPerHourLimit = 200)
+        int aiCallsPerHourLimit = 200,
+        string? poseExtractionPrompt = null,
+        string? imageGenerationPrompt = null)
     {
         if (tenantId == Guid.Empty)
             throw new ArgumentException("TenantId is required.", nameof(tenantId));
@@ -67,6 +78,8 @@ public class TenantAIProfile : Entity<Guid>, ITenantEntity
             BrandRules = brandRules?.Trim(),
             ForbiddenTopics = forbiddenTopics?.Trim(),
             DefaultResponseStyle = defaultResponseStyle?.Trim(),
+            PoseExtractionPrompt = poseExtractionPrompt?.Trim(),
+            ImageGenerationPrompt = imageGenerationPrompt?.Trim(),
             AiCallsPerHourLimit = aiCallsPerHourLimit,
             Version = 1,
             CreatedAt = DateTime.UtcNow
@@ -80,7 +93,9 @@ public class TenantAIProfile : Entity<Guid>, ITenantEntity
         string? brandRules,
         string? forbiddenTopics,
         string? defaultResponseStyle,
-        int aiCallsPerHourLimit)
+        int aiCallsPerHourLimit,
+        string? poseExtractionPrompt = null,
+        string? imageGenerationPrompt = null)
     {
         if (string.IsNullOrWhiteSpace(systemPrompt))
             throw new ArgumentException("System prompt is required.", nameof(systemPrompt));
@@ -93,6 +108,8 @@ public class TenantAIProfile : Entity<Guid>, ITenantEntity
         BrandRules = brandRules?.Trim();
         ForbiddenTopics = forbiddenTopics?.Trim();
         DefaultResponseStyle = defaultResponseStyle?.Trim();
+        PoseExtractionPrompt = poseExtractionPrompt?.Trim();
+        ImageGenerationPrompt = imageGenerationPrompt?.Trim();
         AiCallsPerHourLimit = aiCallsPerHourLimit;
         Version++;
         UpdatedAt = DateTime.UtcNow;

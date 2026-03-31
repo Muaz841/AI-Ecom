@@ -15,10 +15,13 @@ public static class PermissionCodes
     public const string IntegrationsRead = "integrations.read";
     public const string IntegrationsManage = "integrations.manage";
 
-   
     public const string TenantsManage = "tenants.manage";
     public const string SubscriptionsManage = "subscriptions.manage";
     public const string PlatformSettings = "platform.settings";
+
+    public const string ImagesGenerate = "images.generate";
+    public const string ImagesRead     = "images.read";
+    public const string ImagesManage   = "images.manage";
 
     public static readonly string[] All =
     {
@@ -36,7 +39,10 @@ public static class PermissionCodes
         IntegrationsManage,
         TenantsManage,
         SubscriptionsManage,
-        PlatformSettings
+        PlatformSettings,
+        ImagesGenerate,
+        ImagesRead,
+        ImagesManage,
     };
 
     public static readonly string[] HostOnly =
@@ -59,6 +65,9 @@ public static class PermissionCodes
         AiManage,
         WebhooksManage,
         IntegrationsRead,
-        IntegrationsManage
+        IntegrationsManage,
+        ImagesGenerate,
+        ImagesRead,
+        ImagesManage,
     };
 }
