@@ -470,7 +470,7 @@ $surface-bg: var(--p-surface-50, #f9fafb);
 .bg-warning-soft  { background: #fffbeb; }
 
 // ── Dialog shared styles ──────────────────────────────────────────────────────
-.dialog-body { padding: 0 0 0.5rem; }
+.dialog-body { padding: 0; }
 
 .dialog-field-label {
   display: block;
@@ -485,12 +485,26 @@ $surface-bg: var(--p-surface-50, #f9fafb);
 }
 
 // ── New Pose dialog ───────────────────────────────────────────────────────────
+
+// Subgrid: both columns share label/hint/zone rows so their tops are always
+// on the same baseline regardless of text-wrapping differences.
 .dialog-row {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 1rem; margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto 1fr;  // [1] label  [2] hint  [3] upload/preview
+  column-gap: 1rem;
+  row-gap: 0;
+  margin-bottom: 1rem;
 }
 
-.dialog-upload-col { display: flex; flex-direction: column; }
+.dialog-upload-col {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+  align-content: start;
+
+  .dialog-field-hint { margin-bottom: 0.5rem; }
+}
 
 .dialog-image-preview {
   position: relative;
@@ -565,6 +579,36 @@ $surface-bg: var(--p-surface-50, #f9fafb);
   }
 }
 
+
+// ── Pose & Prompt dialog polish ───────────────────────────────────────────────
+::ng-deep .pose-dialog,
+::ng-deep .prompt-dialog {
+  .p-dialog {
+    border: 2px solid var(--p-surface-300, #d1d5db) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.07) !important;
+    overflow: hidden;
+  }
+
+  .p-dialog-header {
+    padding: 1.125rem 1.5rem 0.875rem !important;
+    border-bottom: 1.5px solid var(--p-surface-200, #e5e7eb) !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    background: #fff !important;
+  }
+
+  .p-dialog-content {
+    padding: 1.25rem 1.5rem 0.5rem !important;
+    background: #fff !important;
+  }
+
+  .p-dialog-footer {
+    padding: 0.875rem 1.5rem !important;
+    border-top: 1.5px solid var(--p-surface-200, #e5e7eb) !important;
+    background: #fff !important;
+  }
+}
 
 // ── p-button fill ─────────────────────────────────────────────────────────────
 ::ng-deep .w-100 .p-button { width: 100%; }

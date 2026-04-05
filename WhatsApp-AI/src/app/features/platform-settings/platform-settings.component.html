@@ -136,7 +136,7 @@
             <div class="field-loading"><p-progressSpinner strokeWidth="4" styleClass="field-spinner"></p-progressSpinner><span>Loading models…</span></div>
           } @else {
             <p-select formControlName="geminiModel" [options]="modelOptions()" optionLabel="label" optionValue="value"
-              placeholder="Select base model" styleClass="w-full"></p-select>
+              placeholder="Select base model" styleClass="w-full" appendTo="body"></p-select>
           }
           <span class="field-hint">Fallback for all AI calls unless a task-specific model is configured.</span>
           <button type="button" pButton severity="secondary" [outlined]="true" size="small"
@@ -260,7 +260,7 @@
             <div class="field-loading"><p-progressSpinner strokeWidth="4" styleClass="field-spinner"></p-progressSpinner><span>Loading models…</span></div>
           } @else {
             <p-select formControlName="messagingModelName" [options]="modelOptions()" optionLabel="label" optionValue="value"
-              placeholder="Use base model (default)" [showClear]="true" styleClass="w-full"></p-select>
+              placeholder="Use base model (default)" [showClear]="true" styleClass="w-full" appendTo="body"></p-select>
           }
           <span class="field-hint">Recommended: <code>gemini-1.5-flash</code> or <code>gemini-2.0-flash</code> for fast responses.</span>
         </div>
@@ -300,7 +300,7 @@
             <div class="field-loading"><p-progressSpinner strokeWidth="4" styleClass="field-spinner"></p-progressSpinner><span>Loading models…</span></div>
           } @else {
             <p-select formControlName="visionModelName" [options]="modelOptions()" optionLabel="label" optionValue="value"
-              placeholder="Use base model (default)" [showClear]="true" styleClass="w-full"></p-select>
+              placeholder="Use base model (default)" [showClear]="true" styleClass="w-full" appendTo="body"></p-select>
           }
           <span class="field-hint">Analyzes reference images to extract pose descriptions. Needs vision capability. Recommended: <code>gemini-1.5-pro</code>.</span>
         </div>
@@ -317,7 +317,7 @@
             <div class="field-loading"><p-progressSpinner strokeWidth="4" styleClass="field-spinner"></p-progressSpinner><span>Loading models…</span></div>
           } @else {
             <p-select formControlName="imageGenerationModelName" [options]="modelOptions()" optionLabel="label" optionValue="value"
-              placeholder="gemini-2.0-flash-preview-image-generation" [showClear]="true" styleClass="w-full"></p-select>
+              placeholder="gemini-2.0-flash-preview-image-generation" [showClear]="true" styleClass="w-full" appendTo="body"></p-select>
           }
           <span class="field-hint">Generates the final model-wearing-dress output. Recommended: <code>gemini-2.0-flash-preview-image-generation</code>.</span>
         </div>

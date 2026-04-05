@@ -60,7 +60,10 @@ public class AiSettingsController : ControllerBase
                     EnableStructuredOutput: request.EnableStructuredOutput,
                     Temperature: request.Temperature,
                     TopP: request.TopP,
-                    MaxTokens: request.MaxTokens),
+                    MaxTokens: request.MaxTokens,
+                    VisionModelName: request.VisionModelName,
+                    ImageGenerationModelName: request.ImageGenerationModelName,
+                    MessagingModelName: request.MessagingModelName),
                 cancellationToken);
 
             return Ok(result);
@@ -99,4 +102,7 @@ public sealed record SaveAiConfigApiRequest(
     bool EnableStructuredOutput = false,
     double? Temperature = null,
     double? TopP = null,
-    int? MaxTokens = null);
+    int? MaxTokens = null,
+    string? VisionModelName = null,
+    string? ImageGenerationModelName = null,
+    string? MessagingModelName = null);
