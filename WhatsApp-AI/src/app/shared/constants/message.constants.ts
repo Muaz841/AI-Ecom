@@ -7,7 +7,9 @@ export const MessageDirection = {
 } as const;
 export type MessageDirection = (typeof MessageDirection)[keyof typeof MessageDirection];
 
-
+/**
+ * Canonical message type values — must match backend MessageType enum (stored lowercase).
+ */
 export const MessageType = {
   Text:        'text',
   Comment:     'comment',
@@ -21,7 +23,9 @@ export const MessageType = {
 } as const;
 export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 
-
+/**
+ * Canonical delivery status values — must match backend DeliveryStatus enum (stored lowercase).
+ */
 export const DeliveryStatus = {
   Sent:      'sent',
   Delivered: 'delivered',
@@ -30,7 +34,9 @@ export const DeliveryStatus = {
 } as const;
 export type DeliveryStatus = (typeof DeliveryStatus)[keyof typeof DeliveryStatus];
 
-
+/**
+ * Canonical assignment mode values — must match backend AssignmentMode enum (stored lowercase).
+ */
 export const AssignmentMode = {
   AI:    'ai',
   Human: 'human',
