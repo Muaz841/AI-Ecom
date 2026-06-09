@@ -126,7 +126,7 @@ export class AppShellComponent implements OnInit {
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    // payload is `unknown` — cast once to a loose record for property access.
+    
     const p = (envelope.payload && typeof envelope.payload === 'object')
       ? (envelope.payload as Record<string, unknown>)
       : {};

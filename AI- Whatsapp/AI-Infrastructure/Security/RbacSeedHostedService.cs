@@ -34,7 +34,10 @@ public sealed class RbacSeedHostedService : IHostedService
         ("Platform Settings", PermissionCodes.PlatformSettings, "Manage global platform configuration"),
         ("Generate Images", PermissionCodes.ImagesGenerate, "Run AI image pipeline and pose generation"),
         ("View Images", PermissionCodes.ImagesRead, "View pose library and generated images"),
-        ("Manage Images", PermissionCodes.ImagesManage, "Delete poses and manage image library")
+        ("Manage Images", PermissionCodes.ImagesManage, "Delete poses and manage image library"),
+        ("View Meta Ads", PermissionCodes.MetaAdsView, "View Meta Ads campaigns, decisions, and knowledge base"),
+        ("Manage Meta Ads", PermissionCodes.MetaAdsManage, "Manage knowledge base and Meta Ads engine configuration"),
+        ("Approve Meta Ads Actions", PermissionCodes.MetaAdsApprove, "Approve or reject pending agent decisions before execution")
     };
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -149,11 +152,15 @@ public sealed class RbacSeedHostedService : IHostedService
             PermissionCodes.ConversationsManage,
             PermissionCodes.ProductsManage,
             PermissionCodes.IntegrationsRead,
-            PermissionCodes.LogsRead
+            PermissionCodes.LogsRead,
+            PermissionCodes.MetaAdsView,
+            PermissionCodes.MetaAdsManage,
+            PermissionCodes.MetaAdsApprove,
         ],
         ["agent"] = [
             PermissionCodes.ConversationsRead,
-            PermissionCodes.ConversationsManage
+            PermissionCodes.ConversationsManage,
+            PermissionCodes.MetaAdsView,
         ]
     };
 

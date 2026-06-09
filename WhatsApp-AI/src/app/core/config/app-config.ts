@@ -65,6 +65,23 @@ export interface AppConfig {
     poses: string;
     poseById: (id: string) => string;
   };
+  metaAds: {
+    settings: {
+      get: string;
+      save: string;
+    };
+    knowledge: {
+      list: string;
+      add: string;
+      update: (id: string) => string;
+      delete: (id: string) => string;
+    };
+    decisions: {
+      list: string;
+      approve: (id: string) => string;
+      reject: (id: string) => string;
+    };
+  };
   dev: {
     webhookTest: string;
   };
@@ -135,6 +152,23 @@ export const APP_CONFIG: AppConfig = {
     generateFromPose: '/api/image-pipeline/generate-from-pose',
     poses:            '/api/image-pipeline/poses',
     poseById:         (id: string) => `/api/image-pipeline/poses/${id}`,
+  },
+  metaAds: {
+    settings: {
+      get:  '/api/host/marketing',
+      save: '/api/host/marketing',
+    },
+    knowledge: {
+      list:   '/api/meta-ads/knowledge',
+      add:    '/api/meta-ads/knowledge',
+      update: (id: string) => `/api/meta-ads/knowledge/${id}`,
+      delete: (id: string) => `/api/meta-ads/knowledge/${id}`,
+    },
+    decisions: {
+      list:    '/api/meta-ads/decisions',
+      approve: (id: string) => `/api/meta-ads/decisions/${id}/approve`,
+      reject:  (id: string) => `/api/meta-ads/decisions/${id}/reject`,
+    },
   },
   dev: {
     webhookTest: '/api/dev/webhooks/test',

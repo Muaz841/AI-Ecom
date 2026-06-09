@@ -121,6 +121,15 @@ export const SIDEBAR_PIPELINE: SidebarModule[] = [
     subtitle: 'Define the AI assistant persona, tone, brand rules, and safety guardrails for your store.',
   },
   {
+    id: 'meta-ads',
+    label: 'Meta Ads',
+    route: '/meta-ads',
+    icon: 'pi pi-megaphone',
+    order: 65,
+    requiredPermissions: ['meta.ads.view'],
+    subtitle: 'Autonomous AI-powered Meta ad campaign management.',
+  },
+  {
     id: 'webhook-tester',
     label: 'Webhook Tester',
     route: '/dev/webhooks',

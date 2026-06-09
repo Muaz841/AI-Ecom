@@ -22,6 +22,70 @@ namespace AI_Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("EcomAI.Platform.Business.Entities.AgentDecision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActionPayload")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("Confidence")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("float(5)");
+
+                    b.Property<string>("ContextSummary")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmbeddingJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ExecutedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDryRun")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OutcomeLabel")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("RunAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "RunAt");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("AgentDecisions", (string)null);
+                });
+
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.AppLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -190,6 +254,49 @@ namespace AI_Infrastructure.Migrations
                         .HasFilter("[TenantId] IS NOT NULL");
 
                     b.ToTable("ConversationThreads");
+                });
+
+            modelBuilder.Entity("EcomAI.Platform.Business.Entities.KnowledgeChunk", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmbeddingJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.ToTable("KnowledgeChunks", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.Message", b =>
@@ -555,6 +662,53 @@ namespace AI_Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PlatformAiConfigs", (string)null);
+                });
+
+            modelBuilder.Entity("EcomAI.Platform.Business.Entities.PlatformMarketingConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ClaudeApiKeyProtected")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClaudeDecisionModel")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ClaudeSummaryModel")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("DailySpendCapUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("DryRun")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxActionsPerDay")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MetaAdsAccessTokenProtected")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MetaAdsAccountId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlatformMarketingConfigs", (string)null);
                 });
 
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.PlatformMetaConfig", b =>
@@ -1152,11 +1306,29 @@ namespace AI_Infrastructure.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("EcomAI.Platform.Business.Entities.AgentDecision", b =>
+                {
+                    b.HasOne("EcomAI.Platform.Business.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("EcomAI.Platform.Business.Entities.ClientSecrets", b =>
                 {
                     b.HasOne("EcomAI.Platform.Business.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantRefId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("EcomAI.Platform.Business.Entities.KnowledgeChunk", b =>
+                {
+                    b.HasOne("EcomAI.Platform.Business.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
