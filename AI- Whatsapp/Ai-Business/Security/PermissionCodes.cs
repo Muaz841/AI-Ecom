@@ -23,6 +23,10 @@ public static class PermissionCodes
     public const string ImagesRead     = "images.read";
     public const string ImagesManage   = "images.manage";
 
+    public const string MetaAdsView    = "meta.ads.view";
+    public const string MetaAdsManage  = "meta.ads.manage";
+    public const string MetaAdsApprove = "meta.ads.approve";
+
     public static readonly string[] All =
     {
         UsersManage,
@@ -43,6 +47,9 @@ public static class PermissionCodes
         ImagesGenerate,
         ImagesRead,
         ImagesManage,
+        MetaAdsView,
+        MetaAdsManage,
+        MetaAdsApprove,
     };
 
     public static readonly string[] HostOnly =
@@ -69,5 +76,8 @@ public static class PermissionCodes
         ImagesGenerate,
         ImagesRead,
         ImagesManage,
+        MetaAdsView,
+        MetaAdsManage,
+        MetaAdsApprove,
     };
 }

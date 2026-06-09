@@ -51,6 +51,11 @@ public class PlatformDbContext : DbContext
     public DbSet<TenantAIProfile> TenantAIProfiles { get; set; } = null!;
     public DbSet<PosePrescript> PosePrescripts { get; set; } = null!;
 
+    // Marketing Engine
+    public DbSet<PlatformMarketingConfig> PlatformMarketingConfigs { get; set; } = null!;
+    public DbSet<KnowledgeChunk> KnowledgeChunks { get; set; } = null!;
+    public DbSet<AgentDecision> AgentDecisions { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -365,6 +370,67 @@ public class PlatformDbContext : DbContext
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.ToTable("PosePrescripts");
+        });
+
+        // ── Marketing Engine ───────────────────────────────────────────────────────
+
+        // Singleton host-level marketing config — no tenant filter, single row.
+        // Repository MUST use IgnoreQueryFilters() when called in a tenant request context.
+        modelBuilder.Entity<PlatformMarketingConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ClaudeDecisionModel).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ClaudeSummaryModel).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ClaudeApiKeyProtected).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.MetaAdsAccountId).HasMaxLength(200);
+            entity.Property(e => e.MetaAdsAccessTokenProtected).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.DailySpendCapUsd).HasPrecision(18, 2);
+            entity.ToTable("PlatformMarketingConfigs");
+        });
+
+        // Per-tenant knowledge chunks — subject to EF tenant filter.
+        modelBuilder.Entity<KnowledgeChunk>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.Content).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Source).HasMaxLength(500);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.EmbeddingJson).HasColumnType("nvarchar(max)");
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasOne<TenantEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable("KnowledgeChunks");
+        });
+
+        // Per-tenant agent decision log — subject to EF tenant filter.
+        modelBuilder.Entity<AgentDecision>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.ContextSummary).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ActionType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ActionPayload).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(30)
+                .HasConversion(
+                    v => v.ToString(),
+                    v => Enum.Parse<AgentDecisionStatus>(v, ignoreCase: true));
+            entity.Property(e => e.Reason).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Confidence).HasPrecision(5, 4);
+            entity.Property(e => e.EmbeddingJson).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.OutcomeLabel).HasMaxLength(20);
+            entity.HasIndex(e => new { e.TenantId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.RunAt });
+            entity.HasOne<TenantEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable("AgentDecisions");
         });
 
         // Per-tenant AI persona profile — one row per tenant, subject to EF tenant filter.

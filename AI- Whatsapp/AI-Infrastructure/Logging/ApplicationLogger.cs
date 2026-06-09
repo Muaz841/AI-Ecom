@@ -134,12 +134,8 @@ public class ApplicationLogger : IApplicationLogger
         var endpoint = _httpContextAccessor.HttpContext?.Request?.Path.Value;
         var correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            level,
-            template = messageTemplate,
-            args
-        });
+        var payload = JsonSerializer.Serialize(
+            CreateSafePayload(level, messageTemplate, args));
 
         var appLog = AppLog.CreateOutgoing(
             tenantId: tenantId,
@@ -154,5 +150,19 @@ public class ApplicationLogger : IApplicationLogger
             correlationId: correlationId);
 
         return WriteAppLogAsync(appLog, CancellationToken.None);
+    }
+
+    private static object CreateSafePayload(
+    string level,
+    string messageTemplate,
+    object?[] args)
+    {
+        return new
+        {
+            level,
+            template = messageTemplate,
+            argumentCount = args?.Length ?? 0,
+            containsArguments = args?.Length > 0
+        };
     }
 }

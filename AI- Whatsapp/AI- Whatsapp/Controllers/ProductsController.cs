@@ -144,79 +144,9 @@ public class ProductsController : ControllerBase
 
     // ─── Images ───────────────────────────────────────────────────────────────
 
-    [HttpPost("{id:guid}/images")]
-    [Consumes("multipart/form-data")]
-    [SwaggerOperation(Summary = "Upload image", Description = "Uploads an image file and attaches it to the product.")]
-    [ProducesResponseType(typeof(ProductMutationResult), 200)]
-    [ProducesResponseType(400)]
-    public async Task<ActionResult<ProductMutationResult>> UploadImage(
-        Guid id,
-        IFormFile file,
-        [FromForm] string? altText  = null,
-        [FromForm] bool   isPrimary = false,
-        CancellationToken cancellationToken = default)
-    {
-        var tenantId = GetTenantId();
-        if (tenantId == Guid.Empty) return Unauthorized();
+    
 
-        if (file is null || file.Length == 0)
-            return BadRequest("No file uploaded.");
-
-        string url;
-        try
-        {
-            await using var stream = file.OpenReadStream();
-            url = await _fileStorage.SaveProductImageAsync(
-                tenantId, stream, file.FileName, file.ContentType, cancellationToken);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-
-        var command = new AddProductImageCommand(tenantId, id, url, altText, isPrimary);
-        var result  = await _mediator.Send(command, cancellationToken);
-
-        return result.Success ? Ok(result) : BadRequest(result.ErrorMessage);
-    }
-
-    [HttpDelete("{id:guid}/images/{imageId:guid}")]
-    [SwaggerOperation(Summary = "Remove image", Description = "Removes an image from a product.")]
-    [ProducesResponseType(204)]
-    [ProducesResponseType(404)]
-    public async Task<IActionResult> RemoveImage(
-        Guid id,
-        Guid imageId,
-        CancellationToken cancellationToken = default)
-    {
-        var tenantId = GetTenantId();
-        if (tenantId == Guid.Empty) return Unauthorized();
-
-        var result = await _mediator.Send(new DeleteProductImageCommand(tenantId, id, imageId), cancellationToken);
-        if (!result.Success && result.ErrorMessage?.Contains("not found") == true)
-            return NotFound();
-
-        return result.Success ? NoContent() : BadRequest(result.ErrorMessage);
-    }
-
-    [HttpPut("{id:guid}/images/{imageId:guid}/primary")]
-    [SwaggerOperation(Summary = "Set primary image", Description = "Marks an image as the primary product image.")]
-    [ProducesResponseType(typeof(ProductMutationResult), 200)]
-    [ProducesResponseType(404)]
-    public async Task<ActionResult<ProductMutationResult>> SetPrimaryImage(
-        Guid id,
-        Guid imageId,
-        CancellationToken cancellationToken = default)
-    {
-        var tenantId = GetTenantId();
-        if (tenantId == Guid.Empty) return Unauthorized();
-
-        var result = await _mediator.Send(new SetPrimaryImageCommand(tenantId, id, imageId), cancellationToken);
-        if (!result.Success && result.ErrorMessage?.Contains("not found") == true)
-            return NotFound();
-
-        return result.Success ? Ok(result) : BadRequest(result.ErrorMessage);
-    }
+   
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 

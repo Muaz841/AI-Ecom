@@ -20,7 +20,6 @@ import { ProductsComponent } from './features/products/products.component';
 import { ContentAiComponent } from './features/content-ai/content-ai.component';
 
 const messagingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'messaging');
-const contentModule = SIDEBAR_PIPELINE.find((module) => module.id === 'content');
 const productsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'products');
 const schedulingModule = SIDEBAR_PIPELINE.find((module) => module.id === 'scheduling');
 const settingsModule = SIDEBAR_PIPELINE.find((module) => module.id === 'settings');
@@ -61,12 +60,6 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         data: { permissions: messagingModule?.requiredPermissions ?? [], title: messagingModule?.label ?? 'Messaging', subtitle: messagingModule?.subtitle ?? '' },
         component: InboxComponent,
-      },
-      {
-        path: 'content',
-        canActivate: [permissionGuard],
-        data: { permissions: contentModule?.requiredPermissions ?? [], title: contentModule?.label ?? 'Content AI', subtitle: contentModule?.subtitle ?? '' },
-        component: ContentAiComponent,
       },
       {
         path: 'products',

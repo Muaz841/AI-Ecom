@@ -1,0 +1,428 @@
+<div class="meta-ads-page">
+
+  <!-- ── Page header ───────────────────────────────────────────────────────── -->
+  <div class="page-header d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="page-title mb-1">Meta Ads Engine</h2>
+      <p class="page-subtitle mb-0">
+        Autonomous AI-powered campaign management · Claude + Meta Marketing API
+        @if (isConfigured()) {
+          <span class="status-pill active ms-2">Active</span>
+        } @else {
+          <span class="status-pill inactive ms-2">Not Configured</span>
+        }
+        @if (config()?.dryRun) {
+          <span class="status-pill dryrun ms-1">Dry Run</span>
+        }
+      </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      @if (hasPending()) {
+        <p-tag
+          [value]="pendingDecisions().length + ' pending'"
+          severity="warn"
+          class="pending-badge" />
+      }
+      <p-button
+        icon="pi pi-cog"
+        label="Settings"
+        severity="secondary"
+        [outlined]="true"
+        (click)="openSettings()" />
+    </div>
+  </div>
+
+  <!-- ── Main grid ─────────────────────────────────────────────────────────── -->
+  <div class="row g-3">
+
+    <!-- Knowledge Base card -->
+    <div class="col-lg-5">
+      <p-card styleClass="knowledge-card h-100">
+        <ng-template pTemplate="header">
+          <div class="card-header-row d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+              <i class="pi pi-book text-primary"></i>
+              <span class="card-title">Knowledge Base</span>
+            </div>
+            <p-button
+              icon="pi pi-plus"
+              label="Add Knowledge"
+              size="small"
+              (click)="openAddKnowledge()" />
+          </div>
+        </ng-template>
+
+        @if (loadingKnowledge()) {
+          <div class="d-flex justify-content-center py-4">
+            <p-progress-spinner strokeWidth="4" [style]="{ width: '36px', height: '36px' }" />
+          </div>
+        } @else if (knowledge().length === 0) {
+          <div class="empty-state">
+            <i class="pi pi-book empty-icon"></i>
+            <p>No knowledge added yet.</p>
+            <small>Add brand rules, product scripts, or campaign context to guide the AI.</small>
+            <p-button label="Add First Entry" icon="pi pi-plus" class="mt-3" (click)="openAddKnowledge()" />
+          </div>
+        } @else {
+          <div class="knowledge-list">
+            @for (chunk of knowledge(); track chunk.id) {
+              <div class="knowledge-item">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                  <div class="knowledge-content flex-1">
+                    <div class="chunk-title">{{ chunk.title }}</div>
+                    <div class="chunk-preview">{{ chunk.content | slice:0:120 }}{{ chunk.content.length > 120 ? '…' : '' }}</div>
+                    @if (chunk.source) {
+                      <small class="chunk-source">{{ chunk.source }}</small>
+                    }
+                    <small class="chunk-date">Added {{ formatDate(chunk.createdAt) }}</small>
+                  </div>
+                  <div class="chunk-actions d-flex gap-1 flex-shrink-0">
+                    <p-button
+                      icon="pi pi-pencil"
+                      [text]="true"
+                      size="small"
+                      severity="secondary"
+                      pTooltip="Edit"
+                      tooltipPosition="top"
+                      (click)="openEditKnowledge(chunk)" />
+                    <p-button
+                      icon="pi pi-trash"
+                      [text]="true"
+                      size="small"
+                      severity="danger"
+                      pTooltip="Remove"
+                      tooltipPosition="top"
+                      (click)="deleteKnowledge(chunk)" />
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </p-card>
+    </div>
+
+    <!-- Agent Decisions card -->
+    <div class="col-lg-7">
+      <p-card styleClass="decisions-card h-100">
+        <ng-template pTemplate="header">
+          <div class="card-header-row d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+              <i class="pi pi-brain text-primary"></i>
+              <span class="card-title">Agent Decisions</span>
+            </div>
+            <p-button
+              icon="pi pi-refresh"
+              [text]="true"
+              size="small"
+              severity="secondary"
+              pTooltip="Refresh"
+              (click)="loadDecisions()" />
+          </div>
+        </ng-template>
+
+        @if (loadingDecisions()) {
+          <div class="d-flex justify-content-center py-4">
+            <p-progress-spinner strokeWidth="4" [style]="{ width: '36px', height: '36px' }" />
+          </div>
+        } @else if (decisions().length === 0) {
+          <div class="empty-state">
+            <i class="pi pi-inbox empty-icon"></i>
+            <p>No decisions recorded yet.</p>
+            <small>The agent runs daily at 09:00 PKT. Decisions will appear here after the first run.</small>
+          </div>
+        } @else {
+          <p-table
+            [value]="decisions()"
+            [rowHover]="true"
+            styleClass="decisions-table"
+            [scrollable]="true"
+            scrollHeight="420px">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Run At</th>
+                <th>Action</th>
+                <th>Status</th>
+                <th>Confidence</th>
+                <th style="width:100px"></th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-d>
+              <tr>
+                <td class="date-cell">{{ formatDate(d.runAt) }}</td>
+                <td>
+                  <span class="action-type">{{ d.actionType }}</span>
+                  @if (d.isDryRun) {
+                    <small class="dry-run-badge ms-1">dry run</small>
+                  }
+                  @if (d.reason) {
+                    <div class="decision-reason">{{ d.reason | slice:0:80 }}{{ d.reason.length > 80 ? '…' : '' }}</div>
+                  }
+                </td>
+                <td>
+                  <p-tag
+                    [value]="getStatusLabel(d.status).label"
+                    [severity]="getStatusLabel(d.status).severity" />
+                </td>
+                <td>
+                  <span [class]="'confidence-badge ' + confidenceClass(d.confidence)">
+                    {{ (d.confidence * 100).toFixed(0) }}%
+                  </span>
+                </td>
+                <td>
+                  @if (d.status === 'PendingApproval') {
+                    <div class="d-flex gap-1">
+                      <p-button
+                        icon="pi pi-check"
+                        [text]="true"
+                        size="small"
+                        severity="success"
+                        pTooltip="Approve"
+                        (click)="approveDecision(d)" />
+                      <p-button
+                        icon="pi pi-times"
+                        [text]="true"
+                        size="small"
+                        severity="danger"
+                        pTooltip="Reject"
+                        (click)="rejectDecision(d)" />
+                    </div>
+                  }
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="5" class="text-center py-3 text-muted">No decisions to display</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        }
+      </p-card>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Settings Dialog
+══════════════════════════════════════════════════════════════════════════════ -->
+<p-dialog
+  [(visible)]="settingsVisible"
+  header="Marketing Engine Settings"
+  [modal]="true"
+  [style]="{ width: '600px' }"
+  styleClass="ma-settings-dialog"
+  [closeOnEscape]="true"
+  [draggable]="false">
+
+  <form [formGroup]="settingsForm">
+
+    <!-- Claude Configuration -->
+    <div class="settings-section">
+      <div class="section-label">
+        <i class="pi pi-microchip-ai"></i>
+        Claude Configuration
+      </div>
+
+      <div class="field">
+        <label class="field-label">API Key</label>
+        <p-password
+          formControlName="claudeApiKey"
+          [feedback]="false"
+          [toggleMask]="true"
+          placeholder="sk-ant-••••••• (leave blank to keep existing)"
+          styleClass="w-100"
+          inputStyleClass="w-100" />
+        <small class="field-hint">Stored encrypted. Leave blank to keep the current key.</small>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-6">
+          <div class="field">
+            <label class="field-label">Decision Model</label>
+            <p-select
+              formControlName="claudeDecisionModel"
+              [options]="decisionModels"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select model"
+              styleClass="w-100"
+              appendTo="body" />
+            <small class="field-hint">Used for daily strategy decisions.</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="field">
+            <label class="field-label">Summary Model</label>
+            <p-select
+              formControlName="claudeSummaryModel"
+              [options]="summaryModels"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select model"
+              styleClass="w-100"
+              appendTo="body" />
+            <small class="field-hint">Used for context summaries and copy.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p-divider />
+
+    <!-- Meta Ads Configuration -->
+    <div class="settings-section">
+      <div class="section-label">
+        <i class="pi pi-facebook"></i>
+        Meta Ads Configuration
+      </div>
+
+      <div class="field">
+        <label class="field-label">Ad Account ID</label>
+        <input
+          pInputText
+          formControlName="metaAdsAccountId"
+          placeholder="act_1234567890"
+          class="w-100" />
+        <small class="field-hint">Your Meta Ads Manager account ID.</small>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Access Token</label>
+        <p-password
+          formControlName="metaAdsAccessToken"
+          [feedback]="false"
+          [toggleMask]="true"
+          placeholder="EAAx••••• (leave blank to keep existing)"
+          styleClass="w-100"
+          inputStyleClass="w-100" />
+        <small class="field-hint">Requires ads_management + ads_read scopes. Stored encrypted.</small>
+      </div>
+    </div>
+
+    <p-divider />
+
+    <!-- Safety Controls -->
+    <div class="settings-section">
+      <div class="section-label">
+        <i class="pi pi-shield"></i>
+        Safety Controls
+      </div>
+
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+          <div class="field-label mb-0">Dry Run Mode</div>
+          <small class="field-hint">Actions are logged but NOT sent to Meta.</small>
+        </div>
+        <p-toggle-switch formControlName="dryRun" />
+      </div>
+
+      <div class="row g-3">
+        <div class="col-6">
+          <div class="field">
+            <label class="field-label">Max Actions / Day</label>
+            <input
+              pInputText
+              type="number"
+              formControlName="maxActionsPerDay"
+              class="w-100"
+              min="1"
+              max="50" />
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="field">
+            <label class="field-label">Daily Spend Cap (USD)</label>
+            <input
+              pInputText
+              type="number"
+              formControlName="dailySpendCapUsd"
+              class="w-100"
+              min="1" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [outlined]="true"
+      (click)="settingsVisible.set(false)" />
+    <p-button
+      label="Save Settings"
+      icon="pi pi-save"
+      [loading]="savingConfig()"
+      [disabled]="settingsForm.invalid"
+      (click)="saveSettings()" />
+  </ng-template>
+</p-dialog>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Add / Edit Knowledge Dialog
+══════════════════════════════════════════════════════════════════════════════ -->
+<p-dialog
+  [(visible)]="knowledgeVisible"
+  [header]="editingChunk() ? 'Edit Knowledge' : 'Add Knowledge'"
+  [modal]="true"
+  [style]="{ width: '560px' }"
+  styleClass="ma-knowledge-dialog"
+  [closeOnEscape]="true"
+  [draggable]="false">
+
+  <form [formGroup]="knowledgeForm">
+
+    <div class="field">
+      <label class="field-label">Title <span class="text-danger">*</span></label>
+      <input
+        pInputText
+        formControlName="title"
+        placeholder="e.g. Summer Collection Script, Brand Voice Rules…"
+        class="w-100" />
+      @if (knowledgeForm.get('title')?.invalid && knowledgeForm.get('title')?.touched) {
+        <small class="error-hint">Title is required (min 2 characters).</small>
+      }
+    </div>
+
+    <div class="field">
+      <label class="field-label">Content <span class="text-danger">*</span></label>
+      <textarea
+        pTextarea
+        formControlName="content"
+        rows="8"
+        placeholder="Paste your brand script, product details, campaign rules, audience notes…
+This content will be refined and injected into Claude's decision context."
+        class="w-100"
+        [autoResize]="false"
+        style="resize: vertical;"></textarea>
+      @if (knowledgeForm.get('content')?.invalid && knowledgeForm.get('content')?.touched) {
+        <small class="error-hint">Content is required (min 10 characters).</small>
+      }
+    </div>
+
+    <div class="field">
+      <label class="field-label">Source <span class="text-muted">(optional)</span></label>
+      <input
+        pInputText
+        formControlName="source"
+        placeholder="e.g. Brand Guidelines 2025, Owner Notes…"
+        class="w-100" />
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [outlined]="true"
+      (click)="knowledgeVisible.set(false)" />
+    <p-button
+      [label]="editingChunk() ? 'Update' : 'Add to Engine'"
+      icon="pi pi-save"
+      [loading]="savingKnowledge()"
+      [disabled]="knowledgeForm.invalid"
+      (click)="saveKnowledge()" />
+  </ng-template>
+</p-dialog>

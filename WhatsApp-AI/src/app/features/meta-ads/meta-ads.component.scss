@@ -1,0 +1,263 @@
+// ── Page layout ────────────────────────────────────────────────────────────────
+
+.meta-ads-page {
+  padding: 0;
+}
+
+.page-header {
+  .page-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--p-text-color, #111827);
+    margin: 0;
+  }
+
+  .page-subtitle {
+    font-size: 0.85rem;
+    color: var(--p-text-muted-color, #6b7280);
+  }
+}
+
+// ── Status pills ──────────────────────────────────────────────────────────────
+
+.status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &.active   { background: #d1fae5; color: #065f46; }
+  &.inactive { background: #fee2e2; color: #991b1b; }
+  &.dryrun   { background: #fef3c7; color: #92400e; }
+}
+
+// ── Card headers ──────────────────────────────────────────────────────────────
+
+.card-header-row {
+  padding: 1rem 1.25rem 0;
+}
+
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--p-text-color, #111827);
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--p-text-muted-color, #6b7280);
+
+  .empty-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.35;
+  }
+
+  p    { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; }
+  small { font-size: 0.8rem; }
+}
+
+// ── Knowledge list ────────────────────────────────────────────────────────────
+
+.knowledge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.knowledge-item {
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--p-surface-200, #e5e7eb);
+  transition: background 0.12s;
+
+  &:last-child { border-bottom: none; }
+  &:hover      { background: var(--p-surface-50, #f9fafb); }
+}
+
+.chunk-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--p-text-color, #111827);
+  margin-bottom: 0.2rem;
+}
+
+.chunk-preview {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color, #6b7280);
+  line-height: 1.45;
+  margin-bottom: 0.2rem;
+  white-space: pre-wrap;
+}
+
+.chunk-source,
+.chunk-date {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color, #9ca3af);
+  display: block;
+}
+
+.chunk-actions {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.knowledge-item:hover .chunk-actions {
+  opacity: 1;
+}
+
+// ── Decisions table ───────────────────────────────────────────────────────────
+
+::ng-deep .decisions-table {
+  .p-datatable-header-cell {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--p-text-muted-color, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .p-datatable-tbody > tr > td {
+    font-size: 0.82rem;
+    padding: 0.625rem 0.75rem;
+  }
+}
+
+.date-cell {
+  white-space: nowrap;
+  color: var(--p-text-muted-color, #6b7280);
+  font-size: 0.78rem !important;
+}
+
+.action-type {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--p-text-color, #111827);
+  font-family: var(--font-mono, monospace);
+}
+
+.dry-run-badge {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.decision-reason {
+  font-size: 0.76rem;
+  color: var(--p-text-muted-color, #6b7280);
+  margin-top: 0.15rem;
+  line-height: 1.3;
+}
+
+.confidence-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+
+  &.conf-high { background: #d1fae5; color: #065f46; }
+  &.conf-mid  { background: #fef3c7; color: #92400e; }
+  &.conf-low  { background: #fee2e2; color: #991b1b; }
+}
+
+// ── Settings dialog ───────────────────────────────────────────────────────────
+
+::ng-deep .ma-settings-dialog,
+::ng-deep .ma-knowledge-dialog {
+  .p-dialog {
+    border: 2px solid var(--p-surface-300, #d1d5db) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.07) !important;
+    overflow: hidden;
+  }
+
+  .p-dialog-header {
+    padding: 1.125rem 1.5rem 0.875rem !important;
+    border-bottom: 1.5px solid var(--p-surface-200, #e5e7eb) !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    background: #fff !important;
+  }
+
+  .p-dialog-content {
+    padding: 1.25rem 1.5rem 0.5rem !important;
+    background: #fff !important;
+  }
+
+  .p-dialog-footer {
+    padding: 0.875rem 1.5rem !important;
+    border-top: 1.5px solid var(--p-surface-200, #e5e7eb) !important;
+    background: #fff !important;
+  }
+}
+
+// ── Settings form ─────────────────────────────────────────────────────────────
+
+.settings-section {
+  margin-bottom: 0.5rem;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--p-text-muted-color, #6b7280);
+  margin-bottom: 1rem;
+
+  i { color: var(--p-primary-color, #6366f1); }
+}
+
+.field {
+  margin-bottom: 1rem;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--p-text-color, #374151);
+  margin-bottom: 0.35rem;
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color, #9ca3af);
+  margin-top: 0.25rem;
+}
+
+.error-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin-top: 0.25rem;
+}
+
+// ── Pending badge ─────────────────────────────────────────────────────────────
+
+.pending-badge {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
+}

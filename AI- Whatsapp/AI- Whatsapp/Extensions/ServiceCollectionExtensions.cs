@@ -8,6 +8,7 @@ using EcomAI.Platform.Infrastructure.BackgroundJobs;
 using EcomAI.Platform.Infrastructure.Logging;
 using EcomAI.Platform.Infrastructure.Persistence;
 using EcomAI.Platform.Infrastructure.Persistence.Repositories;
+using EcomAI.Platform.Business.Interfaces;
 using EcomAI.Platform.Infrastructure.Tenant;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,7 @@ using EcomAI.Platform.Infrastructure.AI.Tools;
 using EcomAI.Platform.Infrastructure.Caching;
 using EcomAI.Platform.Infrastructure.Storage;
 using EcomAI.Platform.Infrastructure.Email;
+using EcomAI.Platform.Infrastructure.Services.Marketing;
 
 namespace EcomAI.Platform.Api.Extensions;
 
@@ -105,10 +107,10 @@ public static class ServiceCollectionExtensions
             });
         services.AddAuthorization(options =>
         {
-            foreach (var permission in PermissionCodes.All)
+            foreach (var code in PermissionCodes.All)
             {
-                options.AddPolicy(permission, policy =>
-                    policy.Requirements.Add(new PermissionRequirement(permission)));
+                options.AddPolicy(code, policy =>
+                    policy.Requirements.Add(new PermissionRequirement(code)));
             }
         });
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
@@ -236,6 +238,12 @@ public static class ServiceCollectionExtensions
             client.BaseAddress = new Uri("https://graph.facebook.com/");
             client.Timeout = TimeSpan.FromSeconds(30);
         });
+
+        services.AddHttpClient("claude-decisions", client =>
+        {
+            client.BaseAddress = new Uri("https://api.anthropic.com/");
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
         services.AddResiliencePipelineRegistry<string>();
 
         services.AddResiliencePipeline(MetaMessagingService.SendMessagePipeline, builder =>
@@ -280,6 +288,30 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SendFollowUpRemindersJob>();
         services.AddSingleton<HangfireJobScheduler>();
         services.AddHostedService<RbacSeedHostedService>();
+
+        // ── Marketing Engine ──────────────────────────────────────────────────
+        services.AddScoped<IPlatformMarketingConfigRepository, PlatformMarketingConfigRepository>();
+        services.AddScoped<IKnowledgeChunkRepository, KnowledgeChunkRepository>();
+        services.AddScoped<IAgentDecisionRepository, AgentDecisionRepository>();
+        services.AddScoped<IPlatformMarketingSettingsService, PlatformMarketingSettingsService>();
+        services.AddScoped<IKnowledgeService, KnowledgeService>();
+        services.AddScoped<IAgentDecisionService, AgentDecisionService>();
+
+        // ── Marketing RAG (Phase 2 + 3) ────────────────────────────────────────
+        services.AddMemoryCache();
+        services.AddScoped<IEmbeddingService, GeminiEmbeddingService>();
+        services.AddSingleton<IVectorStore, InProcessVectorStore>();
+        services.AddScoped<IKnowledgeRetrievalService, KnowledgeRetrievalService>();
+        services.AddScoped<IDecisionMemoryService, DecisionMemoryService>();
+        services.AddSingleton<ISkillLoaderService, SkillLoaderService>();
+        services.AddScoped<IClaudeDecisionService, ClaudeDecisionService>();
+        services.AddScoped<IMarketingAgentService, MarketingAgentService>();
+
+        // ── Hangfire background jobs ────────────────────────────────────────────
+        services.AddScoped<MarketingAgentJob>();
+        services.AddScoped<MetaSyncJob>();
+        services.AddScoped<BudgetGuardJob>();
+        services.AddScoped<OutcomeTrackerJob>();
 
         return services;
     }
